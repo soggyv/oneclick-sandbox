@@ -26,7 +26,8 @@ import {
   HelpCircle,
   ShieldCheck,
   TrendingDown,
-  Star
+  Star,
+  Camera
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -48,13 +49,17 @@ interface Shift {
   duration: string;
   price: number;
   address: string;
-  status: 'open' | 'booked' | 'completed';
+  status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'completed';
   category: 'Кава' | 'Рітейл' | 'Склади';
   logo?: string;
   isHot?: boolean;
   details?: string;
   requirements?: string[];
   reviews?: Review[];
+  hasFeedback?: boolean;
+  allowFeedback?: boolean;
+  workPhoto?: string;
+  workComment?: string;
 }
 
 interface Transaction {
@@ -105,6 +110,7 @@ const INITIAL_SHIFTS: Shift[] = [
     isHot: false,
     details: 'Приготування класичних кавових напоїв, робота з касою Poster, підтримання чистоти за баром.',
     requirements: ['Наявність санітарної книжки', 'Досвід роботи баристою від 6 місяців'],
+    allowFeedback: false,
     reviews: [
       { id: 'r3', workerName: 'Аліна М.', rating: 5, date: '12.06.2026', comment: 'Дуже привітний менеджер та дружній колектив. Потік клієнтів великий, але час пролітає непомітно.' },
       { id: 'r4', workerName: 'Сергій П.', rating: 5, date: '05.06.2026', comment: 'Локація в самому центрі, зручно діставатися. Оплата день в день без затримок.' }
@@ -165,12 +171,23 @@ export default function OneClickApp() {
 
   // Employer conceptual balance
   const [employerBalance, setEmployerBalance] = useState<number>(50000);
+  const [employerFrozenBalance, setEmployerFrozenBalance] = useState<number>(0);
 
   // Temporary screen states
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [signedContract, setSignedContract] = useState<boolean>(false);
   const [showQRModal, setShowQRModal] = useState<string | null>(null);
+  const [showScannerModal, setShowScannerModal] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
+  
+  // B2B Venue QR code Display
+  const [showB2BQRModalId, setShowB2BQRModalId] = useState<string | null>(null);
+
+  // B2C Work Report & Photo upload states
+  const [showReportModalId, setShowReportModalId] = useState<string | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [reportComment, setReportComment] = useState<string>('');
+  const [isTakingPhoto, setIsTakingPhoto] = useState<boolean>(false);
   const [simulateDeadline, setSimulateDeadline] = useState<boolean>(false);
 
 
@@ -201,6 +218,69 @@ export default function OneClickApp() {
   const triggerToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // B2C Feedback states
+  const [activeFeedbackShiftId, setActiveFeedbackShiftId] = useState<string | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<number>(5);
+  const [feedbackComment, setFeedbackComment] = useState<string>('');
+
+  const handleSubmitFeedback = (shiftId: string) => {
+    if (!feedbackComment.trim()) {
+      triggerToast('Будь ласка, напишіть текст відгуку!');
+      return;
+    }
+    setShifts(prev =>
+      prev.map(s => {
+        if (s.id === shiftId) {
+          const newReview = {
+            id: `r-user-${Date.now()}`,
+            workerName: 'Олексій К.',
+            rating: feedbackRating,
+            date: 'Сьогодні',
+            comment: feedbackComment.trim()
+          };
+          return {
+            ...s,
+            hasFeedback: true,
+            reviews: [newReview, ...(s.reviews || [])]
+          };
+        }
+        return s;
+      })
+    );
+    setActiveFeedbackShiftId(null);
+    setFeedbackComment('');
+    setFeedbackRating(5);
+    triggerToast('Дякуємо за ваш відгук!');
+  };
+
+  const handleSimulateScan = (shiftId: string) => {
+    const shift = shifts.find(s => s.id === shiftId);
+    if (!shift) return;
+
+    if (employerBalance < shift.price) {
+      triggerToast('У роботодавця недостатньо коштів для гарантування оплати!');
+      return;
+    }
+
+    setShifts(prev =>
+      prev.map(s => (s.id === shiftId ? { ...s, status: 'in_progress' as const } : s))
+    );
+    
+    // Freeze the payment amount
+    setEmployerBalance(prev => prev - shift.price);
+    setEmployerFrozenBalance(prev => prev + shift.price);
+    
+    setShowScannerModal(null);
+    triggerToast('Зміну розпочато! 🔐 Кошти для оплати успішно заблоковано на сейфі.');
+  };
+
+  const handleCheckoutShift = (shiftId: string) => {
+    setShifts(prev =>
+      prev.map(s => (s.id === shiftId ? { ...s, status: 'pending_approval' as const } : s))
+    );
+    triggerToast('Чек-аут виконано! Роботодавець отримав запит на виплату. 💰');
   };
 
   // --- ACTIONS ---
@@ -290,16 +370,11 @@ export default function OneClickApp() {
 
   // B2B: Approve and Complete Shift
   const handleApproveShift = (shiftId: string, price: number, roleName: string, companyName: string) => {
-    if (employerBalance < price) {
-      triggerToast('Недостатньо коштів на рахунку підприємства!');
-      return;
-    }
-
     setShifts(prev =>
       prev.map(s => s.id === shiftId ? { ...s, status: 'completed' as const } : s)
     );
 
-    setEmployerBalance(prev => prev - price);
+    setEmployerFrozenBalance(prev => Math.max(0, prev - price));
     setBalance(prev => prev + price);
 
     setTransactions(prev => [
@@ -313,7 +388,7 @@ export default function OneClickApp() {
       },
       ...prev
     ]);
-    triggerToast(`Зміну підтверджено. Виплачено ${price} ₴`);
+    triggerToast(`Зміну підтверджено. Заморожені кошти (${price} ₴) успішно виплачено виконавцю! 🔐💸`);
   };
 
   // Real-time synchronization state
@@ -478,9 +553,9 @@ export default function OneClickApp() {
 
         {/* LIQUID GLASS: Background animated blobs floating behind everything */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-12 -left-12 w-52 h-52 rounded-full bg-[#FF5722]/15 dark:bg-[#FF5722]/12 blur-[60px] animate-blob"></div>
-          <div className="absolute top-[320px] -right-16 w-64 h-64 rounded-full bg-blue-500/18 dark:bg-blue-600/12 blur-[70px] animate-blob animation-delay-2000"></div>
-          <div className="absolute bottom-12 -left-16 w-52 h-52 rounded-full bg-purple-500/15 dark:bg-purple-600/10 blur-[60px] animate-blob animation-delay-4000"></div>
+          <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-[#FF5722]/22 dark:bg-[#FF5722]/18 blur-[50px] animate-blob"></div>
+          <div className="absolute top-[280px] -right-16 w-72 h-72 rounded-full bg-blue-500/24 dark:bg-blue-600/16 blur-[55px] animate-blob animation-delay-2000"></div>
+          <div className="absolute bottom-12 -left-16 w-64 h-64 rounded-full bg-purple-500/22 dark:bg-purple-600/16 blur-[50px] animate-blob animation-delay-4000"></div>
         </div>
 
         {/* Toast notifications */}
@@ -641,9 +716,16 @@ export default function OneClickApp() {
                           key={s.id}
                           onClick={() => setSelectedShift(s)}
                           className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group backdrop-blur-[24px] ${theme === 'light'
-                            ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)] hover:-translate-y-0.5'
-                            : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)] hover:-translate-y-0.5'
-                            } ${s.isHot ? 'bg-gradient-to-br from-white/40 to-[#FF9500]/6 border-[#FF9500]/30' : ''}`}
+                              ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5'
+                              : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5'
+                            } ${s.isHot
+                              ? theme === 'light'
+                                ? 'shadow-[0_8px_30px_rgba(255,149,0,0.22)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.35)]'
+                                : 'shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.55)]'
+                              : theme === 'light'
+                                ? 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)]'
+                                : 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)]'
+                            }`}
                         >
                           <div className="flex justify-between items-start gap-2 relative z-10">
                             <div className="flex gap-3">
@@ -942,30 +1024,37 @@ export default function OneClickApp() {
                   <div className="space-y-4">
                     {shifts.filter(s => {
                       const isMatchSubTab = myShiftsSubTab === 'active'
-                        ? s.status === 'booked'
+                        ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval')
                         : s.status === 'completed';
                       return isMatchSubTab;
                     }).length > 0 ? (
                       shifts.filter(s => {
                         const isMatchSubTab = myShiftsSubTab === 'active'
-                          ? s.status === 'booked'
+                          ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval')
                           : s.status === 'completed';
                         return isMatchSubTab;
-                      }).map((s) => (
+                      }).map((s) => {
+                        const isFuture = parseInt(s.date) > 14;
+                        return (
                         <div
                           key={s.id}
                           className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                            ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                            ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
+                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
                             } relative overflow-hidden animate-fade-in`}
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider border ${s.status === 'completed'
-                                ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/20'
-                                : 'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/20'
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider border ${
+                                s.status === 'completed' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/20' :
+                                s.status === 'in_progress' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                s.status === 'pending_approval' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/20'
                                 }`}>
-                                {s.status === 'completed' ? 'Виплачено' : 'Очікує'}
+                                {s.status === 'completed' && 'Виплачено'}
+                                {s.status === 'booked' && 'Заброньовано'}
+                                {s.status === 'in_progress' && 'Працюю'}
+                                {s.status === 'pending_approval' && 'На підтвердженні'}
                               </span>
                               <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
                                 }`}>{s.role}</h4>
@@ -989,15 +1078,115 @@ export default function OneClickApp() {
                             </div>
                           </div>
 
+                          {s.status === 'completed' && (
+                            <div className={`mt-3 pt-3 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                              {s.allowFeedback === false ? (
+                                <div className="text-[10px] font-semibold text-gray-400 italic">
+                                  Для цієї компанії відгуки вимкнено роботодавцем
+                                </div>
+                              ) : s.hasFeedback ? (
+                                <div className="flex items-center gap-1.5 text-[#10B981] text-[11px] font-black uppercase tracking-wider bg-[#10B981]/8 px-2.5 py-1.5 rounded-xl border border-[#10B981]/20 w-fit">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Відгук надіслано</span>
+                                </div>
+                              ) : activeFeedbackShiftId === s.id ? (
+                                <div className="space-y-3 mt-1">
+                                  <p className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
+                                  <div className="flex gap-1.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setFeedbackRating(star)}
+                                        className="focus:outline-none transition-transform active:scale-125"
+                                      >
+                                        <Star
+                                          className={`w-5 h-5 ${star <= feedbackRating
+                                              ? 'text-[#FF9500] fill-[#FF9500]'
+                                              : theme === 'light' ? 'text-gray-300' : 'text-gray-600'
+                                            }`}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div>
+                                    <textarea
+                                      rows={2}
+                                      value={feedbackComment}
+                                      onChange={(e) => setFeedbackComment(e.target.value)}
+                                      placeholder="Поділіться враженнями від зміни (умови, команда, оплата)..."
+                                      className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                                          ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
+                                          : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
+                                        }`}
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleSubmitFeedback(s.id)}
+                                      className="flex-1 bg-[#FF5722] hover:bg-[#e64a19] text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-sm"
+                                    >
+                                      Надіслати
+                                    </button>
+                                    <button
+                                      onClick={() => setActiveFeedbackShiftId(null)}
+                                      className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${theme === 'light'
+                                          ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
+                                          : 'bg-white/5 hover:bg-white/10 text-white'
+                                        }`}
+                                    >
+                                      Скасувати
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setActiveFeedbackShiftId(s.id);
+                                    setFeedbackRating(5);
+                                    setFeedbackComment('');
+                                  }}
+                                  className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${theme === 'light'
+                                      ? 'border-[#FF5722]/30 text-[#FF5722] hover:bg-[#FF5722]/5'
+                                      : 'border-[#FF5722]/40 text-[#FF5722] hover:bg-[#FF5722]/10'
+                                    }`}
+                                >
+                                  <Star className="w-3.5 h-3.5 fill-[#FF5722]/10" />
+                                  Залишити відгук про роботу
+                                </button>
+                              )}
+                            </div>
+                          )}
+
                           {s.status === 'booked' && (
                             <div className="mt-3.5 space-y-2">
-                              <button
-                                onClick={() => setShowQRModal(s.id)}
-                                className="w-full bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                              >
-                                <QrCode className="w-4 h-4" />
-                                Почати зміну (Чек-ін)
-                              </button>
+                              {isFuture ? (
+                                <>
+                                  <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 ${
+                                    theme === 'light'
+                                      ? 'bg-amber-50 border-amber-200 text-amber-855'
+                                      : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                                  }`}>
+                                    <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                    <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} червня).</span>
+                                  </div>
+                                  <button
+                                    onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} червня.`)}
+                                    className="w-full bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
+                                  >
+                                    <Camera className="w-4 h-4" />
+                                    Відсканувати QR закладу
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => setShowScannerModal(s.id)}
+                                  className="w-full bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all hover:scale-[1.01]"
+                                >
+                                  <Camera className="w-4 h-4" />
+                                  Відсканувати QR закладу
+                                </button>
+                              )}
                               <button
                                 onClick={() => setShowCancelModal(s.id)}
                                 className="w-full border border-red-500/35 hover:border-red-500/50 bg-red-500/5 text-red-500 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 transition-all"
@@ -1006,8 +1195,42 @@ export default function OneClickApp() {
                               </button>
                             </div>
                           )}
+
+                          {s.status === 'in_progress' && (
+                            <div className="mt-3.5 space-y-2">
+                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 animate-pulse ${
+                                theme === 'light'
+                                  ? 'bg-green-50 border-green-200 text-green-800'
+                                  : 'bg-green-500/10 border-green-500/20 text-green-300'
+                              }`}>
+                                <Clock className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                <span>Зміна триває. Не забудьте зробити Чек-аут після завершення роботи!</span>
+                              </div>
+                              <button
+                                onClick={() => setShowReportModalId(s.id)}
+                                className="w-full bg-gradient-to-br from-[#10B981] to-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Завершити зміну (Чек-аут)
+                              </button>
+                            </div>
+                          )}
+
+                          {s.status === 'pending_approval' && (
+                            <div className="mt-3.5">
+                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold ${
+                                theme === 'light'
+                                  ? 'bg-blue-50 border-blue-200 text-blue-800'
+                                  : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                              }`}>
+                                <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                <span>Зміну завершено. Очікується підтвердження та виплата від роботодавця.</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ))
+                      );
+                    })
                     ) : (
                       <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
                         }`}>
@@ -1169,9 +1392,12 @@ export default function OneClickApp() {
 
                         <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Олексій Коваленко</h2>
 
-                        <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 my-2">
-                          <span className="bg-[#001B3D] text-[#FF5722] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
-                          <span className="text-[10px] font-bold text-blue-800">Верифіковано через Дію</span>
+                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                          ? 'bg-blue-50 border-blue-100 text-blue-800'
+                          : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                          }`}>
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
+                          <span className="text-[10px] font-bold">Верифіковано через Дію</span>
                         </div>
 
                         <div className="flex items-center gap-1 bg-[#FF9500]/10 px-3 py-1 rounded-xl mt-1">
@@ -1192,7 +1418,7 @@ export default function OneClickApp() {
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}>
                               <User className="w-4 h-4" />
                             </div>
                             <div>
@@ -1209,7 +1435,7 @@ export default function OneClickApp() {
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-[#FF5722]">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-orange-50 text-[#FF5722]' : 'bg-[#FF5722]/10 text-[#FF5722]'}`}>
                               <FileText className="w-4 h-4" />
                             </div>
                             <div>
@@ -1226,7 +1452,7 @@ export default function OneClickApp() {
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-purple-50 text-purple-600' : 'bg-purple-500/10 text-purple-400'}`}>
                               <HelpCircle className="w-4 h-4" />
                             </div>
                             <div>
@@ -1243,7 +1469,7 @@ export default function OneClickApp() {
                             }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-red-50 text-red-500' : 'bg-red-500/10 text-red-400'}`}>
                               <Settings className="w-4 h-4" />
                             </div>
                             <div>
@@ -1487,9 +1713,16 @@ export default function OneClickApp() {
                       <p className={`text-[10px] uppercase font-bold ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Депозит підприємства</p>
                       <h4 className={`text-xl font-black mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{employerBalance.toLocaleString()} ₴</h4>
                     </div>
-                    <span className="text-[9px] font-black uppercase bg-[#10B981]/8 text-[#10B981] px-2 py-1 rounded border border-[#10B981]/25">
-                      АКТИВНИЙ
-                    </span>
+                    {employerFrozenBalance > 0 ? (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase font-black text-amber-500">Заморожено (Сейф)</p>
+                        <h4 className="text-sm font-black mt-0.5 text-amber-500">{employerFrozenBalance.toLocaleString()} ₴</h4>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase bg-[#10B981]/8 text-[#10B981] px-2 py-1 rounded border border-[#10B981]/25">
+                        АКТИВНИЙ
+                      </span>
+                    )}
                   </div>
 
                   <h3 className={`text-xs font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
@@ -1500,8 +1733,8 @@ export default function OneClickApp() {
                       <div
                         key={s.id}
                         className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                          ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                          : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                          ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
+                          : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
                           } animate-fade-in`}
                       >
                         <div className="flex justify-between items-start">
@@ -1535,19 +1768,78 @@ export default function OneClickApp() {
                         </div>
 
                         {/* Approve Payout trigger */}
-                        {s.status === 'booked' && (
-                          <div className="mt-4 pt-3.5 border-t border-gray-100 flex flex-col gap-2">
-                            <div className="bg-[#fff9e6] border border-[#ffe082] rounded-2xl p-3 flex items-start gap-2 text-[10px] text-[#856404] font-bold">
-                              <Info className="w-4 h-4 text-[#FF9500] shrink-0 mt-0.5" />
-                              <span>Виконавець прибув на зміну та закінчив її. Перевірте та схваліть виплату.</span>
+                        {(s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval') && (
+                          <div className={`mt-4 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} flex flex-col gap-2`}>
+                            <div className={`rounded-2xl p-3 flex items-start gap-2 text-[10px] font-bold ${
+                              s.status === 'pending_approval'
+                                ? 'bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400'
+                                : 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
+                            }`}>
+                              <Info className={`w-4 h-4 shrink-0 mt-0.5 ${s.status === 'pending_approval' ? 'text-green-500' : 'text-[#FF9500]'}`} />
+                              <span>
+                                {s.status === 'booked' && 'Виконавець забронював зміну, але ще не розпочав роботу.'}
+                                {s.status === 'in_progress' && 'Виконавець зараз працює на зміні.'}
+                                {s.status === 'pending_approval' && 'Виконавець завершив зміну (Чек-аут) та очікує перевірки й виплати!'}
+                              </span>
                             </div>
-                            <button
-                              onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
-                              className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              Підтвердити виконання та сплатити
-                            </button>
+                            
+                            {s.status === 'booked' && (
+                              <button
+                                onClick={() => setShowB2BQRModalId(s.id)}
+                                className={`w-full py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all ${
+                                  theme === 'light'
+                                    ? 'border-[#001B3D]/30 text-[#001B3D] hover:bg-gray-50'
+                                    : 'border-white/20 text-white hover:bg-white/5'
+                                }`}
+                              >
+                                <QrCode className="w-4 h-4" />
+                                Показати QR-код закладу
+                              </button>
+                            )}
+
+                            {s.status === 'pending_approval' && s.workPhoto && (
+                              <div className="my-1 space-y-2 text-left">
+                                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Надісланий фотозвіт роботи:</p>
+                                <div className={`rounded-2xl border p-3 flex flex-col gap-2 ${theme === 'light' ? 'bg-[#fcf9f8] border-gray-150' : 'bg-[#121829]/50 border-white/5'}`}>
+                                  <div className="relative w-full h-36 rounded-xl overflow-hidden bg-black">
+                                    <img src={s.workPhoto} alt="Work Report Proof" className="w-full h-full object-cover" />
+                                  </div>
+                                  {s.workComment && (
+                                    <p className={`text-xs italic font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                      &ldquo;{s.workComment}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {s.status === 'pending_approval' && (
+                              <button
+                                onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
+                                className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Підтвердити виконання та сплатити
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {s.status === 'completed' && s.reviews && s.reviews.some(r => r.workerName === 'Олексій К.') && (
+                          <div className={`mt-3.5 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} space-y-2`}>
+                            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Відгук виконавця:</p>
+                            {s.reviews.filter(r => r.workerName === 'Олексій К.').map((rev) => (
+                              <div key={rev.id} className={`rounded-xl p-3 text-xs font-semibold ${theme === 'light' ? 'bg-[#fcf9f8]' : 'bg-[#121829]/50'}`}>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rev.workerName}</span>
+                                  <div className="flex items-center gap-0.5 text-[#FF9500]">
+                                    <Star className="w-3.5 h-3.5 fill-[#FF9500]" />
+                                    <span className="text-[11px] font-black">{rev.rating}</span>
+                                  </div>
+                                </div>
+                                <p className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>{rev.comment}</p>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -1816,6 +2108,211 @@ export default function OneClickApp() {
           </div>
         </div>
       )}
+
+      {/* --- MOCK QR SCANNER MODAL FOR WORKER --- */}
+      {showScannerModal && (() => {
+        const targetShift = shifts.find(s => s.id === showScannerModal);
+        return (
+          <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
+            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/90 border-[#E5E7EB]' : 'bg-[#1c2541]/80 border-white/10'
+              }`}>
+              <div className="w-16 h-16 bg-[#FF5722]/10 rounded-full flex items-center justify-center mb-5">
+                <Camera className="w-8 h-8 text-[#FF5722]" />
+              </div>
+              <h3 className={`text-xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Сканування QR закладу</h3>
+              <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                Наведіть камеру на QR-код, який надасть менеджер у закладі <span className="text-[#FF5722] font-black">{targetShift?.company}</span>.
+              </p>
+
+              {/* Simulated Viewfinder */}
+              <div className="relative w-48 h-48 rounded-3xl overflow-hidden mb-6 border-2 border-[#FF5722]/35 bg-black">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#FF5722]/10 pointer-events-none" />
+                <div className="absolute left-0 right-0 h-1 bg-[#FF5722] shadow-[0_0_8px_#FF5722] animate-bounce top-1/2" />
+                <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-white" />
+                <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-white" />
+                <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-white" />
+                <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-white" />
+                <QrCode className="w-24 h-24 text-white/15 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+
+              <div className="space-y-2 w-full">
+                <button
+                  onClick={() => targetShift && handleSimulateScan(targetShift.id)}
+                  className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Симулювати зчитування QR
+                </button>
+                <button
+                  onClick={() => setShowScannerModal(null)}
+                  className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all ${
+                    theme === 'light'
+                      ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
+                      : 'bg-white/5 hover:bg-white/10 text-white'
+                  }`}
+                >
+                  Скасувати
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* --- B2B VENUE QR CODE POPUP --- */}
+      {showB2BQRModalId && (() => {
+        const targetShift = shifts.find(s => s.id === showB2BQRModalId);
+        return (
+          <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
+            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/90 border-[#E5E7EB]' : 'bg-[#1c2541]/80 border-white/10'
+              }`}>
+              <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
+                <QrCode className="w-10 h-10 text-blue-500" />
+              </div>
+              <h3 className={`text-xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>QR-код закладу</h3>
+              <p className={`text-xs font-semibold leading-normal mb-8 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                Попросіть виконавця відсканувати цей QR-код через додаток <span className="font-bold text-[#FF5722]">OneClick</span> для початку зміни в <span className="font-bold">{targetShift?.company}</span>.
+              </p>
+              
+              {/* Employer Venue Check-in QR */}
+              <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed ${theme === 'light' ? 'bg-[#fcf9f8]/90 border-[#E5E7EB]' : 'bg-[#121829]/60 border-white/10'
+                }`}>
+                <svg className={`w-48 h-48 ${theme === 'light' ? 'text-blue-900' : 'text-blue-400'}`} viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2z"></path>
+                </svg>
+              </div>
+
+              <button
+                onClick={() => setShowB2BQRModalId(null)}
+                className={`w-full py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all shadow-md ${theme === 'light' ? 'bg-[#001B3D] text-white hover:bg-[#001430]' : 'bg-[#FF5722] text-white hover:bg-[#e64a19]'
+                  }`}
+              >
+                Закрити
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* --- B2C WORK REPORT & PHOTO CAPTURE MODAL --- */}
+      {showReportModalId && (() => {
+        const targetShift = shifts.find(s => s.id === showReportModalId);
+        
+        // select a mock photo based on shift category
+        const getMockPhoto = (cat?: string) => {
+          if (cat === 'Кава') return 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=80';
+          if (cat === 'Склади') return 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=500&q=80';
+          return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80'; // Retail
+        };
+
+        const handleSnapPhoto = () => {
+          setIsTakingPhoto(true);
+          setTimeout(() => {
+            setCapturedPhoto(getMockPhoto(targetShift?.category));
+            setIsTakingPhoto(false);
+            triggerToast('Фото успішно додано до звіту! 📸');
+          }, 1200); // simulate camera snap delay
+        };
+
+        const handleSendReport = () => {
+          if (!capturedPhoto) {
+            triggerToast('Будь ласка, додайте фото виконаної роботи!');
+            return;
+          }
+          setShifts(prev =>
+            prev.map(s =>
+              s.id === showReportModalId
+                ? {
+                    ...s,
+                    status: 'pending_approval' as const,
+                    workPhoto: capturedPhoto,
+                    workComment: reportComment.trim() || 'Роботу виконано успішно та вчасно.'
+                  }
+                : s
+            )
+          );
+          setShowReportModalId(null);
+          setCapturedPhoto(null);
+          setReportComment('');
+          triggerToast('Звіт надіслано! Очікуйте виплати від роботодавця. 💰');
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
+            <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white/95 border-[#E5E7EB]' : 'bg-[#1c2541]/90 border-white/10'
+              }`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-sm font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Звіт про виконану роботу</h3>
+                <button
+                  onClick={() => {
+                    setShowReportModalId(null);
+                    setCapturedPhoto(null);
+                    setReportComment('');
+                  }}
+                  className={`text-xs font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}
+                >
+                  Закрити
+                </button>
+              </div>
+
+              {/* Photo Snapper Simulation */}
+              <div className="relative w-full h-44 rounded-2xl overflow-hidden mb-4 border bg-black flex flex-col items-center justify-center">
+                {capturedPhoto ? (
+                  <>
+                    <img src={capturedPhoto} alt="Work Proof" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setCapturedPhoto(null)}
+                      className="absolute bottom-2 right-2 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl transition-all shadow-md"
+                    >
+                      Перезняти
+                    </button>
+                  </>
+                ) : isTakingPhoto ? (
+                  <div className="flex flex-col items-center gap-2 text-white">
+                    <div className="w-8 h-8 border-4 border-t-transparent border-white rounded-full animate-spin" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Робимо знімок...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center p-4 text-center">
+                    <Camera className="w-10 h-10 text-gray-500 mb-2" />
+                    <p className="text-[11px] text-gray-400 font-semibold mb-3">Зробіть фото-підтвердження виконаної роботи у закладі</p>
+                    <button
+                      onClick={handleSnapPhoto}
+                      className="bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      Зробити фото роботи
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Report Comment Input */}
+              <div className="text-left space-y-1 mb-4">
+                <label className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Коментар до звіту (необов'язково):</label>
+                <textarea
+                  rows={2}
+                  value={reportComment}
+                  onChange={(e) => setReportComment(e.target.value)}
+                  placeholder="Наприклад: роботу завершено, все прибрано, полиці заповнені..."
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                      ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
+                    }`}
+                />
+              </div>
+
+              <button
+                onClick={handleSendReport}
+                className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Надіслати звіт та Чек-аут
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* --- CANCELLATION MODAL POPUP --- */}
       {showCancelModal && (
