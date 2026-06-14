@@ -1,0 +1,999 @@
+<!DOCTYPE html><html class="light" lang="uk" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "on-surface": "#1c1b1b",
+                        "inverse-surface": "#313030",
+                        "on-secondary-fixed-variant": "#31476b",
+                        "surface-container": "#f0edec",
+                        "oneclick-orange": "#FF5722",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#445a7f",
+                        "secondary-container": "#bcd2fe",
+                        "border-subtle": "#E5E7EB",
+                        "background": "#fcf9f8",
+                        "on-surface-variant": "#5b4039",
+                        "primary": "#b02f00",
+                        "surface-variant": "#e5e2e1",
+                        "outline": "#907067",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "bg-muted": "#F5F5F7",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-secondary-fixed": "#001b3d",
+                        "on-primary-container": "#541200",
+                        "on-tertiary-fixed": "#001e2e",
+                        "surface-container-high": "#ebe7e7",
+                        "inverse-on-surface": "#f3f0ef",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-container-highest": "#e5e2e1",
+                        "tertiary-container": "#007caf",
+                        "on-primary-fixed": "#3b0900",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "oneclick-navy": "#001B3D",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#ffdbd1",
+                        "on-secondary": "#ffffff",
+                        "surface": "#fcf9f8",
+                        "secondary-fixed": "#d6e3ff",
+                        "warning-amber": "#FF9500",
+                        "surface-dim": "#dcd9d9",
+                        "on-primary-fixed-variant": "#862200",
+                        "surface-bright": "#fcf9f8",
+                        "inverse-primary": "#ffb5a0",
+                        "on-background": "#1c1b1b",
+                        "success-green": "#10B981",
+                        "outline-variant": "#e4beb4",
+                        "surface-container-low": "#f6f3f2",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "primary-container": "#ff5722",
+                        "secondary": "#495f84",
+                        "secondary-fixed-dim": "#b1c7f2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max-width": "1280px",
+                        "stack-md": "16px",
+                        "mobile-max-width": "450px",
+                        "card-padding": "20px",
+                        "stack-sm": "8px",
+                        "base": "4px",
+                        "stack-lg": "24px",
+                        "gutter-mobile": "20px",
+                        "gutter-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Inter"],
+                        "caption": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "shift-price": ["Inter"],
+                        "body-main": ["Inter"],
+                        "body-muted": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "nav-label": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["14px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "caption": ["12px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "800" }],
+                        "shift-price": ["24px", { "lineHeight": "1.1", "fontWeight": "900" }],
+                        "body-main": ["16px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "body-muted": ["14px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "headline-md": ["20px", { "lineHeight": "1.4", "fontWeight": "700" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "nav-label": ["11px", { "lineHeight": "1", "fontWeight": "700" }]
+                    },
+                    boxShadow: {
+                        'premium': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'premium-glow': '0 8px 30px rgba(255, 87, 34, 0.25)',
+                        'card': '0 4px 14px 0_rgba(255,87,34,0.39)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100dvh;
+            background-color: #fcf9f8;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .page { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .premium-card { transition: all 0.2s ease; border-radius: 1.25rem; }
+        .premium-card:active { transform: scale(0.98); }
+
+        .date-tab.active {
+            background: linear-gradient(135deg, #FF5722 0%, #e64a19 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.25);
+            border-color: transparent;
+        }
+        
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: #1c1b1b;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .orange-glow {
+            box-shadow: 0 10px 15px -3px rgba(255, 87, 34, 0.3), 0 4px 6px -2px rgba(255, 87, 34, 0.1);
+        }
+    </style>
+</head>
+<body class="text-on-surface min-h-screen flex flex-col pb-[100px] antialiased bg-gray-50">
+<header class="bg-surface-container-lowest flex justify-between items-center w-full px-gutter-mobile h-16 border-b border-border-subtle sticky top-0 z-40 md:hidden"><h1 class="text-headline-md font-headline-md font-extrabold text-oneclick-navy">Пошук</h1><div class="flex gap-4"><span class="material-symbols-outlined text-secondary cursor-pointer">notifications</span><span class="material-symbols-outlined text-secondary cursor-pointer">settings</span></div></header>
+<main class="flex-1 w-full mx-auto relative md:px-gutter-desktop">
+<!-- PAGE 1: SEARCH (MAIN FEED) -->
+<div class="page active" id="page-search">
+<div class="px-gutter-mobile pt-stack-md flex gap-2">
+<div class="bg-white rounded-full shadow-sm border border-border-subtle flex items-center px-4 py-3 gap-3 cursor-text text-on-surface-variant flex-1" id="search-trigger">
+<span class="material-symbols-outlined">search</span>
+<span class="font-body-main flex-1 truncate" id="search-display-text">Пошук професії чи компанії...</span>
+<span class="material-symbols-outlined bg-surface-container-high rounded-full p-1 text-sm">tune</span>
+</div>
+<button class="bg-surface-container-high rounded-full w-12 h-12 flex items-center justify-center text-oneclick-navy shadow-sm border border-border-subtle transition-all active:scale-95" id="view-toggle" onclick="document.getElementById('map-view-overlay').classList.remove('hidden')">
+<span class="material-symbols-outlined">map</span>
+</button>
+</div>
+<div id="list-view-container">
+<!-- Functional Date Selector -->
+<section class="py-stack-md overflow-x-auto no-scrollbar flex px-gutter-mobile gap-3" id="date-selector">
+<div class="flex flex-col items-center justify-center min-w-[68px] h-[84px] rounded-2xl border border-border-subtle text-on-surface-variant cursor-pointer transition-all date-tab active" data-date="15">
+<span class="text-caption font-caption opacity-90 mb-1">Пн</span>
+<span class="text-headline-md font-headline-md">15</span>
+</div>
+<div class="flex flex-col items-center justify-center min-w-[68px] h-[84px] rounded-2xl bg-white border border-border-subtle text-on-surface-variant cursor-pointer transition-all date-tab" data-date="16">
+<span class="text-caption font-caption opacity-70 mb-1">Вт</span>
+<span class="text-headline-md font-headline-md text-oneclick-navy">16</span>
+</div>
+<div class="flex flex-col items-center justify-center min-w-[68px] h-[84px] rounded-2xl bg-white border border-border-subtle text-on-surface-variant cursor-pointer transition-all date-tab" data-date="17">
+<span class="text-caption font-caption opacity-70 mb-1">Ср</span>
+<span class="text-headline-md font-headline-md text-oneclick-navy">17</span>
+</div>
+<div class="flex flex-col items-center justify-center min-w-[68px] h-[84px] rounded-2xl bg-white border border-border-subtle text-on-surface-variant cursor-pointer transition-all date-tab" data-date="18">
+<span class="text-caption font-caption opacity-70 mb-1">Чт</span>
+<span class="text-headline-md font-headline-md text-oneclick-navy">18</span>
+</div>
+<div class="flex flex-col items-center justify-center min-w-[68px] h-[84px] rounded-2xl bg-white border border-border-subtle text-on-surface-variant cursor-pointer transition-all date-tab" data-date="19">
+<span class="text-caption font-caption opacity-70 mb-1">Пт</span>
+<span class="text-headline-md font-headline-md text-oneclick-navy">19</span>
+</div>
+</section>
+<!-- Filter Chips -->
+<section class="pb-stack-md overflow-x-auto no-scrollbar flex px-gutter-mobile gap-2">
+<button class="filter-chip bg-oneclick-navy text-white px-5 py-2.5 rounded-full text-label-bold">Всі</button>
+<button class="filter-chip bg-white border border-border-subtle text-on-surface px-5 py-2.5 rounded-full text-label-bold whitespace-nowrap">Склади</button>
+<button class="filter-chip bg-white border border-border-subtle text-on-surface px-5 py-2.5 rounded-full text-label-bold whitespace-nowrap">Рітейл</button>
+<button class="filter-chip bg-white border border-border-subtle text-on-surface px-5 py-2.5 rounded-full text-label-bold whitespace-nowrap">Кафе</button>
+<button class="filter-chip bg-white border border-border-subtle text-on-surface px-5 py-2.5 rounded-full text-label-bold whitespace-nowrap">Кур'єр</button>
+</section>
+<!-- Shift Feed -->
+<section class="px-gutter-mobile space-y-stack-md pb-stack-lg" id="job-list"><div class="job-card rounded-2xl p-5 premium-card shadow-md border border-border-subtle/30 transition-all bg-gradient-to-b from-white to-warning-amber/5 border-warning-amber/20 shadow-premium-glow">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden">
+                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9H07DGUXMt4VT-QujkNlIgnXMXVzQr5RDH-Vz28DAp2tNCMva4tQUD9tAxIUjnXrv0F1EHQdKJAzYz8gbeGJF51RcHflgN7OWv4XYFNpD8UqET251mrSL15Ot7iyuwE_S_CYGRbK3c0WdgnwmQbXqtVBg7UtAXg72uoknC5ZZTwi5wngFvKPcR1Q9nwuvPgkURjLvkaRojW_rF710OMBy4BZgb_WeKRUM57vsbO1cg9h9pk3CrE10CfCUgMKK2Qn5eLIJKDUWiDw" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <span class="bg-warning-amber text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 w-fit mb-1">HOT</span>
+                            <h3 class="text-lg font-bold text-oneclick-navy leading-tight">Комплектувальник</h3>
+                            <p class="text-sm text-secondary font-medium">Rozetka • 2.4 км</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-shift-price text-oneclick-orange">1 800 ₴</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant opacity-70">за зміну</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-t border-border-subtle/20">
+                    <div class="flex items-center gap-1.5 text-body-muted text-oneclick-navy">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+                        <span class="">08:00 — 20:00</span>
+                    </div>
+                </div>
+                <button class="w-full bg-oneclick-orange text-white py-3 rounded-xl font-label-bold text-label-bold active:scale-95 transition-transform">Відгукнутися</button>
+            </div><div class="job-card rounded-2xl p-5 premium-card shadow-md border border-border-subtle/30 transition-all bg-white">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden">
+                            <span class="material-symbols-outlined text-oneclick-navy">coffee</span>
+                        </div>
+                        <div>
+                            
+                            <h3 class="text-lg font-bold text-oneclick-navy leading-tight">Бариста</h3>
+                            <p class="text-sm text-secondary font-medium">Aroma Kava • 1.5 км</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-shift-price text-oneclick-navy">950 ₴</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant opacity-70">за зміну</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-t border-border-subtle/20">
+                    <div class="flex items-center gap-1.5 text-body-muted text-oneclick-navy">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+                        <span class="">09:00 — 21:00</span>
+                    </div>
+                </div>
+                <button class="w-full bg-oneclick-orange text-white py-3 rounded-xl font-label-bold text-label-bold active:scale-95 transition-transform">Відгукнутися</button>
+            </div><div class="job-card rounded-2xl p-5 premium-card shadow-md border border-border-subtle/30 transition-all bg-gradient-to-b from-white to-warning-amber/5 border-warning-amber/20 shadow-premium-glow">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden">
+                            <span class="material-symbols-outlined text-oneclick-navy">delivery_dining</span>
+                        </div>
+                        <div>
+                            <span class="bg-warning-amber text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 w-fit mb-1">HOT</span>
+                            <h3 class="text-lg font-bold text-oneclick-navy leading-tight">Кур'єр</h3>
+                            <p class="text-sm text-secondary font-medium">Glovo • 3.1 км</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-shift-price text-oneclick-orange">1 500 ₴</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant opacity-70">за зміну</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-t border-border-subtle/20">
+                    <div class="flex items-center gap-1.5 text-body-muted text-oneclick-navy">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+                        <span class="">12:00 — 22:00</span>
+                    </div>
+                </div>
+                <button class="w-full bg-oneclick-orange text-white py-3 rounded-xl font-label-bold text-label-bold active:scale-95 transition-transform">Відгукнутися</button>
+            </div><div class="job-card rounded-2xl p-5 premium-card shadow-md border border-border-subtle/30 transition-all bg-white">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden">
+                            <span class="material-symbols-outlined text-oneclick-navy">package_2</span>
+                        </div>
+                        <div>
+                            
+                            <h3 class="text-lg font-bold text-oneclick-navy leading-tight">Вантажник</h3>
+                            <p class="text-sm text-secondary font-medium">Нова Пошта • 5.0 км</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-shift-price text-oneclick-navy">1 100 ₴</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant opacity-70">за зміну</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-t border-border-subtle/20">
+                    <div class="flex items-center gap-1.5 text-body-muted text-oneclick-navy">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+                        <span class="">18:00 — 02:00</span>
+                    </div>
+                </div>
+                <button class="w-full bg-oneclick-orange text-white py-3 rounded-xl font-label-bold text-label-bold active:scale-95 transition-transform">Відгукнутися</button>
+            </div></section>
+</div>
+</div>
+<!-- PAGE 2: MY SHIFTS -->
+<div class="page pt-stack-md pb-stack-lg" id="page-jobs">
+<div class="px-gutter-mobile">
+<h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Мої зміни</h2>
+<!-- Active/History Toggle -->
+<div class="flex p-1 bg-surface-container-highest rounded-xl mb-8">
+<button class="tab-btn flex-1 py-2 text-center rounded-lg font-label-bold text-label-bold transition-all active" data-tab="active-shifts">
+                Активні
+            </button>
+<button class="tab-btn flex-1 py-2 text-center rounded-lg text-on-surface-variant font-label-bold text-label-bold hover:bg-surface-container-low transition-all" data-tab="history-shifts">
+                Історія
+            </button>
+</div>
+<div class="space-y-stack-md" id="active-shifts">
+<article class="bg-white rounded-2xl shadow-md p-5 flex flex-col gap-3 relative border border-border-subtle/50 overflow-hidden shadow-[0_4px_14px_0_rgba(255,87,34,0.3)]">
+<div class="flex justify-between items-start">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 bg-surface-container-high rounded-full overflow-hidden flex items-center justify-center border border-border-subtle">
+<img alt="Company Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB__dy1QAZVvdBozcfWEey4SqCTBQQvjqdbM0S_qrDEsFrtnsBpVEtosv-72QOwFtnhoJHtpHxOsmifCDJTkYFqSgoaEpyUg7G6UfMn66PiydipVrKpOdIhC0tDZ3TdK7zVLuKbhMLWTJ2f6qkDwiFS5aBO9mq_wnQfGvLqNqVvn2PzHYbQ2bNRdRSL7IQ9FH5_qVJJuIh16u-Tmyz-DjxjmQrH-2OWC74_8wsHGzp1h6R4jZ1CS5lSAFnuk9CoU38Uu5YJQMLG9v8">
+</div>
+<div>
+<h2 class="font-label-bold text-label-bold text-oneclick-navy">Комплектувальник</h2>
+<p class="font-body-muted text-body-muted text-secondary flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">storefront</span> Нова Пошта
+</p>
+</div>
+</div>
+<div class="bg-warning-amber/10 text-warning-amber font-caption text-caption px-2 py-1 rounded-md flex items-center gap-1 border border-warning-amber/20">
+<span class="material-symbols-outlined text-[12px]">schedule</span> Очікує
+</div>
+</div>
+<div class="h-px w-full bg-border-subtle/30"></div>
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3 text-on-surface mb-1">
+<span class="material-symbols-outlined text-oneclick-orange text-[20px] mt-1">calendar_month</span>
+<div>
+<p class="font-body-main font-bold text-oneclick-navy leading-relaxed">Сьогодні, 14 Жовтня</p>
+<p class="text-body-muted text-secondary">18:00 - 02:00 (8 год)</p>
+</div>
+</div>
+<div class="flex items-start gap-3 text-on-surface">
+<span class="material-symbols-outlined text-oneclick-orange text-[20px] mt-1">location_on</span>
+<div class="flex flex-col">
+<p class="text-body-muted text-secondary">Київ, вул. Маршала Малиновського, 12</p>
+<span class="text-[12px] text-tertiary font-bold">Термінал 2</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-border-subtle/30">
+<div class="font-shift-price text-oneclick-navy">₴1,200 <span class="text-body-muted font-normal text-secondary">/ зміна</span></div>
+</div>
+<div class="flex gap-3 mt-1">
+<button class="flex-1 py-3 rounded-xl font-label-bold text-oneclick-navy bg-surface-container border border-border-subtle/50 active:scale-95 transition-transform" onclick="const pages = document.querySelectorAll('.page'); pages.forEach(p =&gt; p.classList.remove('active')); document.getElementById('page-shift-details').classList.add('active'); document.querySelector('header h1').textContent = 'Деталі зміни'; window.scrollTo({ top: 0, behavior: 'smooth' });">Деталі</button>
+<button class="flex-1 py-3 rounded-xl font-label-bold text-white bg-oneclick-orange shadow-premium-glow active:scale-95 transition-transform" onclick="document.getElementById('qr-modal').classList.remove('hidden')">Почати зміну</button>
+</div>
+</article>
+<article class="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3 border border-border-subtle/50 transition-all">
+<div class="flex justify-between items-start">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 bg-surface-container-high rounded-full overflow-hidden flex items-center justify-center border border-border-subtle">
+<img alt="Company Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9z6oEih0LqG0e3L-VSzYgjVIE06DZMhMq3UoakC9gQOrKreLjblwRhZ2zvWI4y937R0yAS4UnWeEzgBX3KpkRceRR5muU14KUuGdCyfTFwvL2toF75XaDW8MOF0vX9jGFgjIzLGutJb9m4y74YwtBG29NYqLwwaqcAJGBJTcaWl_tFqov4O8FgR6ZYHs_th4sY-p6ufHIkd5QsUBUWZIztnm1xcMRTrFJMXTgEETl6nrin43yNix_no66vQRr3iPoRaWX0HwR370">
+</div>
+<div>
+<h2 class="font-label-bold text-label-bold text-oneclick-navy">Бариста</h2>
+<p class="font-body-muted text-body-muted text-secondary flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">storefront</span> Aroma Kava
+</p>
+</div>
+</div>
+<div class="bg-success-green/10 text-success-green font-caption text-caption px-2 py-1 rounded-md flex items-center gap-1 border border-success-green/20">
+<span class="material-symbols-outlined text-[12px] filled-icon">check_circle</span> Підтверджено
+</div>
+</div>
+<div class="h-px w-full bg-border-subtle/30"></div>
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3 text-on-surface mb-1">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-1">calendar_month</span>
+<div>
+<p class="font-body-main font-bold text-oneclick-navy leading-relaxed">Завтра, 15 Жовтня</p>
+<p class="text-body-muted text-secondary">08:00 - 16:00 (8 год)</p>
+</div>
+</div>
+<div class="flex items-start gap-3 text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[20px] mt-1">location_on</span>
+<p class="text-body-muted text-secondary">Київ, Хрещатик, 24</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-border-subtle/30">
+<div class="font-shift-price text-oneclick-navy">₴850 <span class="text-body-muted font-normal text-secondary">/ зміна</span></div>
+<button class="px-6 py-2 rounded-xl font-label-bold text-oneclick-navy bg-white border border-border-subtle/50" onclick="const pages = document.querySelectorAll('.page'); pages.forEach(p =&gt; p.classList.remove('active')); document.getElementById('page-shift-details').classList.add('active'); document.querySelector('header h1').textContent = 'Деталі зміни'; window.scrollTo({ top: 0, behavior: 'smooth' });">Деталі</button>
+</div>
+</article>
+</div>
+<div class="space-y-stack-md hidden" id="history-shifts">
+<div class="bg-white rounded-2xl shadow-sm border border-border-subtle/50 p-4">
+<div class="flex justify-between items-start mb-3">
+<div>
+<span class="text-xs font-bold text-secondary bg-surface-container px-2 py-1 rounded mb-2 inline-block uppercase">Завершено</span>
+<h3 class="font-headline-md text-oneclick-navy">Касир</h3>
+<p class="text-sm text-secondary">Сільпо • 12 Лют</p>
+</div>
+<div class="font-shift-price text-success-green">1 100 ₴</div>
+</div>
+<button class="w-full bg-surface-container text-oneclick-navy py-2 rounded-xl font-label-bold text-sm">Переглянути відгук</button>
+</div>
+</div>
+</div>
+</div>
+<!-- PAGE 3: WALLET (INTEGRATED) -->
+<div class="page pt-stack-md pb-stack-lg" id="page-wallet">
+<div class="px-gutter-mobile">
+<h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Гаманець</h2>
+<!-- Balance Card -->
+<div class="relative overflow-hidden rounded-[24px] bg-oneclick-navy p-6 shadow-xl text-white mb-6">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-oneclick-orange opacity-20 rounded-full blur-3xl"></div>
+<div class="absolute -left-8 -bottom-8 w-24 h-24 bg-tertiary-container opacity-20 rounded-full blur-2xl"></div>
+<div class="relative z-10">
+<span class="text-caption font-caption text-white/70 uppercase tracking-widest">Доступний баланс</span>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="text-white font-shift-price text-[40px] leading-none">12,450.00</span>
+<span class="text-headline-md font-headline-md text-white/80">₴</span>
+</div>
+<div class="mt-8 grid grid-cols-2 gap-3">
+<button class="orange-glow bg-oneclick-orange text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-label-bold text-label-bold active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">payments</span>
+                    Вивести
+                </button>
+<button class="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-label-bold text-label-bold active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">history</span>
+                    Історія
+                </button>
+</div>
+</div>
+</div>
+<!-- Weekly Summary Bento -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-border-subtle/30">
+<div class="flex items-center gap-2 text-success-green mb-1">
+<span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+<span class="text-caption font-caption">Нараховано</span>
+</div>
+<p class="text-headline-md font-headline-md text-oneclick-navy">3,200 ₴</p>
+<p class="text-[10px] text-on-surface-variant font-medium mt-1">За цей тиждень</p>
+</div>
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-border-subtle/30">
+<div class="flex items-center gap-2 text-oneclick-orange mb-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="text-caption font-caption">В обробці</span>
+</div>
+<p class="text-headline-md font-headline-md text-oneclick-navy">850 ₴</p>
+<p class="text-[10px] text-on-surface-variant font-medium mt-1">Останні 2 зміни</p>
+</div>
+</div>
+<!-- Transactions Section -->
+<div>
+<div class="flex justify-between items-end mb-4">
+<h2 class="text-headline-md font-headline-md text-oneclick-navy">Останні операції</h2>
+<button class="text-primary-container font-label-bold text-label-bold">Фільтри</button>
+</div>
+<div class="space-y-3">
+<!-- Transaction Item 1 -->
+<div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-border-subtle/30 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-success-green/10 flex items-center justify-center text-success-green">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">work</span>
+</div>
+<div>
+<p class="text-body-main font-label-bold text-on-surface">Зміна: Кур'єр GLOVO</p>
+<p class="text-caption font-caption text-on-surface-variant">24 Травня, 18:30</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-main font-label-bold text-success-green">+1,200 ₴</p>
+<p class="text-[10px] uppercase font-bold text-success-green/70">Виконано</p>
+</div>
+</div>
+<!-- Transaction Item 2 -->
+<div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-border-subtle/30 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-oneclick-orange/10 flex items-center justify-center text-oneclick-orange">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">account_balance_wallet</span>
+</div>
+<div>
+<p class="text-body-main font-label-bold text-on-surface">Вивід на картку</p>
+<p class="text-caption font-caption text-on-surface-variant">22 Травня, 11:20</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-main font-label-bold text-on-background">-5,000 ₴</p>
+<p class="text-[10px] uppercase font-bold text-on-surface-variant">Обробка</p>
+</div>
+</div>
+<!-- Transaction Item 3 -->
+<div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-border-subtle/30 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-success-green/10 flex items-center justify-center text-success-green">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">storefront</span>
+</div>
+<div>
+<p class="text-body-main font-label-bold text-on-surface">Зміна: Касир "Сільпо"</p>
+<p class="text-caption font-caption text-on-surface-variant">21 Травня, 21:15</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-main font-label-bold text-success-green">+850 ₴</p>
+<p class="text-[10px] uppercase font-bold text-success-green/70">Виконано</p>
+</div>
+</div>
+<!-- Transaction Item 4 -->
+<div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-border-subtle/30 hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-success-green/10 flex items-center justify-center text-success-green">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">inventory_2</span>
+</div>
+<div>
+<p class="text-body-main font-label-bold text-on-surface">Зміна: Складальник</p>
+<p class="text-caption font-caption text-on-surface-variant">20 Травня, 16:45</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-main font-label-bold text-success-green">+1,150 ₴</p>
+<p class="text-[10px] uppercase font-bold text-success-green/70">Виконано</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-4 border-2 border-dashed border-border-subtle rounded-2xl text-on-surface-variant font-label-bold hover:bg-white transition-colors mb-8">
+            Завантажити ще
+        </button>
+</div>
+<!-- Promotion Card -->
+<div class="bg-secondary-container/30 rounded-3xl p-6 border border-secondary-container flex items-center gap-4 relative overflow-hidden mb-6">
+<div class="relative z-10 flex-1">
+<h3 class="text-label-bold font-label-bold text-on-secondary-container">Отримуйте бонуси!</h3>
+<p class="text-caption font-caption text-on-secondary-container/80 mt-1">Запросіть друга та отримайте 200 ₴ після його першої зміни.</p>
+</div>
+<div class="relative z-10 w-20 h-20 flex items-center justify-center bg-white rounded-2xl shadow-sm">
+<span class="material-symbols-outlined text-[40px] text-oneclick-orange">celebration</span>
+</div>
+</div>
+</div>
+</div>
+<!-- PAGE 4: PROFILE -->
+<div class="page px-gutter-mobile pt-stack-md pb-stack-lg" id="page-profile"><div class="md:px-gutter-desktop py-stack-lg flex flex-col gap-stack-lg"><!-- Profile Hero Card (Bento Pattern) --><section class="bg-white rounded-[24px] p-stack-lg bento-shadow flex flex-col items-center text-center relative overflow-hidden w-full shadow-lg max-w-4xl mx-auto"><div class="absolute -top-12 -right-12 w-32 h-32 bg-oneclick-orange opacity-5 rounded-full"></div><div class="absolute top-1/2 -left-8 w-20 h-20 bg-oneclick-navy opacity-5 rounded-full"></div><div class="relative mb-stack-md"><img alt="User Avatar" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyKo3q-0hL5ApzubxrVu-43Vd6rtLNbct2ANIk3pEP-bxizDXGRijOQmpN6rtwUKmB_wfxLcRi9r7O4pzxdAOWt_vYQcqi-BWXrNi7jQyi2c3TT7gIif3K18CWNBh8R59fG3nqscLvpI7AnXFa99kGP1Urjia9ODwRjAFUnkRefmBqwZqW6GTXqTp82QMzvcd0PRSQ9zddMu0c2GnMtppcBxYmZBG1XRdjP5MTH8elRLFR8waUsJPqlNJsMt4ChN9V0blmdMOM6Qg"><div class="absolute bottom-0 right-0 bg-success-green text-white p-1 rounded-full border-2 border-white flex items-center justify-center" title="Verified"><span class="material-symbols-outlined text-[16px] fill-icon">verified</span></div></div><div class="flex flex-col items-center gap-1"><h2 class="text-display-lg-mobile md:text-display-lg font-display-lg-mobile md:font-display-lg text-oneclick-navy">Олексій Коваленко</h2><div class="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 mb-2"><img alt="Diia" class="h-4 w-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4MqfxjaQheiq5h87Er3RAGoG886uSJElD_rGuwYWz0ehl0BMXLqEF0ZkWaPeF5MlX1czobIQZkyD0IFH7zxRtJ8KwWP7XEJ_QYLjiTO9-UWcPrjXcP0PNRhq3yv90bctTNEXybm4ysh36LsVeoSJ1qXzDnv1IJosakfCG8wGt71dz5tNa3j-Rlp7tx9B3mJyVU3ZxxwlfJQAbTYua2kfLv7_dU4d8Zd9NKVhIApj0z63qPihTJnHDogWREWwGqzifzBYVDc9hsOU"><span class="text-caption font-caption text-blue-800">Верифіковано через Дію</span></div><div class="flex items-center gap-1.5 bg-warning-amber/10 px-4 py-1.5 rounded-xl"><span class="material-symbols-outlined text-warning-amber fill-icon text-[18px]">star</span><span class="text-label-bold font-label-bold text-on-surface">4.9</span><span class="text-caption font-caption text-secondary">(124 відгуки)</span></div></div><div class="grid grid-cols-3 w-full mt-stack-lg pt-stack-lg border-t border-gray-100"><div class="flex flex-col gap-1"><span class="text-caption font-caption text-secondary">Відпрацьовано</span><span class="text-label-bold font-label-bold text-oneclick-navy">42 год</span></div><div class="flex flex-col gap-1 border-x border-gray-100"><span class="text-caption font-caption text-secondary">Виконано</span><span class="text-label-bold font-label-bold text-oneclick-navy">18 змін</span></div><div class="flex flex-col gap-1"><span class="text-caption font-caption text-secondary">Успішність</span><span class="text-label-bold font-label-bold text-success-green">98%</span></div></div></section><!-- Menu List --><nav class="flex flex-col gap-stack-sm"><p class="text-label-bold font-label-bold text-secondary px-2 mb-2 uppercase tracking-wider text-[11px]">Налаштування акаунту</p><!-- Personal Data --><a class="group bg-white rounded-2xl p-4 flex items-center justify-between transition-all hover:bg-surface-container active:scale-[0.98] bento-shadow" href="#" onclick="document.getElementById('page-profile').classList.remove('active'); document.getElementById('page-profile-personal').classList.add('active'); return false;"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition-colors"><span class="material-symbols-outlined">person_outline</span></div><div class="flex flex-col"><span class="text-body-main font-body-main text-on-surface">Особисті дані</span><span class="text-caption font-caption text-secondary">ПІБ, телефон, адреса</span></div></div><span class="material-symbols-outlined text-secondary">chevron_right</span></a><!-- Documents --><a class="group bg-white rounded-2xl p-4 flex items-center justify-between transition-all hover:bg-surface-container active:scale-[0.98] bento-shadow" href="#" onclick="document.getElementById('page-profile').classList.remove('active'); document.getElementById('page-profile-docs').classList.add('active'); return false;"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-oneclick-orange group-hover:bg-orange-100 transition-colors"><span class="material-symbols-outlined">description</span></div><div class="flex flex-col"><span class="text-body-main font-body-main text-on-surface">Документи</span><span class="text-caption font-caption text-secondary">Паспорт, ІПН, Санкнижка</span></div></div><div class="flex items-center gap-2"><span class="bg-success-green/10 text-success-green text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Ок</span><span class="material-symbols-outlined text-secondary">chevron_right</span></div></a><!-- Help Center --><a class="group bg-white rounded-2xl p-4 flex items-center justify-between transition-all hover:bg-surface-container active:scale-[0.98] bento-shadow" href="#" onclick="document.getElementById('page-profile').classList.remove('active'); document.getElementById('page-profile-help').classList.add('active'); return false;"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors"><span class="material-symbols-outlined">support_agent</span></div><div class="flex flex-col"><span class="text-body-main font-body-main text-on-surface">Центр допомоги</span><span class="text-caption font-caption text-secondary">Часті питання, підтримка</span></div></div><span class="material-symbols-outlined text-secondary">chevron_right</span></a><!-- Settings --><a class="group bg-white rounded-2xl p-4 flex items-center justify-between transition-all hover:bg-surface-container active:scale-[0.98] bento-shadow" href="#" onclick="document.getElementById('page-profile').classList.remove('active'); document.getElementById('page-profile-settings').classList.add('active'); return false;"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 group-hover:bg-gray-100 transition-colors"><span class="material-symbols-outlined">settings</span></div><div class="flex flex-col"><span class="text-body-main font-body-main text-on-surface">Налаштування</span><span class="text-caption font-caption text-secondary">Сповіщення, безпека</span></div></div><span class="material-symbols-outlined text-secondary">chevron_right</span></a><!-- Logout --><button class="group mt-stack-md bg-white rounded-2xl p-4 flex items-center justify-between transition-all hover:bg-red-50 active:scale-[0.98] bento-shadow w-full py-5"><div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 group-hover:bg-red-100 transition-colors"><span class="material-symbols-outlined">logout</span></div><div class="flex flex-col text-left"><span class="text-body-main font-body-main text-red-600">Вийти з акаунту</span><span class="text-caption font-caption text-red-400">Завершити поточну сесію</span></div></div></button></nav><!-- App Version & Legal --><div class="flex flex-col items-center gap-2 mt-4 opacity-40"><p class="text-caption font-caption">OneClick Business v2.4.1</p><div class="flex gap-4"><a class="text-caption font-caption underline" href="#">Політика конфіденційності</a><a class="text-caption font-caption underline" href="#">Умови використання</a></div></div></div></div>
+<div class="page pt-stack-md pb-stack-lg" id="page-shift-details">
+<div class="px-gutter-mobile">
+<button class="flex items-center gap-2 text-secondary mb-6" onclick="const navItem = document.querySelector('.nav-item[data-target=&quot;page-search&quot;]'); if(navItem) { navItem.click(); const headerTitle = document.querySelector('header h1'); if(headerTitle) headerTitle.textContent = 'Пошук'; }">
+<span class="material-symbols-outlined">arrow_back</span>
+<span class="font-label-bold">Назад до пошуку</span>
+</button>
+<!-- Header Section -->
+<section class="bg-white rounded-3xl p-6 bento-shadow mb-6 border border-border-subtle/30">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-4">
+<div class="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center overflow-hidden border border-border-subtle">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9H07DGUXMt4VT-QujkNlIgnXMXVzQr5RDH-Vz28DAp2tNCMva4tQUD9tAxIUjnXrv0F1EHQdKJAzYz8gbeGJF51RcHflgN7OWv4XYFNpD8UqET251mrSL15Ot7iyuwE_S_CYGRbK3c0WdgnwmQbXqtVBg7UtAXg72uoknC5ZZTwi5wngFvKPcR1Q9nwuvPgkURjLvkaRojW_rF710OMBy4BZgb_WeKRUM57vsbO1cg9h9pk3CrE10CfCUgMKK2Qn5eLIJKDUWiDw">
+</div>
+<div>
+<h2 class="text-2xl font-bold text-oneclick-navy">Комплектувальник</h2>
+<p class="text-body-main text-secondary">Rozetka</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-warning-amber text-[16px] fill-icon">star</span>
+<span class="text-label-bold">4.8</span>
+<span class="text-caption text-secondary">(2.4к відгуків)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Payment Guarantee -->
+<div class="bg-success-green/10 border border-success-green/20 rounded-2xl p-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-success-green">verified_user</span>
+<p class="text-caption text-on-surface">Оплата гарантована сервісом OneClick. Кошти зарезервовані.</p>
+</div>
+</section>
+<!-- Shift Details Bento -->
+<section class="grid grid-cols-1 gap-4 mb-6">
+<div class="bg-white p-5 rounded-2xl border border-border-subtle/30 flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<div>
+<p class="text-caption text-secondary uppercase tracking-wider">Дата</p>
+<p class="text-body-main font-bold text-oneclick-navy">Понеділок, 15 Жовтня</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+<div>
+<p class="text-caption text-secondary uppercase tracking-wider">Час</p>
+<p class="text-body-main font-bold text-oneclick-navy">08:00 — 20:00 (12 год)</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-oneclick-orange">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="text-caption text-secondary uppercase tracking-wider">Виплата</p>
+<p class="text-headline-md font-headline-md text-oneclick-orange">1 800 ₴</p>
+</div>
+</div>
+</div>
+<!-- Address -->
+<div class="bg-white p-5 rounded-2xl border border-border-subtle/30">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined">location_on</span>
+</div>
+<div>
+<p class="text-caption text-secondary uppercase tracking-wider">Адреса</p>
+<p class="text-body-main font-bold text-oneclick-navy">Київ, вул. Броварська, 15</p>
+<p class="text-caption text-secondary mt-1">Склад №4, вхід з правого боку</p>
+</div>
+</div>
+<div class="mt-4 relative rounded-xl overflow-hidden border border-border-subtle/50 h-[180px] bg-gray-100 flex flex-col">
+    <div class="flex-1 relative flex items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+        <div class="relative">
+            <span class="material-symbols-outlined text-oneclick-orange text-[48px] drop-shadow-md" style="font-variation-settings: &quot;FILL&quot; 1;">location_on</span>
+            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1.5 bg-black/10 rounded-full blur-[1px]"></div>
+        </div>
+    </div>
+    <a href="https://maps.google.com" target="_blank" class="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-border-subtle flex items-center gap-1.5 text-caption text-oneclick-navy hover:bg-white transition-colors">
+        <span class="material-symbols-outlined text-[16px]">map</span>
+        <span class="">Відкрити в Google Maps</span>
+    </a>
+</div></div>
+</section><section class="bg-white rounded-2xl p-5 border border-border-subtle/30 mb-6">
+    <h3 class="text-headline-md font-headline-md text-oneclick-navy mb-4">Опис вакансії</h3>
+    <div class="space-y-4">
+        <div>
+            <h4 class="text-label-bold font-label-bold text-oneclick-navy mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-oneclick-orange text-[20px]">task_alt</span>
+                Обов'язки
+            </h4>
+            <ul class="list-disc list-inside text-body-muted text-secondary space-y-1 ml-1">
+                <li class="">Сортування та комплектування товарів згідно з накладною</li>
+                <li class="">Сканування штрих-кодів та перевірка цілісності пакування</li>
+                <li class="">Підготовка замовлень до відправлення кур'єрам</li>
+                <li class="">Підтримання порядку на робочому місці</li>
+            </ul>
+        </div>
+        <div>
+            <h4 class="text-label-bold font-label-bold text-oneclick-navy mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-oneclick-orange text-[20px]">assignment_ind</span>
+                Вимоги
+            </h4>
+            <ul class="list-disc list-inside text-body-muted text-secondary space-y-1 ml-1">
+                <li class="">Пунктуальність та відповідальне ставлення до роботи</li>
+                <li class="">Фізична витривалість (робота на ногах)</li>
+                <li class="">Наявність смартфона для роботи з додатком</li>
+                <li class="">Охайний зовнішній вигляд</li>
+            </ul>
+        </div>
+    </div>
+</section>
+<!-- Reviews Section -->
+<section class="mb-8"><h3 class="text-headline-md font-headline-md text-oneclick-navy mb-4">Відгуки про роботодавця</h3>
+<div class="space-y-4">
+    <div class="bg-white p-4 rounded-2xl border border-border-subtle/30 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <p class="text-label-bold font-label-bold text-oneclick-navy">Микола П.</p>
+                <p class="text-[10px] text-secondary uppercase">12 Жовтня 2023</p>
+            </div>
+            <div class="flex text-warning-amber">
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+            </div>
+        </div>
+        <p class="text-body-muted text-secondary">Чудовий колектив, виплати завжди вчасно. Склад чистий, є зона для відпочинку. Рекомендую!</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-border-subtle/30 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <p class="text-label-bold font-label-bold text-oneclick-navy">Олена В.</p>
+                <p class="text-[10px] text-secondary uppercase">05 Жовтня 2023</p>
+            </div>
+            <div class="flex text-warning-amber">
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] opacity-30">star</span>
+            </div>
+        </div>
+        <p class="text-body-muted text-secondary">Робота інтенсивна, але оплата того варта. Менеджери адекватні, все пояснили на початку зміни.</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-border-subtle/30 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <p class="text-label-bold font-label-bold text-oneclick-navy">Андрій С.</p>
+                <p class="text-[10px] text-secondary uppercase">28 Вересня 2023</p>
+            </div>
+            <div class="flex text-warning-amber">
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+                <span class="material-symbols-outlined text-[16px] fill-icon">star</span>
+            </div>
+        </div>
+        <p class="text-body-muted text-secondary">Все супер. Швидка перевірка зміни та миттєве нарахування коштів на баланс.</p>
+    </div>
+</div></section>
+<!-- Action Button -->
+<div class="fixed bottom-[100px] left-0 w-full px-gutter-mobile z-40">
+<button class="w-full bg-oneclick-orange text-white py-4 rounded-2xl font-label-bold text-lg shadow-premium-glow active:scale-95 transition-transform">Відгукнутися на зміну</button>
+</div>
+</div>
+</div><!-- Sub-page: Personal Data --><div class="page px-gutter-mobile pt-stack-md pb-stack-lg" id="page-profile-personal"><button class="flex items-center gap-2 text-secondary mb-6" onclick="document.getElementById('page-profile-personal').classList.remove('active'); document.getElementById('page-profile').classList.add('active');"><span class="material-symbols-outlined">arrow_back</span><span class="font-label-bold">Назад</span></button><h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Особисті дані</h2><div class="space-y-4"><div class="bg-white p-4 rounded-2xl bento-shadow border border-border-subtle/30"><p class="text-caption text-secondary uppercase">ПІБ</p><p class="text-body-main font-bold text-oneclick-navy">Олексій Коваленко</p></div><div class="bg-white p-4 rounded-2xl bento-shadow border border-border-subtle/30"><p class="text-caption text-secondary uppercase">Телефон</p><p class="text-body-main font-bold text-oneclick-navy">+380 67 123 45 67</p></div><div class="bg-white p-4 rounded-2xl bento-shadow border border-border-subtle/30"><p class="text-caption text-secondary uppercase">Email</p><p class="text-body-main font-bold text-oneclick-navy">oleksii.k@example.com</p></div><div class="bg-white p-4 rounded-2xl bento-shadow border border-border-subtle/30"><p class="text-caption text-secondary uppercase">Місто</p><p class="text-body-main font-bold text-oneclick-navy">Київ</p></div></div></div><!-- Sub-page: Documents --><div class="page px-gutter-mobile pt-stack-md pb-stack-lg" id="page-profile-docs"><button class="flex items-center gap-2 text-secondary mb-6" onclick="document.getElementById('page-profile-docs').classList.remove('active'); document.getElementById('page-profile').classList.add('active');"><span class="material-symbols-outlined">arrow_back</span><span class="font-label-bold">Назад</span></button><h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Документи</h2><div class="space-y-3"><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><div><p class="font-label-bold text-oneclick-navy">Паспорт</p><p class="text-caption text-secondary">ID-картка</p></div><span class="bg-success-green/10 text-success-green text-[10px] font-bold px-2 py-1 rounded-full">ВЕРИФІКОВАНО</span></div><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><div><p class="font-label-bold text-oneclick-navy">ІПН</p><p class="text-caption text-secondary">Податковий номер</p></div><span class="bg-success-green/10 text-success-green text-[10px] font-bold px-2 py-1 rounded-full">ВЕРИФІКОВАНО</span></div><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><div><p class="font-label-bold text-oneclick-navy">Санкнижка</p><p class="text-caption text-secondary">Дійсна до 12.2024</p></div><span class="bg-success-green/10 text-success-green text-[10px] font-bold px-2 py-1 rounded-full">ВЕРИФІКОВАНО</span></div></div></div><!-- Sub-page: Settings --><div class="page px-gutter-mobile pt-stack-md pb-stack-lg" id="page-profile-settings"><button class="flex items-center gap-2 text-secondary mb-6" onclick="document.getElementById('page-profile-settings').classList.remove('active'); document.getElementById('page-profile').classList.add('active');"><span class="material-symbols-outlined">arrow_back</span><span class="font-label-bold">Назад</span></button><h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Налаштування</h2><div class="space-y-2"><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><span class="">Сповіщення</span><div class="w-10 h-5 bg-oneclick-orange rounded-full relative"><div class="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div></div></div><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><span class="">Мова</span><span class="text-secondary">Українська</span></div><div class="bg-white p-4 rounded-2xl flex items-center justify-between border border-border-subtle/30"><span class="">Темна тема</span><div class="w-10 h-5 bg-gray-200 rounded-full relative"><div class="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div></div></div></div></div><!-- Sub-page: Help Center --><div class="page px-gutter-mobile pt-stack-md pb-stack-lg" id="page-profile-help"><button class="flex items-center gap-2 text-secondary mb-6" onclick="document.getElementById('page-profile-help').classList.remove('active'); document.getElementById('page-profile').classList.add('active');"><span class="material-symbols-outlined">arrow_back</span><span class="font-label-bold">Назад</span></button><h2 class="text-display-lg-mobile font-display-lg-mobile text-oneclick-navy mb-6">Центр допомоги</h2><div class="space-y-3 mb-8"><div class="bg-white p-4 rounded-2xl border border-border-subtle/30"><p class="font-label-bold text-oneclick-navy">Як отримати виплату?</p><p class="text-body-muted text-secondary mt-1">Виплата нараховується автоматично після підтвердження зміни роботодавцем.</p></div><div class="bg-white p-4 rounded-2xl border border-border-subtle/30"><p class="font-label-bold text-oneclick-navy">Що робити, якщо я запізнююсь?</p><p class="text-body-muted text-secondary mt-1">Обов'язково попередьте роботодавця через чат або зателефонуйте менеджеру.</p></div></div><button class="w-full bg-oneclick-navy text-white py-4 rounded-2xl font-label-bold flex items-center justify-center gap-2"><span class="material-symbols-outlined">chat</span>Написати в підтримку</button></div><div id="qr-modal" class="fixed inset-0 z-50 flex items-center justify-center p-gutter-mobile hidden"><div class="absolute inset-0 bg-oneclick-navy/60 backdrop-blur-md"></div><div class="bg-white rounded-[32px] p-8 w-full max-w-sm relative z-10 flex flex-col items-center text-center shadow-2xl"><div class="w-20 h-20 bg-oneclick-orange/10 rounded-full flex items-center justify-center mb-6"><span class="material-symbols-outlined text-oneclick-orange text-[40px]">qr_code_scanner</span></div><h3 class="text-2xl font-bold text-oneclick-navy mb-2">Чек-ін на зміну</h3><p class="text-body-muted text-secondary mb-8">Покажіть цей код менеджеру для початку роботи</p><div class="bg-surface-container p-6 rounded-3xl mb-8 border-2 border-dashed border-border-subtle"><svg class="w-48 h-48 text-oneclick-navy" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2z"></path></svg></div><button id="close-qr-modal" class="w-full py-4 bg-oneclick-navy text-white rounded-2xl font-label-bold active:scale-95 transition-transform" onclick="document.getElementById('qr-modal').classList.add('hidden')">Закрити</button></div></div><div id="map-view-overlay" class="fixed inset-0 z-50 bg-gray-50 flex-col"><div class="absolute top-0 left-0 w-full p-gutter-mobile z-10 flex items-center gap-3"><button id="close-map-view" class="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-oneclick-navy active:scale-95 transition-transform" onclick="document.getElementById('map-view-overlay').classList.add('hidden')"><span class="material-symbols-outlined">arrow_back</span></button><div class="flex-1 bg-white rounded-full shadow-lg px-4 py-3 flex items-center gap-2 border border-border-subtle"><span class="material-symbols-outlined text-oneclick-orange">location_on</span><span class="font-label-bold text-oneclick-navy">Робота поруч</span></div></div><div class="flex-1 relative bg-surface-container overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px]"><div class="absolute top-[30%] left-[20%] group cursor-pointer" onclick="updateMapSheet('Комплектувальник', 'Rozetka', '1 800 ₴', 'https://lh3.googleusercontent.com/aida-public/AB6AXuA9H07DGUXMt4VT-QujkNlIgnXMXVzQr5RDH-Vz28DAp2tNCMva4tQUD9tAxIUjnXrv0F1EHQdKJAzYz8gbeGJF51RcHflgN7OWv4XYFNpD8UqET251mrSL15Ot7iyuwE_S_CYGRbK3c0WdgnwmQbXqtVBg7UtAXg72uoknC5ZZTwi5wngFvKPcR1Q9nwuvPgkURjLvkaRojW_rF710OMBy4BZgb_WeKRUM57vsbO1cg9h9pk3CrE10CfCUgMKK2Qn5eLIJKDUWiDw')"><div class="bg-oneclick-orange text-white px-2 py-1 rounded-lg text-[10px] font-bold mb-1 shadow-md">1 800 ₴</div><div class="w-10 h-10 bg-white rounded-full border-2 border-oneclick-orange flex items-center justify-center shadow-lg overflow-hidden"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9H07DGUXMt4VT-QujkNlIgnXMXVzQr5RDH-Vz28DAp2tNCMva4tQUD9tAxIUjnXrv0F1EHQdKJAzYz8gbeGJF51RcHflgN7OWv4XYFNpD8UqET251mrSL15Ot7iyuwE_S_CYGRbK3c0WdgnwmQbXqtVBg7UtAXg72uoknC5ZZTwi5wngFvKPcR1Q9nwuvPgkURjLvkaRojW_rF710OMBy4BZgb_WeKRUM57vsbO1cg9h9pk3CrE10CfCUgMKK2Qn5eLIJKDUWiDw" class="w-full h-full object-cover"></div></div><div class="absolute top-[55%] left-[65%] group cursor-pointer" onclick="updateMapSheet('Бариста', 'Aroma Kava', '950 ₴', 'coffee')"><div class="bg-oneclick-navy text-white px-2 py-1 rounded-lg text-[10px] font-bold mb-1 shadow-md">950 ₴</div><div class="w-10 h-10 bg-white rounded-full border-2 border-oneclick-navy flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-oneclick-navy text-[20px]">coffee</span></div></div><div class="absolute top-[40%] left-[75%] group cursor-pointer" onclick="updateMapSheet('Кур\'єр', 'Glovo', '1 500 ₴', 'delivery_dining')"><div class="bg-oneclick-orange text-white px-2 py-1 rounded-lg text-[10px] font-bold mb-1 shadow-md">1 500 ₴</div><div class="w-10 h-10 bg-white rounded-full border-2 border-oneclick-orange flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-oneclick-orange text-[20px]">delivery_dining</span></div></div><div class="absolute top-[45%] left-[48%] flex flex-col items-center"><div class="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div><div class="w-24 h-24 bg-blue-500/20 rounded-full absolute -top-9 animate-pulse"></div></div></div><div class="absolute bottom-0 left-0 w-full p-gutter-mobile pb-8"></div><script class="">function updateMapSheet(title, company, price, iconOrImg){const titleEl = document.getElementById('map-sheet-title');const companyEl = document.getElementById('map-sheet-company');const priceEl = document.getElementById('map-sheet-price');const iconContainer = document.getElementById('map-sheet-icon-container');titleEl.textContent = title;companyEl.textContent = company + ' • Поруч з вами';priceEl.textContent = price;if(iconOrImg.startsWith('http')){iconContainer.innerHTML = `<img src="${iconOrImg}" class="w-full h-full object-cover">`;} else {iconContainer.innerHTML = `<span class="material-symbols-outlined text-oneclick-navy">${iconOrImg}</span>`;}}</script></div></main>
+<!-- Navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe bg-white backdrop-blur-md h-[88px] rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] border-t border-border-subtle/30">
+<button class="nav-item flex flex-col items-center justify-center w-[72px] h-[64px] rounded-2xl relative text-oneclick-orange active" data-target="page-search">
+<div class="nav-indicator absolute inset-0 bg-primary-container/10 rounded-2xl transition-transform scale-100"></div>
+<span class="material-symbols-outlined relative z-10" style="font-variation-settings: &quot;FILL&quot; 1;">search</span>
+<span class="text-nav-label font-nav-label mt-1 relative z-10">Пошук</span>
+</button>
+<button class="nav-item flex flex-col items-center justify-center w-[72px] h-[64px] rounded-2xl relative text-secondary" data-target="page-jobs">
+<div class="nav-indicator absolute inset-0 bg-primary-container/10 rounded-2xl transition-transform scale-0"></div>
+<span class="material-symbols-outlined relative z-10" style="font-variation-settings: &quot;FILL&quot; 0;">event</span>
+<span class="text-nav-label font-nav-label mt-1 relative z-10">Зміни</span>
+</button>
+<button class="nav-item flex flex-col items-center justify-center w-[72px] h-[64px] rounded-2xl relative text-secondary" data-target="page-wallet">
+<div class="nav-indicator absolute inset-0 bg-primary-container/10 rounded-2xl transition-transform scale-0"></div>
+<span class="material-symbols-outlined relative z-10" style="font-variation-settings: &quot;FILL&quot; 0;">account_balance_wallet</span>
+<span class="text-nav-label font-nav-label mt-1 relative z-10">Гаманець</span>
+</button>
+<button class="nav-item flex flex-col items-center justify-center w-[72px] h-[64px] rounded-2xl relative text-secondary" data-target="page-profile">
+<div class="nav-indicator absolute inset-0 bg-primary-container/10 rounded-2xl transition-transform scale-0"></div>
+<span class="material-symbols-outlined relative z-10" style="font-variation-settings: &quot;FILL&quot; 0;">person</span>
+<span class="text-nav-label font-nav-label mt-1 relative z-10">Профіль</span>
+</button>
+</nav>
+<script>
+    const SHIFTS_DATA = [
+        { id: '1', date: '15', role: 'Комплектувальник', company: 'Rozetka', price: '1 800 ₴', time: '08:00 — 20:00', dist: '2.4 км', hot: true, type: 'Склади', icon: 'inventory_2', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA9H07DGUXMt4VT-QujkNlIgnXMXVzQr5RDH-Vz28DAp2tNCMva4tQUD9tAxIUjnXrv0F1EHQdKJAzYz8gbeGJF51RcHflgN7OWv4XYFNpD8UqET251mrSL15Ot7iyuwE_S_CYGRbK3c0WdgnwmQbXqtVBg7UtAXg72uoknC5ZZTwi5wngFvKPcR1Q9nwuvPgkURjLvkaRojW_rF710OMBy4BZgb_WeKRUM57vsbO1cg9h9pk3CrE10CfCUgMKK2Qn5eLIJKDUWiDw' },
+        { id: '2', date: '15', role: 'Бариста', company: 'Aroma Kava', price: '950 ₴', time: '09:00 — 21:00', dist: '1.5 км', hot: false, type: 'Кафе', icon: 'coffee' },
+        { id: '4', date: '15', role: 'Кур\'єр', company: 'Glovo', price: '1 500 ₴', time: '12:00 — 22:00', dist: '3.1 км', hot: true, type: 'Кур\'єр', icon: 'delivery_dining' },
+        { id: '6', date: '15', role: 'Вантажник', company: 'Нова Пошта', price: '1 100 ₴', time: '18:00 — 02:00', dist: '5.0 км', hot: false, type: 'Склади', icon: 'package_2' }
+    ];
+
+    let activeDate = '15';
+    let searchTerm = '';
+
+    function renderShifts() {
+        const container = document.getElementById('job-list');
+        if(!container) return;
+        container.innerHTML = '';
+
+        const filtered = SHIFTS_DATA.filter(s => {
+            const matchesDate = s.date === activeDate;
+            const matchesSearch = s.role.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 s.company.toLowerCase().includes(searchTerm.toLowerCase());
+            return matchesDate && matchesSearch;
+        });
+
+        filtered.forEach(shift => {
+            const card = document.createElement('div');
+            card.className = `job-card rounded-2xl p-5 premium-card shadow-md border border-border-subtle/30 transition-all ${shift.hot ? 'bg-gradient-to-b from-white to-warning-amber/5 border-warning-amber/20 shadow-premium-glow' : 'bg-white'}`;
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden">
+                            ${shift.logo ? `<img src="${shift.logo}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-oneclick-navy">${shift.icon}</span>`}
+                        </div>
+                        <div>
+                            ${shift.hot ? `<span class="bg-warning-amber text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 w-fit mb-1">HOT</span>` : ''}
+                            <h3 class="text-lg font-bold text-oneclick-navy leading-tight">${shift.role}</h3>
+                            <p class="text-sm text-secondary font-medium">${shift.company} • ${shift.dist}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-shift-price ${shift.hot ? 'text-oneclick-orange' : 'text-oneclick-navy'}">${shift.price}</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant opacity-70">за зміну</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 py-3 border-t border-border-subtle/20">
+                    <div class="flex items-center gap-1.5 text-body-muted text-oneclick-navy">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">schedule</span>
+                        <span>${shift.time}</span>
+                    </div>
+                </div>
+                <button class="w-full bg-oneclick-orange text-white py-3 rounded-xl font-label-bold text-label-bold active:scale-95 transition-transform">Відгукнутися</button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Tab Switching for "My Shifts" (Active vs History)
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-tab');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'text-on-surface'));
+            btn.classList.add('active');
+            
+            if (target === 'active-shifts') {
+                document.getElementById('active-shifts').classList.remove('hidden');
+                document.getElementById('history-shifts').classList.add('hidden');
+            } else {
+                document.getElementById('active-shifts').classList.add('hidden');
+                document.getElementById('history-shifts').classList.remove('hidden');
+            }
+        });
+    });
+
+    // SPA navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const target = item.getAttribute('data-target');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(target).classList.add('active');
+
+            const headerLocation = document.getElementById('header-location');
+            const headerTitle = document.getElementById('header-title');
+
+            if (target === 'page-wallet') {
+                headerLocation.classList.add('hidden');
+                headerTitle.classList.remove('hidden');
+            } else {
+                headerLocation.classList.remove('hidden');
+                headerTitle.classList.add('hidden');
+            }
+
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('text-oneclick-orange', 'active');
+                n.classList.add('text-secondary');
+                n.querySelector('.nav-indicator').classList.add('scale-0');
+                n.querySelector('.nav-indicator').classList.remove('scale-100');
+                n.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
+            });
+            item.classList.add('text-oneclick-orange', 'active');
+            item.querySelector('.nav-indicator').classList.add('scale-100');
+            item.querySelector('.nav-indicator').classList.remove('scale-0');
+            item.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
+        });
+    });
+
+    // Date tabs
+    document.querySelectorAll('.date-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeDate = tab.getAttribute('data-date');
+            renderShifts();
+        });
+    });
+
+    // Initial render
+    renderShifts();
+</script>
+<script class="">
+(function() {
+    const navItems = document.querySelectorAll('nav.fixed.bottom-0.left-0 .nav-item');
+    const pages = document.querySelectorAll('.page');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const targetId = item.getAttribute('data-target');
+            
+            // 1. Hide all pages and show the target page
+            pages.forEach(page => {
+                page.classList.remove('active');
+                if (page.id === targetId) {
+                    page.classList.add('active');
+                }
+            });
+
+            // 2. Update visual state of nav items
+            navItems.forEach(nav => {
+                const indicator = nav.querySelector('.nav-indicator');
+                const icon = nav.querySelector('.material-symbols-outlined');
+                
+                nav.classList.remove('text-oneclick-orange', 'active');
+                nav.classList.add('text-secondary');
+                
+                if (indicator) {
+                    indicator.classList.remove('scale-100');
+                    indicator.classList.add('scale-0');
+                }
+                
+                if (icon) {
+                    icon.style.fontVariationSettings = "'FILL' 0";
+                }
+            });
+
+            // 3. Set active state for clicked item
+            item.classList.add('text-oneclick-orange', 'active');
+            item.classList.remove('text-secondary');
+            
+            const activeIndicator = item.querySelector('.nav-indicator');
+            const activeIcon = item.querySelector('.material-symbols-outlined');
+            
+            if (activeIndicator) {
+                activeIndicator.classList.remove('scale-0');
+                activeIndicator.classList.add('scale-100');
+            }
+            
+            if (activeIcon) {
+                activeIcon.style.fontVariationSettings = "'FILL' 1";
+            }
+
+            // 4. Update Header Title based on page
+            const headerTitle = document.querySelector('header h1');
+            if (headerTitle) {
+                const labels = {
+                    'page-search': 'Пошук',
+                    'page-jobs': 'Зміни',
+                    'page-wallet': 'Гаманець',
+                    'page-profile': 'Профіль'
+                };
+                headerTitle.textContent = labels[targetId] || 'OneClick';
+            }
+            
+            // Scroll to top on page change
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+})();
+</script>
+<script>
+(function() {
+    // Function to show shift details
+    function showShiftDetails() {
+        const pages = document.querySelectorAll('.page');
+        const detailsPage = document.getElementById('page-shift-details');
+        const headerTitle = document.querySelector('header h1');
+
+        pages.forEach(p => p.classList.remove('active'));
+        detailsPage.classList.add('active');
+        
+        if (headerTitle) headerTitle.textContent = 'Деталі зміни';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Delegate click events for job cards and buttons
+    document.addEventListener('click', (e) => {
+        const jobCard = e.target.closest('.job-card');
+        const applyBtn = e.target.closest('.job-card button');
+        
+        if (jobCard || applyBtn) {
+            showShiftDetails();
+        }
+    });
+})();
+</script>
+
+<script class="">
+(function() {
+    // Function to handle 'Details' button clicks in the 'My Shifts' section
+    function handleMyShiftDetails(event) {
+        const btn = event.target.closest('button');
+        if (!btn || !btn.textContent.includes('Деталі')) return;
+
+        const article = btn.closest('article');
+        if (!article) return;
+
+        // Extract data from the card to simulate population (though the details page is currently static in the HTML)
+        const role = article.querySelector('h2')?.textContent || '';
+        const company = article.querySelector('.text-secondary')?.textContent.replace('storefront', '').trim() || '';
+        const price = article.querySelector('.font-shift-price')?.textContent.split('/')[0].trim() || '';
+        const time = article.querySelector('.text-body-muted')?.textContent.trim() || '';
+
+        // Navigate to details page
+        const pages = document.querySelectorAll('.page');
+        const detailsPage = document.getElementById('page-shift-details');
+        const headerTitle = document.querySelector('header h1');
+
+        pages.forEach(p => p.classList.remove('active'));
+        detailsPage.classList.add('active');
+        
+        if (headerTitle) headerTitle.textContent = 'Деталі зміни';
+        
+        // Optional: Update details page content if needed (simulated)
+        const detailsRole = detailsPage.querySelector('h2');
+        if (detailsRole) detailsRole.textContent = role;
+        
+        const detailsCompany = detailsPage.querySelector('.text-body-main.text-secondary');
+        if (detailsCompany) detailsCompany.textContent = company;
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Attach listener to the active shifts container
+    const activeShiftsContainer = document.getElementById('active-shifts');
+    if (activeShiftsContainer) {
+        activeShiftsContainer.addEventListener('click', handleMyShiftDetails);
+    }
+
+    // Attach listener to the history shifts container
+    const historyShiftsContainer = document.getElementById('history-shifts');
+    if (historyShiftsContainer) {
+        historyShiftsContainer.addEventListener('click', handleMyShiftDetails);
+    }
+})();
+</script></body></html>
