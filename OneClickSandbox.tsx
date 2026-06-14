@@ -485,7 +485,7 @@ export default function OneClickApp() {
 
         {/* Toast notifications */}
         {toast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[9999] bg-[#001B3D]/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 border border-white/10 text-xs font-semibold max-w-[85%] text-center animate-bounce">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[9999] bg-[#001B3D]/75 backdrop-blur-[24px] text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 border border-white/10 text-xs font-semibold max-w-[85%] text-center animate-bounce">
             <span className="w-2 h-2 rounded-full bg-[#FF5722] inline-block"></span>
             {toast}
           </div>
@@ -493,9 +493,9 @@ export default function OneClickApp() {
 
         {/* --- HEADER (Liquid glass styling with lower opacity & high blur) --- */}
         <header className={`px-4 py-4 flex items-center justify-between sticky top-0 z-40 border-b transition-all duration-300 ${theme === 'light'
-          ? 'bg-white/40 border-black/10 text-[#001B3D]'
-          : 'bg-[#121829]/30 border-white/10 text-white'
-          } backdrop-blur-[32px]`}>
+          ? 'bg-white/70 border-black/10 text-[#001B3D]'
+          : 'bg-[#0f172a]/70 border-white/10 text-white'
+          } backdrop-blur-[24px]`}>
           <div className="flex items-center gap-2 relative z-10">
             <div className="w-9 h-9 bg-gradient-to-br from-[#FF5722] to-[#e64a19] rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)]">
               1C
@@ -509,8 +509,8 @@ export default function OneClickApp() {
               onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
               className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center border ${theme === 'light'
                 ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
-                : 'bg-[#1c2541]/40 hover:bg-[#252f55]/60 border-white/10 text-white'
-                } backdrop-blur-md`}
+                : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
+                } backdrop-blur-[24px]`}
               title="Переключити тему"
             >
               {theme === 'light' ? (
@@ -532,8 +532,8 @@ export default function OneClickApp() {
               }}
               className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all active:scale-95 border ${theme === 'light'
                 ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
-                : 'bg-[#1c2541]/40 hover:bg-[#252f55]/60 border-white/10 text-white'
-                } backdrop-blur-md`}
+                : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
+                } backdrop-blur-[24px]`}
             >
               {userRole === 'worker' ? (
                 <>
@@ -565,9 +565,9 @@ export default function OneClickApp() {
                   {/* Search and Filters Trigger */}
                   <div className="p-4 flex gap-2">
                     <div className={`rounded-full shadow-sm border flex items-center px-4 py-2.5 gap-2.5 flex-1 transition-all ${theme === 'light'
-                      ? 'bg-white/80 border-[#E5E7EB]'
-                      : 'bg-[#121829]/40 border-white/10'
-                      } backdrop-blur-[16px]`}>
+                      ? 'bg-white/70 border-[#E5E7EB]'
+                      : 'bg-[#0f172a]/60 border-white/10'
+                      } backdrop-blur-[24px]`}>
                       <Search className="w-4 h-4 text-[#FF5722]" />
                       <input
                         type="text"
@@ -617,9 +617,9 @@ export default function OneClickApp() {
                             ? 'bg-[#001B3D] text-white border-transparent'
                             : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
                           : theme === 'light'
-                            ? 'bg-white/85 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
-                            : 'bg-[#1c2541]/40 text-gray-300 border-white/10 hover:bg-[#252f55]/60'
-                          } backdrop-blur-[12px]`}
+                            ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
+                            : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
+                          } backdrop-blur-[24px]`}
                       >
                         {cat}
                       </button>
@@ -640,9 +640,9 @@ export default function OneClickApp() {
                         <div
                           key={s.id}
                           onClick={() => setSelectedShift(s)}
-                          className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group backdrop-blur-[16px] ${theme === 'light'
-                            ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)] hover:-translate-y-0.5'
-                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)] hover:-translate-y-0.5'
+                          className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group backdrop-blur-[24px] ${theme === 'light'
+                            ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)] hover:-translate-y-0.5'
+                            : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)] hover:-translate-y-0.5'
                             } ${s.isHot ? 'bg-gradient-to-br from-white/40 to-[#FF9500]/6 border-[#FF9500]/30' : ''}`}
                         >
                           <div className="flex justify-between items-start gap-2 relative z-10">
@@ -721,9 +721,9 @@ export default function OneClickApp() {
                   </button>
 
                   {/* Header bento */}
-                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                    ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
-                    : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
+                    ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+                    : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                     } space-y-4`}>
                     <div className="flex gap-4">
                       <div className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
@@ -754,9 +754,9 @@ export default function OneClickApp() {
                   </div>
 
                   {/* Details block */}
-                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                    ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
-                    : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
+                    ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+                    : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                     } space-y-4`}>
                     <div className="flex flex-col gap-3.5">
                       <div className="flex items-center gap-3">
@@ -1705,9 +1705,9 @@ export default function OneClickApp() {
 
         {/* --- PERSISTENT FLOATING BOTTOM NAVIGATION (B2C Worker only - Glassmorphic overlay) --- */}
         {userRole === 'worker' && (
-          <nav className={`absolute bottom-4 left-4 right-4 z-40 border h-[76px] rounded-[24px] shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex justify-around items-center px-2 transition-all backdrop-blur-[32px] ${theme === 'light'
-            ? 'bg-white/40 border-black/10'
-            : 'bg-[#121829]/30 border-white/10'
+          <nav className={`absolute bottom-4 left-4 right-4 z-40 border h-[76px] rounded-[24px] shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex justify-around items-center px-2 transition-all backdrop-blur-[24px] ${theme === 'light'
+            ? 'bg-white/70 border-black/10'
+            : 'bg-[#0f172a]/70 border-white/10'
             }`}>
 
             <button
