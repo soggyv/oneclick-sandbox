@@ -27,7 +27,8 @@ import {
   ShieldCheck,
   TrendingDown,
   Star,
-  Camera
+  Camera,
+  AlertTriangle
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -49,7 +50,7 @@ interface Shift {
   duration: string;
   price: number;
   address: string;
-  status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'completed';
+  status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'disputed' | 'completed';
   category: 'Кава' | 'Рітейл' | 'Склади';
   logo?: string;
   isHot?: boolean;
@@ -60,6 +61,9 @@ interface Shift {
   allowFeedback?: boolean;
   workPhoto?: string;
   workComment?: string;
+  disputeReason?: string;
+  disputeComment?: string;
+  disputeStatus?: 'under_review' | 'pending_settlement';
 }
 
 interface Transaction {
@@ -182,6 +186,11 @@ export default function OneClickApp() {
   
   // B2B Venue QR code Display
   const [showB2BQRModalId, setShowB2BQRModalId] = useState<string | null>(null);
+
+  // B2B Dispute Modal states
+  const [showDisputeModalId, setShowDisputeModalId] = useState<string | null>(null);
+  const [disputeReasonInput, setDisputeReasonInput] = useState<string>('Неякісно виконана робота');
+  const [disputeCommentInput, setDisputeCommentInput] = useState<string>('');
 
   // B2C Work Report & Photo upload states
   const [showReportModalId, setShowReportModalId] = useState<string | null>(null);
@@ -389,6 +398,111 @@ export default function OneClickApp() {
       ...prev
     ]);
     triggerToast(`Зміну підтверджено. Заморожені кошти (${price} ₴) успішно виплачено виконавцю! 🔐💸`);
+  };
+
+  // B2B/B2C: Clean Dispute settlement handlers
+  const handleResolveDisputeClean = (shiftId: string, resolution: 'pay_full' | 'compromise' | 'refund_full') => {
+    const shift = shifts.find(s => s.id === shiftId);
+    if (!shift) return;
+
+    if (resolution === 'pay_full') {
+      setShifts(prev =>
+        prev.map(s => s.id === shiftId ? { 
+          ...s, 
+          status: 'completed' as const,
+          disputeReason: undefined,
+          disputeComment: undefined,
+          disputeStatus: undefined
+        } : s)
+      );
+      setEmployerFrozenBalance(prev => Math.max(0, prev - shift.price));
+      setBalance(prev => prev + shift.price);
+      
+      setTransactions(prev => [
+        {
+          id: String(Date.now()),
+          title: `Спір вирішено (Оплата): ${shift.role} (${shift.company})`,
+          amount: shift.price,
+          date: 'Сьогодні, щойно',
+          status: 'completed',
+          type: 'work'
+        },
+        ...prev
+      ]);
+      triggerToast(`Спір врегульовано. Виконавцю сплачено повну суму (${shift.price} ₴)! 💸`);
+    } else if (resolution === 'compromise') {
+      const half = Math.round(shift.price / 2);
+      setShifts(prev =>
+        prev.map(s => s.id === shiftId ? { 
+          ...s, 
+          status: 'completed' as const,
+          disputeReason: undefined,
+          disputeComment: undefined,
+          disputeStatus: undefined
+        } : s)
+      );
+      setEmployerFrozenBalance(prev => Math.max(0, prev - shift.price));
+      setEmployerBalance(prev => prev + half);
+      setBalance(prev => prev + (shift.price - half));
+      
+      setTransactions(prev => [
+        {
+          id: String(Date.now()),
+          title: `🤝 Компроміс по спору: ${shift.role} (${shift.company})`,
+          amount: shift.price - half,
+          date: 'Сьогодні, щойно',
+          status: 'completed',
+          type: 'work'
+        },
+        ...prev
+      ]);
+      triggerToast(`Угода досягнута! 50% (${half} ₴) повернуто вам, 50% сплачено виконавцю. 🤝`);
+    } else if (resolution === 'refund_full') {
+      setShifts(prev =>
+        prev.map(s =>
+          s.id === shiftId
+            ? {
+                ...s,
+                status: 'open' as const,
+                workPhoto: undefined,
+                workComment: undefined,
+                disputeReason: undefined,
+                disputeComment: undefined,
+                disputeStatus: undefined
+              }
+            : s
+        )
+      );
+      setEmployerFrozenBalance(prev => Math.max(0, prev - shift.price));
+      setEmployerBalance(prev => prev + shift.price);
+      triggerToast(`Спір вирішено скасуванням. Повну суму (${shift.price} ₴) повернуто вам! ↩️`);
+    }
+  };
+
+  const handleSummonArbitrator = (shiftId: string) => {
+    setShifts(prev =>
+      prev.map(s =>
+        s.id === shiftId
+          ? {
+              ...s,
+              disputeStatus: 'under_review' as const
+            }
+          : s
+      )
+    );
+    triggerToast('⚖️ Справу передано Арбітражу OneClick. Почався аналіз фотозвіту!');
+    
+    // Simulate arbitrator decision after 4.5 seconds
+    setTimeout(() => {
+      // 75% chance worker wins (due to photo report proof), 25% refund
+      const decision = Math.random() > 0.25 ? 'pay_full' : 'refund_full';
+      handleResolveDisputeClean(shiftId, decision as any);
+      if (decision === 'pay_full') {
+        triggerToast('⚖️ Вердикт Арбітра: Фотозвіт підтверджує роботу! Кошти виплачено виконавцю.');
+      } else {
+        triggerToast('⚖️ Вердикт Арбітра: Роботу виконано незадовільно. Кошти повернуто роботодавцю.');
+      }
+    }, 4500);
   };
 
   // Real-time synchronization state
@@ -1228,6 +1342,51 @@ export default function OneClickApp() {
                               </div>
                             </div>
                           )}
+
+                          {s.status === 'disputed' && (
+                            <div className="mt-3.5 space-y-3">
+                              <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs">
+                                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                                  <span>Роботодавець оскаржує виконання</span>
+                                </div>
+                                <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                  <strong className="text-red-500">Причина:</strong> {s.disputeReason}
+                                </p>
+                                {s.disputeComment && (
+                                  <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    &ldquo;{s.disputeComment}&rdquo;
+                                  </p>
+                                )}
+
+                                {s.disputeStatus === 'under_review' ? (
+                                  <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-1">
+                                    <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
+                                      <span>СТАТУС: НА РОЗГЛЯДІ АРБІТРА</span>
+                                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400">Справа розглядається підтримкою OneClick. Рішення буде прийнято найближчим часом.</p>
+                                  </div>
+                                ) : (
+                                  <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2">
+                                    <div className={`rounded-xl p-2.5 text-[10px] font-bold ${
+                                      theme === 'light'
+                                        ? 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
+                                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                                    }`}>
+                                      Кошти за зміну тимчасово заморожено. Очікується погодження сторін або втручання арбітражу.
+                                    </div>
+                                    <button
+                                      onClick={() => handleSummonArbitrator(s.id)}
+                                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                                    >
+                                      ⚖️ Передати Справу Арбітру
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })
@@ -1741,11 +1900,16 @@ export default function OneClickApp() {
                           <div>
                             <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${s.status === 'open' ? 'bg-gray-50 text-gray-600 border-[#E5E7EB]' :
                               s.status === 'booked' ? 'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/25' :
+                              s.status === 'in_progress' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25' :
+                              s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/25' :
                                 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25'
                               }`}>
                               {s.status === 'open' && 'Вільна'}
                               {s.status === 'booked' && 'Заброньована'}
-                              {s.status === 'completed' && 'Завершена / Виплачено'}
+                              {s.status === 'in_progress' && 'Працює'}
+                              {s.status === 'pending_approval' && 'На підтвердженні'}
+                              {s.status === 'disputed' && 'У спорі ⚠️'}
+                              {s.status === 'completed' && 'Виплачено'}
                             </span>
                             <h4 className={`text-base font-bold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.role}</h4>
                             <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{s.company}</p>
@@ -1768,7 +1932,7 @@ export default function OneClickApp() {
                         </div>
 
                         {/* Approve Payout trigger */}
-                        {(s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval') && (
+                        {(s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed') && (
                           <div className={`mt-4 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} flex flex-col gap-2`}>
                             <div className={`rounded-2xl p-3 flex items-start gap-2 text-[10px] font-bold ${
                               s.status === 'pending_approval'
@@ -1814,13 +1978,78 @@ export default function OneClickApp() {
                             )}
 
                             {s.status === 'pending_approval' && (
-                              <button
-                                onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
-                                className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                Підтвердити виконання та сплатити
-                              </button>
+                              <div className="space-y-2">
+                                <button
+                                  onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
+                                  className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  Підтвердити виконання та сплатити
+                                </button>
+                                <button
+                                  onClick={() => setShowDisputeModalId(s.id)}
+                                  className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                                >
+                                  <AlertTriangle className="w-4 h-4" />
+                                  Відкрити спір
+                                </button>
+                              </div>
+                            )}
+
+                            {s.status === 'disputed' && (
+                              <div className="mt-3.5 space-y-3">
+                                <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                  <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs">
+                                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                                    <span>Зміну оскаржено</span>
+                                  </div>
+                                  <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                    <strong className="text-red-500">Причина спору:</strong> {s.disputeReason}
+                                  </p>
+                                  {s.disputeComment && (
+                                    <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                                      &ldquo;{s.disputeComment}&rdquo;
+                                    </p>
+                                  )}
+
+                                  {s.disputeStatus === 'under_review' ? (
+                                    <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-1">
+                                      <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
+                                        <span>СТАТУС: НА РОЗГЛЯДІ АРБІТРА</span>
+                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                      </div>
+                                      <p className="text-[10px] text-gray-400">Служба підтримки OneClick перевіряє фотозвіт та деталі зміни. Рішення буде прийнято найближчим часом.</p>
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 gap-2 pt-2 border-t border-dashed border-gray-200 dark:border-white/10">
+                                      <button
+                                        onClick={() => handleResolveDisputeClean(s.id, 'pay_full')}
+                                        className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                      >
+                                        Сплатити повністю ({s.price} ₴)
+                                      </button>
+                                      <button
+                                        onClick={() => handleResolveDisputeClean(s.id, 'compromise')}
+                                        className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                      >
+                                        🤝 Компроміс (по 50%)
+                                      </button>
+                                      <button
+                                        onClick={() => handleResolveDisputeClean(s.id, 'refund_full')}
+                                        className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                      >
+                                        Скасувати зміну та повернути кошти
+                                      </button>
+                                      <button
+                                        onClick={() => handleSummonArbitrator(s.id)}
+                                        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                      >
+                                        ⚖️ Передати Справу Арбітру
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
                         )}
@@ -2369,6 +2598,103 @@ export default function OneClickApp() {
           </div>
         </div>
       )}
+
+      {/* --- B2B OPEN DISPUTE MODAL --- */}
+      {showDisputeModalId && (() => {
+        const targetShift = shifts.find(s => s.id === showDisputeModalId);
+        
+        const handleSubmitDispute = () => {
+          if (!disputeCommentInput.trim()) {
+            triggerToast('Будь ласка, вкажіть опис претензії!');
+            return;
+          }
+
+          setShifts(prev =>
+            prev.map(s =>
+              s.id === showDisputeModalId
+                ? {
+                    ...s,
+                    status: 'disputed' as const,
+                    disputeReason: disputeReasonInput,
+                    disputeComment: disputeCommentInput.trim(),
+                    disputeStatus: 'pending_settlement' as const
+                  }
+                : s
+            )
+          );
+          setShowDisputeModalId(null);
+          setDisputeCommentInput('');
+          triggerToast('Спір відкрито. Оберіть варіант врегулювання! ⚖️');
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
+            <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white/95 border-[#E5E7EB]' : 'bg-[#1c2541]/90 border-white/10'
+              }`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-sm font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                  Відкрити спір
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowDisputeModalId(null);
+                    setDisputeCommentInput('');
+                  }}
+                  className={`text-xs font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}
+                >
+                  Закрити
+                </button>
+              </div>
+
+              <div className="text-left space-y-3 mb-6">
+                <div>
+                  <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Причина спору:
+                  </label>
+                  <select
+                    value={disputeReasonInput}
+                    onChange={(e) => setDisputeReasonInput(e.target.value)}
+                    className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
+                        ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                        : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                      }`}
+                  >
+                    <option value="Неякісно виконана робота">Неякісно виконана робота</option>
+                    <option value="Неповний робочий час">Неповний робочий час</option>
+                    <option value="Запізнення / Відсутність">Запізнення / Відсутність</option>
+                    <option value="Невідповідність вимогам">Невідповідність вимогам</option>
+                    <option value="Інша причина">Інша причина</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Опис претензії:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={disputeCommentInput}
+                    onChange={(e) => setDisputeCommentInput(e.target.value)}
+                    placeholder="Детально опишіть, що саме виконано не так..."
+                    className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                        ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                        : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                      }`}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleSubmitDispute}
+                className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Ініціювати спір
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
