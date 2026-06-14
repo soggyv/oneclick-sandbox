@@ -17,6 +17,7 @@ import {
   Building,
   Info,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   Award,
   Bell,
@@ -32,6 +33,13 @@ import {
 } from 'lucide-react';
 
 // --- TYPES ---
+interface DisputeMessage {
+  id: string;
+  sender: 'system' | 'manager' | 'employer' | 'worker';
+  text: string;
+  timestamp: string;
+}
+
 interface Review {
   id: string;
   workerName: string;
@@ -191,6 +199,11 @@ export default function OneClickApp() {
   const [showDisputeModalId, setShowDisputeModalId] = useState<string | null>(null);
   const [disputeReasonInput, setDisputeReasonInput] = useState<string>('Неякісно виконана робота');
   const [disputeCommentInput, setDisputeCommentInput] = useState<string>('');
+
+  // Dispute Chat and Accordion states
+  const [collapsedDisputes, setCollapsedDisputes] = useState<Record<string, boolean>>({});
+  const [disputeChats, setDisputeChats] = useState<Record<string, DisputeMessage[]>>({});
+  const [disputeMessageText, setDisputeMessageText] = useState<string>('');
 
   // B2C Work Report & Photo upload states
   const [showReportModalId, setShowReportModalId] = useState<string | null>(null);
@@ -479,6 +492,21 @@ export default function OneClickApp() {
     }
   };
 
+  const handleSendDisputeMessage = (shiftId: string, sender: 'employer' | 'worker') => {
+    if (!disputeMessageText.trim()) return;
+    const newMsg: DisputeMessage = {
+      id: String(Date.now()),
+      sender,
+      text: disputeMessageText.trim(),
+      timestamp: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+    };
+    setDisputeChats(prev => ({
+      ...prev,
+      [shiftId]: [...(prev[shiftId] || []), newMsg]
+    }));
+    setDisputeMessageText('');
+  };
+
   const handleSummonArbitrator = (shiftId: string) => {
     setShifts(prev =>
       prev.map(s =>
@@ -490,9 +518,32 @@ export default function OneClickApp() {
           : s
       )
     );
+
+    // Initialize chat
+    setDisputeChats(prev => ({
+      ...prev,
+      [shiftId]: [
+        { id: 'sys1', sender: 'system', text: '⚖️ Справу передано до арбітражу OneClick. Менеджер спору підключається...', timestamp: 'Щойно' },
+        { id: 'mgr1', sender: 'manager', text: 'Вітаю! Я призначений менеджером для розгляду вашого спору. Перевіряю надісланий фотозвіт та опис претензії. Будь ласка, напишіть сюди будь-які додаткові аргументи.', timestamp: 'Щойно' }
+      ]
+    }));
+
     triggerToast('⚖️ Справу передано Арбітражу OneClick. Почався аналіз фотозвіту!');
     
-    // Simulate arbitrator decision after 4.5 seconds
+    // Simulate arbitrator active review messages and final verdict
+    setTimeout(() => {
+      setDisputeChats(prev => {
+        const chat = prev[shiftId] || [];
+        return {
+          ...prev,
+          [shiftId]: [
+            ...chat,
+            { id: 'mgr2', sender: 'manager', text: '🔍 Перевіряю відповідність фотозвіту вимогам та коментар закладу. Очікуйте остаточне рішення підтримки за кілька секунд...', timestamp: 'Щойно' }
+          ]
+        };
+      });
+    }, 4500);
+
     setTimeout(() => {
       // 75% chance worker wins (due to photo report proof), 25% refund
       const decision = Math.random() > 0.25 ? 'pay_full' : 'refund_full';
@@ -502,7 +553,7 @@ export default function OneClickApp() {
       } else {
         triggerToast('⚖️ Вердикт Арбітра: Роботу виконано незадовільно. Кошти повернуто роботодавцю.');
       }
-    }, 4500);
+    }, 9500);
   };
 
   // Real-time synchronization state
@@ -1138,13 +1189,13 @@ export default function OneClickApp() {
                   <div className="space-y-4">
                     {shifts.filter(s => {
                       const isMatchSubTab = myShiftsSubTab === 'active'
-                        ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval')
+                        ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
                         : s.status === 'completed';
                       return isMatchSubTab;
                     }).length > 0 ? (
                       shifts.filter(s => {
                         const isMatchSubTab = myShiftsSubTab === 'active'
-                          ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval')
+                          ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
                           : s.status === 'completed';
                         return isMatchSubTab;
                       }).map((s) => {
@@ -1163,12 +1214,14 @@ export default function OneClickApp() {
                                 s.status === 'completed' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/20' :
                                 s.status === 'in_progress' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                                 s.status === 'pending_approval' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                 'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/20'
                                 }`}>
                                 {s.status === 'completed' && 'Виплачено'}
                                 {s.status === 'booked' && 'Заброньовано'}
                                 {s.status === 'in_progress' && 'Працюю'}
                                 {s.status === 'pending_approval' && 'На підтвердженні'}
+                                {s.status === 'disputed' && 'У спорі ⚠️'}
                               </span>
                               <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
                                 }`}>{s.role}</h4>
@@ -1343,50 +1396,133 @@ export default function OneClickApp() {
                             </div>
                           )}
 
-                          {s.status === 'disputed' && (
-                            <div className="mt-3.5 space-y-3">
-                              <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
-                                <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs">
-                                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                                  <span>Роботодавець оскаржує виконання</span>
-                                </div>
-                                <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
-                                  <strong className="text-red-500">Причина:</strong> {s.disputeReason}
-                                </p>
-                                {s.disputeComment && (
-                                  <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
-                                    &ldquo;{s.disputeComment}&rdquo;
-                                  </p>
-                                )}
+                          {s.status === 'disputed' && (() => {
+                            const isCollapsed = collapsedDisputes[s.id] === true;
+                            return (
+                              <div className="mt-3.5 space-y-3">
+                                <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                  <button
+                                    onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                    className="w-full flex items-center justify-between text-left focus:outline-none"
+                                  >
+                                    <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
+                                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                                      <span>Роботодавець оскаржує виконання</span>
+                                    </div>
+                                    <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
+                                  </button>
 
-                                {s.disputeStatus === 'under_review' ? (
-                                  <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-1">
-                                    <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
-                                      <span>СТАТУС: НА РОЗГЛЯДІ АРБІТРА</span>
-                                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                  {!isCollapsed && (
+                                    <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
+                                      <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                        <strong className="text-red-500">Причина:</strong> {s.disputeReason}
+                                      </p>
+                                      {s.disputeComment && (
+                                        <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                                          &ldquo;{s.disputeComment}&rdquo;
+                                        </p>
+                                      )}
+
+                                      {s.disputeStatus === 'under_review' ? (
+                                        <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2 text-left">
+                                          <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
+                                            <span>ЧАТ З АРБІТРОМ ONECLICK</span>
+                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                          </div>
+
+                                          {/* Message area */}
+                                          <div className={`max-h-48 overflow-y-auto p-2.5 rounded-xl space-y-2 flex flex-col text-[11px] leading-relaxed ${
+                                            theme === 'light' ? 'bg-[#f6f3f2]' : 'bg-[#121829]/40'
+                                          }`}>
+                                            {(disputeChats[s.id] || []).map((msg) => {
+                                              if (msg.sender === 'system') {
+                                                return (
+                                                  <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1 bg-gray-500/5 rounded-lg border border-dashed border-gray-500/10 self-stretch">
+                                                    {msg.text}
+                                                  </div>
+                                                );
+                                              }
+
+                                              const isMe = msg.sender === 'worker';
+                                              const isMgr = msg.sender === 'manager';
+                                              
+                                              let bubbleStyle = '';
+                                              let alignStyle = '';
+                                              
+                                              if (isMe) {
+                                                alignStyle = 'self-end';
+                                                bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] text-right font-semibold';
+                                              } else if (isMgr) {
+                                                alignStyle = 'self-start';
+                                                bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
+                                              } else {
+                                                alignStyle = 'self-start';
+                                                bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
+                                              }
+
+                                              return (
+                                                <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
+                                                  <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
+                                                    {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Роботодавець'}
+                                                  </span>
+                                                  <div className={bubbleStyle}>
+                                                    {msg.text}
+                                                  </div>
+                                                  <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
+                                                    {msg.timestamp}
+                                                  </span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+
+                                          {/* Send message form */}
+                                          <div className="flex gap-1.5 pt-1.5 border-t border-dashed border-gray-200 dark:border-white/10">
+                                            <input
+                                              type="text"
+                                              value={disputeMessageText}
+                                              onChange={(e) => setDisputeMessageText(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSendDisputeMessage(s.id, 'worker');
+                                              }}
+                                              placeholder="Напишіть повідомлення арбітру..."
+                                              className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-xl border outline-none transition-all ${
+                                                theme === 'light'
+                                                  ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                                                  : 'bg-[#121829]/60 border-[#2a3454] text-white focus:border-[#FF5722]'
+                                              }`}
+                                            />
+                                            <button
+                                              onClick={() => handleSendDisputeMessage(s.id, 'worker')}
+                                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                                            >
+                                              Надіслати
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2">
+                                          <div className={`rounded-xl p-2.5 text-[10px] font-bold ${
+                                            theme === 'light'
+                                              ? 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
+                                              : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                                          }`}>
+                                            Кошти за зміну тимчасово заморожено. Очікується погодження сторін або втручання арбітражу.
+                                          </div>
+                                          <button
+                                            onClick={() => handleSummonArbitrator(s.id)}
+                                            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                                          >
+                                            ⚖️ Передати Справу Арбітру
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
-                                    <p className="text-[10px] text-gray-400">Справа розглядається підтримкою OneClick. Рішення буде прийнято найближчим часом.</p>
-                                  </div>
-                                ) : (
-                                  <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2">
-                                    <div className={`rounded-xl p-2.5 text-[10px] font-bold ${
-                                      theme === 'light'
-                                        ? 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
-                                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
-                                    }`}>
-                                      Кошти за зміну тимчасово заморожено. Очікується погодження сторін або втручання арбітражу.
-                                    </div>
-                                    <button
-                                      onClick={() => handleSummonArbitrator(s.id)}
-                                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                                    >
-                                      ⚖️ Передати Справу Арбітру
-                                    </button>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       );
                     })
@@ -1996,61 +2132,144 @@ export default function OneClickApp() {
                               </div>
                             )}
 
-                            {s.status === 'disputed' && (
-                              <div className="mt-3.5 space-y-3">
-                                <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
-                                  <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs">
-                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <span>Зміну оскаржено</span>
-                                  </div>
-                                  <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
-                                    <strong className="text-red-500">Причина спору:</strong> {s.disputeReason}
-                                  </p>
-                                  {s.disputeComment && (
-                                    <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
-                                      &ldquo;{s.disputeComment}&rdquo;
-                                    </p>
-                                  )}
-
-                                  {s.disputeStatus === 'under_review' ? (
-                                    <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-1">
-                                      <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
-                                        <span>СТАТУС: НА РОЗГЛЯДІ АРБІТРА</span>
-                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                            {s.status === 'disputed' && (() => {
+                              const isCollapsed = collapsedDisputes[s.id] === true;
+                              return (
+                                <div className="mt-3.5 space-y-3">
+                                  <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                    <button
+                                      onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                      className="w-full flex items-center justify-between text-left focus:outline-none"
+                                    >
+                                      <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
+                                        <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                                        <span>Зміну оскаржено</span>
                                       </div>
-                                      <p className="text-[10px] text-gray-400">Служба підтримки OneClick перевіряє фотозвіт та деталі зміни. Рішення буде прийнято найближчим часом.</p>
-                                    </div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 gap-2 pt-2 border-t border-dashed border-gray-200 dark:border-white/10">
-                                      <button
-                                        onClick={() => handleResolveDisputeClean(s.id, 'pay_full')}
-                                        className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                      >
-                                        Сплатити повністю ({s.price} ₴)
-                                      </button>
-                                      <button
-                                        onClick={() => handleResolveDisputeClean(s.id, 'compromise')}
-                                        className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                      >
-                                        🤝 Компроміс (по 50%)
-                                      </button>
-                                      <button
-                                        onClick={() => handleResolveDisputeClean(s.id, 'refund_full')}
-                                        className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                      >
-                                        Скасувати зміну та повернути кошти
-                                      </button>
-                                      <button
-                                        onClick={() => handleSummonArbitrator(s.id)}
-                                        className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                      >
-                                        ⚖️ Передати Справу Арбітру
-                                      </button>
-                                    </div>
-                                  )}
+                                      <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {!isCollapsed && (
+                                      <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
+                                        <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                          <strong className="text-red-500">Причина спору:</strong> {s.disputeReason}
+                                        </p>
+                                        {s.disputeComment && (
+                                          <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                                            &ldquo;{s.disputeComment}&rdquo;
+                                          </p>
+                                        )}
+
+                                        {s.disputeStatus === 'under_review' ? (
+                                          <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2 text-left">
+                                            <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
+                                              <span>ЧАТ З АРБІТРОМ ONECLICK</span>
+                                              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                            </div>
+
+                                            {/* Message area */}
+                                            <div className={`max-h-48 overflow-y-auto p-2.5 rounded-xl space-y-2 flex flex-col text-[11px] leading-relaxed ${
+                                              theme === 'light' ? 'bg-[#f6f3f2]' : 'bg-[#121829]/40'
+                                            }`}>
+                                              {(disputeChats[s.id] || []).map((msg) => {
+                                                if (msg.sender === 'system') {
+                                                  return (
+                                                    <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1 bg-gray-500/5 rounded-lg border border-dashed border-gray-500/10 self-stretch">
+                                                      {msg.text}
+                                                    </div>
+                                                  );
+                                                }
+
+                                                const isMe = msg.sender === 'employer';
+                                                const isMgr = msg.sender === 'manager';
+                                                
+                                                let bubbleStyle = '';
+                                                let alignStyle = '';
+                                                
+                                                if (isMe) {
+                                                  alignStyle = 'self-end';
+                                                  bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] text-right font-semibold';
+                                                } else if (isMgr) {
+                                                  alignStyle = 'self-start';
+                                                  bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
+                                                } else {
+                                                  alignStyle = 'self-start';
+                                                  bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
+                                                }
+
+                                                return (
+                                                  <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
+                                                    <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
+                                                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Виконавець'}
+                                                    </span>
+                                                    <div className={bubbleStyle}>
+                                                      {msg.text}
+                                                    </div>
+                                                    <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
+                                                      {msg.timestamp}
+                                                    </span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+
+                                            {/* Send message form */}
+                                            <div className="flex gap-1.5 pt-1.5 border-t border-dashed border-gray-200 dark:border-white/10">
+                                              <input
+                                                type="text"
+                                                value={disputeMessageText}
+                                                onChange={(e) => setDisputeMessageText(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') handleSendDisputeMessage(s.id, 'employer');
+                                                }}
+                                                placeholder="Напишіть повідомлення арбітру..."
+                                                className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-xl border outline-none transition-all ${
+                                                  theme === 'light'
+                                                    ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                                                    : 'bg-[#121829]/60 border-[#2a3454] text-white focus:border-[#FF5722]'
+                                                }`}
+                                              />
+                                              <button
+                                                onClick={() => handleSendDisputeMessage(s.id, 'employer')}
+                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                                              >
+                                                Надіслати
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="grid grid-cols-1 gap-2 pt-2 border-t border-dashed border-gray-200 dark:border-white/10">
+                                            <button
+                                              onClick={() => handleResolveDisputeClean(s.id, 'pay_full')}
+                                              className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                            >
+                                              Сплатити повністю ({s.price} ₴)
+                                            </button>
+                                            <button
+                                              onClick={() => handleResolveDisputeClean(s.id, 'compromise')}
+                                              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                            >
+                                              🤝 Компроміс (по 50%)
+                                            </button>
+                                            <button
+                                              onClick={() => handleResolveDisputeClean(s.id, 'refund_full')}
+                                              className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                            >
+                                              Скасувати зміну та повернути кошти
+                                            </button>
+                                            <button
+                                              onClick={() => handleSummonArbitrator(s.id)}
+                                              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
+                                            >
+                                              ⚖️ Передати Справу Арбітру
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         )}
 
