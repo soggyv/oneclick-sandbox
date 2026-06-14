@@ -596,9 +596,9 @@ export default function OneClickApp() {
                         className={`flex flex-col items-center justify-center min-w-[68px] h-[82px] rounded-2xl border transition-all ${selectedDate === d.date
                           ? 'bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white border-transparent shadow-[0_8px_20px_rgba(255,87,34,0.25)] scale-[1.02]'
                           : theme === 'light'
-                            ? 'bg-white/85 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
-                            : 'bg-[#1c2541]/40 text-gray-300 border-white/10 hover:bg-[#252f55]/60'
-                          } backdrop-blur-[12px]`}
+                            ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
+                            : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
+                          } backdrop-blur-[24px]`}
                       >
                         <span className="text-[11px] font-bold opacity-80 mb-0.5">{d.day}</span>
                         <span className="text-lg font-black">{d.date}</span>
@@ -897,7 +897,9 @@ export default function OneClickApp() {
                       onClick={() => handleBookShift(selectedShift.id)}
                       className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-md ${signedContract
                         ? 'bg-[#FF5722] text-white active:scale-98 shadow-[#FF5722]/20 hover:bg-[#e64a19]'
-                        : 'bg-[#f0edec] text-[#5b4039]/60 cursor-not-allowed shadow-none'
+                        : theme === 'light'
+                          ? 'bg-[#f0edec] text-[#5b4039]/60 cursor-not-allowed shadow-none'
+                          : 'bg-[#1c2541]/45 text-gray-500 border border-white/5 cursor-not-allowed shadow-none'
                         }`}
                     >
                       Відгукнутися на зміну
@@ -1148,7 +1150,7 @@ export default function OneClickApp() {
 
                   {/* MAIN PROFILE SCREEN */}
                   {profileSubPage === 'main' && (
-                    <div className="space-y-5">
+                    <div className="space-y-5 animate-fade-in">
                       {/* Profile Card */}
                       <div className={`rounded-[24px] p-5 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB]' : 'bg-[#1c2541]/45 border-white/10'
                         }`}>
@@ -1255,7 +1257,10 @@ export default function OneClickApp() {
 
                       <button
                         onClick={() => triggerToast('Вихід з акаунту в MVP обмежено.')}
-                        className="w-full bg-white/60 border border-[#E5E7EB] backdrop-blur-md hover:bg-red-50/20 text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                        className={`w-full border backdrop-blur-md text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors ${theme === 'light'
+                          ? 'bg-white/60 border-[#E5E7EB] hover:bg-red-50/20'
+                          : 'bg-[#1c2541]/45 border-white/5 hover:bg-red-500/10'
+                          }`}
                       >
                         <LogOut className="w-4 h-4" />
                         Вийти з акаунту
