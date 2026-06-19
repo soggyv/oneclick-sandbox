@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import {
   Search,
   Calendar,
@@ -32,6 +33,15 @@ import {
   AlertTriangle,
   Phone
 } from 'lucide-react';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const isSupabaseConfigured = 
+  supabaseUrl !== 'https://placeholder.supabase.co' && 
+  supabaseAnonKey !== 'placeholder-key' &&
+  !supabaseUrl.includes('your-supabase-project-id');
 
 // --- TYPES ---
 interface DisputeMessage {
@@ -206,8 +216,21 @@ export default function OneClickApp() {
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
   const [showAvatarEditModal, setShowAvatarEditModal] = useState<boolean>(false);
 
+  // B2B Company states
+  const [companyName, setCompanyName] = useState<string>('Кав’ярня «OneClick Coffee»');
+  const [companyDetails, setCompanyDetails] = useState<string>('ТОВ «Ван Клік Кофі», ЄДРПОУ 12345678');
+  const [isEditingCompany, setIsEditingCompany] = useState<boolean>(false);
+  const [tempCompanyName, setTempCompanyName] = useState<string>('');
+  const [tempCompanyDetails, setTempCompanyDetails] = useState<string>('');
+
   // Auth flow screens
-  const [authStep, setAuthStep] = useState<'welcome' | 'phone-input' | 'phone-verify' | 'diia-qr'>('welcome');
+  const [authStep, setAuthStep] = useState<'welcome' | 'phone-input' | 'phone-verify' | 'diia-qr' | 'company-register'>('welcome');
+  const [regRole, setRegRole] = useState<'worker' | 'employer'>('worker');
+  const [regCompanyName, setRegCompanyName] = useState<string>('');
+  const [regCompanyEdrpou, setRegCompanyEdrpou] = useState<string>('');
+  const [regCompanyAddress, setRegCompanyAddress] = useState<string>('');
+  const [regCompanyCategory, setRegCompanyCategory] = useState<'Кава' | 'Рітейл' | 'Склади'>('Кава');
+
   const [tempPhone, setTempPhone] = useState<string>('');
   const [tempName, setTempName] = useState<string>('');
   const [smsCode, setSmsCode] = useState<string>('');
@@ -332,6 +355,7 @@ export default function OneClickApp() {
     setShifts(prev =>
       prev.map(s => (s.id === shiftId ? { ...s, status: 'in_progress' as const } : s))
     );
+    updateShiftStatusInDb(shiftId, 'in_progress');
     
     // Freeze the payment amount
     setEmployerBalance(prev => prev - shift.price);
@@ -345,6 +369,7 @@ export default function OneClickApp() {
     setShifts(prev =>
       prev.map(s => (s.id === shiftId ? { ...s, status: 'pending_approval' as const } : s))
     );
+    updateShiftStatusInDb(shiftId, 'pending_approval');
     triggerToast('Чек-аут виконано! Роботодавець отримав запит на виплату. 💰');
   };
 
@@ -364,6 +389,7 @@ export default function OneClickApp() {
     setShifts(prev =>
       prev.map(s => s.id === shiftId ? { ...s, status: 'booked' as const, price: finalPrice, isHot: isHotNow } : s)
     );
+    updateShiftStatusInDb(shiftId, 'booked');
     setSelectedShift(null);
     setSignedContract(false);
     triggerToast('Зміну успішно заброньовано!');
@@ -374,6 +400,7 @@ export default function OneClickApp() {
     setShifts(prev =>
       prev.map(s => s.id === shiftId ? { ...s, status: 'open' as const } : s)
     );
+    updateShiftStatusInDb(shiftId, 'open');
     if (isUrgent) {
       setBalance(prev => prev - 250);
       setTransactions(prev => [
@@ -423,7 +450,30 @@ export default function OneClickApp() {
       requirements: ['Охайний вигляд', 'Наявність документов']
     };
 
-    setShifts(prev => [created, ...prev]);
+    if (isSupabaseConfigured) {
+      const insertShift = async () => {
+        const { error } = await supabase.from('shifts').insert([{
+          company: newCompany,
+          role: newRole,
+          date: newDate,
+          dayName: calendarDays.find(d => d.date === newDate)?.day || 'Пн',
+          time: newTime,
+          duration: newDuration,
+          price: Number(newPrice),
+          address: newAddress,
+          status: 'open',
+          category: newCategory,
+          details: newDetails
+        }]);
+        if (error) {
+          console.error("Error inserting shift:", error);
+          triggerToast("Помилка бази даних! ❌");
+        }
+      };
+      insertShift();
+    } else {
+      setShifts(prev => [created, ...prev]);
+    }
     setNewRole('');
     setNewCompany('');
     setNewPrice('');
@@ -448,11 +498,165 @@ export default function OneClickApp() {
     }
   };
 
+  const handleLoginSuccess = async (name: string, phone: string, isDiia: boolean) => {
+    setUserName(name);
+    setUserPhone(phone);
+    setIsDiiaVerified(isDiia);
+
+    if (regRole === 'employer') {
+      setUserRole('employer');
+      setAuthStep('company-register');
+      return;
+    }
+
+    setIsLoggedIn(true);
+    setUserRole('worker');
+
+    const profileData = {
+      isLoggedIn: true,
+      userRole: 'worker',
+      userName: name,
+      userPhone: phone,
+      userAvatar,
+      isDiiaVerified: isDiia,
+      companyName: '',
+      companyDetails: ''
+    };
+    localStorage.setItem('oneclick_auth_profile', JSON.stringify(profileData));
+
+    if (isSupabaseConfigured) {
+      let userId = localStorage.getItem('oneclick_user_id');
+      if (!userId) {
+        userId = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
+        localStorage.setItem('oneclick_user_id', userId);
+      }
+      try {
+        const { error } = await supabase.from('profiles').upsert({
+          id: userId,
+          username: name,
+          phone: phone,
+          avatar_url: userAvatar,
+          role: 'worker',
+          is_verified: isDiia,
+          updated_at: new Date().toISOString()
+        });
+        if (error) console.error("Error upserting profile:", error);
+      } catch (e) {
+        console.error("Error during profile upsert:", e);
+      }
+    }
+  };
+
+  const handleRegisterCompanySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regCompanyName.trim() || !regCompanyEdrpou.trim() || !regCompanyAddress.trim()) {
+      triggerToast('Заповніть всі обов\'язкові поля компанії!');
+      return;
+    }
+    if (regCompanyEdrpou.trim().length !== 8 || !/^\d+$/.test(regCompanyEdrpou)) {
+      triggerToast('Код ЄДРПОУ має складатися з 8 цифр!');
+      return;
+    }
+
+    const fullDetails = `ТОВ «${regCompanyName.trim()}», ЄДРПОУ ${regCompanyEdrpou.trim()}`;
+    setCompanyName(regCompanyName.trim());
+    setCompanyDetails(fullDetails);
+    setIsLoggedIn(true);
+    setUserRole('employer');
+
+    const profileData = {
+      isLoggedIn: true,
+      userRole: 'employer',
+      userName,
+      userPhone,
+      userAvatar,
+      isDiiaVerified,
+      companyName: regCompanyName.trim(),
+      companyDetails: fullDetails
+    };
+    localStorage.setItem('oneclick_auth_profile', JSON.stringify(profileData));
+
+    if (isSupabaseConfigured) {
+      let userId = localStorage.getItem('oneclick_user_id');
+      if (!userId) {
+        userId = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
+        localStorage.setItem('oneclick_user_id', userId);
+      }
+      try {
+        // 1. Upsert profile with employer role
+        await supabase.from('profiles').upsert({
+          id: userId,
+          username: userName,
+          phone: userPhone,
+          avatar_url: userAvatar,
+          role: 'employer',
+          is_verified: isDiiaVerified,
+          updated_at: new Date().toISOString()
+        });
+
+        // 2. Insert company
+        await supabase.from('companies').insert([{
+          owner_id: userId,
+          name: regCompanyName.trim(),
+          address: regCompanyAddress.trim(),
+          details: fullDetails
+        }]);
+
+      } catch (e) {
+        console.error("Error saving B2B company to database:", e);
+      }
+    }
+
+    triggerToast(`Компанію «${regCompanyName.trim()}» успішно зареєстровано! 🏢🚀`);
+  };
+
+  const handleToggleUserRole = async () => {
+    const nextRole = userRole === 'worker' ? 'employer' : 'worker';
+    setUserRole(nextRole);
+    setSelectedShift(null);
+
+    const saved = localStorage.getItem('oneclick_auth_profile');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        parsed.userRole = nextRole;
+        localStorage.setItem('oneclick_auth_profile', JSON.stringify(parsed));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      const userId = localStorage.getItem('oneclick_user_id');
+      if (userId) {
+        try {
+          await supabase.from('profiles').update({ role: nextRole }).eq('id', userId);
+        } catch (e) {
+          console.error("Error updating role in database:", e);
+        }
+      }
+    }
+  };
+
+  const updateShiftStatusInDb = async (shiftId: string, status: string) => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { error } = await supabase
+        .from('shifts')
+        .update({ status })
+        .eq('id', shiftId);
+      if (error) console.error("Error updating shift status in Supabase:", error);
+    } catch (e) {
+      console.error("Error updating shift status:", e);
+    }
+  };
+
   // B2B: Approve and Complete Shift
   const handleApproveShift = (shiftId: string, price: number, roleName: string, companyName: string) => {
     setShifts(prev =>
       prev.map(s => s.id === shiftId ? { ...s, status: 'completed' as const } : s)
     );
+    updateShiftStatusInDb(shiftId, 'completed');
 
     setEmployerFrozenBalance(prev => Math.max(0, prev - price));
     setBalance(prev => prev + price);
@@ -623,6 +827,105 @@ export default function OneClickApp() {
     }, 5000); // Update every 5 seconds for real-time countdown updates
     return () => clearInterval(interval);
   }, []);
+
+  // Supabase & Local Session Sync
+  useEffect(() => {
+    const saved = localStorage.getItem('oneclick_auth_profile');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.isLoggedIn) {
+          setIsLoggedIn(true);
+          setUserRole(parsed.userRole || 'worker');
+          setUserName(parsed.userName || '');
+          setUserPhone(parsed.userPhone || '');
+          setUserAvatar(parsed.userAvatar || '');
+          setIsDiiaVerified(parsed.isDiiaVerified || false);
+          if (parsed.companyName) setCompanyName(parsed.companyName);
+          if (parsed.companyDetails) setCompanyDetails(parsed.companyDetails);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (!isSupabaseConfigured) return;
+
+    const fetchShifts = async () => {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching shifts:', error);
+      } else if (data && data.length > 0) {
+        setShifts(data.map((item: any) => ({
+          id: item.id,
+          company: item.company,
+          role: item.role,
+          date: item.date,
+          dayName: item.dayName,
+          time: item.time,
+          duration: item.duration,
+          price: item.price,
+          address: item.address,
+          status: item.status,
+          category: item.category,
+          details: item.details || '',
+          requirements: ['Охайний вигляд', 'Наявність документів']
+        })));
+      }
+    };
+    fetchShifts();
+
+    const channel = supabase
+      .channel('realtime-shifts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newItem = payload.new as any;
+          const mappedShift: Shift = {
+            id: newItem.id,
+            company: newItem.company,
+            role: newItem.role,
+            date: newItem.date,
+            dayName: newItem.dayName,
+            time: newItem.time,
+            duration: newItem.duration,
+            price: newItem.price,
+            address: newItem.address,
+            status: newItem.status,
+            category: newItem.category,
+            details: newItem.details || '',
+            requirements: ['Охайний вигляд', 'Наявність документів']
+          };
+          setShifts(prev => {
+            if (prev.some(s => s.id === mappedShift.id)) return prev;
+            return [mappedShift, ...prev];
+          });
+          triggerToast(`🔔 Нова зміна: ${mappedShift.role} в ${mappedShift.company}! 🚀`);
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedItem = payload.new as any;
+          setShifts(prev => prev.map(s => s.id === updatedItem.id ? {
+            ...s,
+            status: updatedItem.status,
+            worker_id: updatedItem.worker_id
+          } as any : s));
+        } else if (payload.eventType === 'DELETE') {
+          setShifts(prev => prev.filter(s => s.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userRole === 'employer' && companyName) {
+      setNewCompany(companyName);
+    }
+  }, [userRole, companyName]);
 
   // Helper to generate calendar days dynamically starting from today
   const calendarDays = useMemo(() => {
@@ -835,7 +1138,7 @@ export default function OneClickApp() {
 
             {/* Step: Welcome */}
             {authStep === 'welcome' && (
-              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-8 my-auto animate-fade-in">
+              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 my-auto animate-fade-in">
                 <div className="space-y-3">
                   <h1 className={`text-3xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
                     Знайди зміну в <span className="text-[#FF5722]">один клік</span>
@@ -845,9 +1148,41 @@ export default function OneClickApp() {
                   </p>
                 </div>
 
-                <div className="w-full space-y-4 pt-4">
+                <div className="w-full space-y-4 pt-2">
+                  {/* B2B vs B2C registration role selector */}
+                  <div className={`p-1 rounded-2xl flex border transition-all ${
+                    theme === 'light' 
+                      ? 'bg-white/60 border-black/10' 
+                      : 'bg-[#1c2541]/45 border-white/10'
+                  } mb-2`}>
+                    <button
+                      type="button"
+                      onClick={() => setRegRole('worker')}
+                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                        regRole === 'worker'
+                          ? 'bg-[#FF5722] text-white shadow-md'
+                          : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      Шукач (B2C)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegRole('employer')}
+                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                        regRole === 'employer'
+                          ? 'bg-[#001B3D] text-white shadow-md'
+                          : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      <Building className="w-3.5 h-3.5" />
+                      Бізнес (B2B)
+                    </button>
+                  </div>
+
                   {/* Agreement Checkbox */}
-                  <div className="flex items-start gap-2.5 px-2 text-left mb-6">
+                  <div className="flex items-start gap-2.5 px-2 text-left mb-4">
                     <input
                       type="checkbox"
                       id="agreement"
@@ -906,6 +1241,87 @@ export default function OneClickApp() {
                     За номером телефону
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Step: Company Register (B2B Only) */}
+            {authStep === 'company-register' && (
+              <div className="flex-1 flex flex-col justify-center space-y-4 my-auto animate-fade-in text-left">
+                <div className="space-y-1">
+                  <h2 className={`text-xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                    Реєстрація компанії 🏢
+                  </h2>
+                  <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Вкажіть юридичні дані вашого бізнесу для публікації змін та блокування виплат.
+                  </p>
+                </div>
+
+                <form onSubmit={handleRegisterCompanySubmit} className="space-y-3 pt-1">
+                  <div className="space-y-0.5">
+                    <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
+                      Назва компанії або бренду *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Наприклад: Кав'ярня «OneClick Coffee»"
+                      value={regCompanyName}
+                      onChange={(e) => setRegCompanyName(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
+                      Код ЄДРПОУ (8 цифр) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={8}
+                      placeholder="12345678"
+                      value={regCompanyEdrpou}
+                      onChange={(e) => setRegCompanyEdrpou(e.target.value.replace(/\D/g, ''))}
+                      className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
+                      Юридична / фактична адреса *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Київ, вул. Хрещатик, 15"
+                      value={regCompanyAddress}
+                      onChange={(e) => setRegCompanyAddress(e.target.value)}
+                      className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
+                      Основна сфера діяльності
+                    </label>
+                    <select
+                      value={regCompanyCategory}
+                      onChange={(e) => setRegCompanyCategory(e.target.value as any)}
+                      className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
+                    >
+                      <option value="Кава">Кава та ресторани</option>
+                      <option value="Рітейл">Роздрібна торгівля</option>
+                      <option value="Склади">Склади та логістика</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#001B3D] hover:bg-black text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(0,27,61,0.25)] active:scale-[0.98] transition-all mt-4"
+                  >
+                    Завершити реєстрацію компанії
+                  </button>
+                </form>
               </div>
             )}
 
@@ -1035,10 +1451,8 @@ export default function OneClickApp() {
                         triggerToast("Неправильний код з SMS!");
                         return;
                       }
-                      setUserName(tempName);
-                      setUserPhone(`+380 ${tempPhone.substring(0,2)} ${tempPhone.substring(2,5)} ${tempPhone.substring(5,9)}`);
-                      setIsDiiaVerified(false);
-                      setIsLoggedIn(true);
+                      const formattedPhone = `+380 ${tempPhone.substring(0,2)} ${tempPhone.substring(2,5)} ${tempPhone.substring(5,9)}`;
+                      handleLoginSuccess(tempName, formattedPhone, false);
                       triggerToast(`Ласкаво просимо, ${tempName}! 🚀`);
                     }}
                     className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(255,87,34,0.25)] active:scale-[0.98] transition-all mt-4"
@@ -1102,10 +1516,7 @@ export default function OneClickApp() {
                     onClick={() => {
                       triggerToast("🔄 Запит підпису в Дія... Будь ласка, зачекайте.");
                       setTimeout(() => {
-                        setUserName("Олексій Коваленко");
-                        setUserPhone("+380 67 123 45 67");
-                        setIsDiiaVerified(true);
-                        setIsLoggedIn(true);
+                        handleLoginSuccess("Олексій Коваленко", "+380 67 123 45 67", true);
                         triggerToast("Вхід успішно виконано через Дію! 🤝");
                       }, 1800);
                     }}
@@ -1164,10 +1575,7 @@ export default function OneClickApp() {
 
             {/* B2C/B2B Switcher */}
             <button
-              onClick={() => {
-                setUserRole(prev => prev === 'worker' ? 'employer' : 'worker');
-                setSelectedShift(null);
-              }}
+              onClick={handleToggleUserRole}
               className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all active:scale-95 border ${theme === 'light'
                 ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
                 : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
@@ -2182,11 +2590,11 @@ export default function OneClickApp() {
                           <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
                         </div>
                       </nav>
-
                       <button
                         onClick={() => {
                           setIsLoggedIn(false);
                           setAuthStep('welcome');
+                          localStorage.removeItem('oneclick_auth_profile');
                           triggerToast('Ви успішно вийшли з акаунту.');
                         }}
                         className={`w-full border backdrop-blur-md text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors ${theme === 'light'
