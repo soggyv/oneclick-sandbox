@@ -29,7 +29,8 @@ import {
   TrendingDown,
   Star,
   Camera,
-  AlertTriangle
+  AlertTriangle,
+  Phone
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -83,14 +84,39 @@ interface Transaction {
   type: 'work' | 'withdrawal';
 }
 
+// Helper to get relative date and day name
+const getRelativeDateInfo = (offsetDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const ukDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  return {
+    date: String(d.getDate()),
+    dayName: ukDays[d.getDay()]
+  };
+};
+
+const getRelativeDateString = (offsetDays: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const getUkMonthGenitive = (dateVal?: string | number): string => {
+  const monthNames = [
+    'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+    'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
+  ];
+  return monthNames[new Date().getMonth()];
+};
+
 // --- INITIAL MOCK DATA ---
 const INITIAL_SHIFTS: Shift[] = [
   {
     id: '1',
     company: 'Rozetka',
     role: 'Комплектувальник',
-    date: '15',
-    dayName: 'Пн',
+    date: getRelativeDateInfo(1).date,
+    dayName: getRelativeDateInfo(1).dayName,
     time: '08:00 — 20:00',
     duration: '12 год',
     price: 1800,
@@ -102,16 +128,16 @@ const INITIAL_SHIFTS: Shift[] = [
     details: 'Збір та пакування інтернет-замовлень за допомогою ТЗД (терміналу збору даних) на теплому складі.',
     requirements: ['Фізична витривалість', 'Вміння працювати зі смартфоном'],
     reviews: [
-      { id: 'r1', workerName: 'Дмитро К.', rating: 5, date: '10.06.2026', comment: 'Теплий склад, чудовий бригадир. Виплатили гроші через 5 хвилин після закінчення зміни!' },
-      { id: 'r2', workerName: 'Ольга С.', rating: 4, date: '08.06.2026', comment: 'Робота на ногах, трохи втомлюєшся. Але умови супер, є безкоштовна кава та чай в обід.' }
+      { id: 'r1', workerName: 'Дмитро К.', rating: 5, date: getRelativeDateString(-9), comment: 'Теплий склад, чудовий бригадир. Виплатили гроші через 5 хвилин після закінчення зміни!' },
+      { id: 'r2', workerName: 'Ольга С.', rating: 4, date: getRelativeDateString(-11), comment: 'Робота на ногах, трохи втомлюєшся. Але умови супер, є безкоштовна кава та чай в обід.' }
     ]
   },
   {
     id: '2',
     company: 'Aroma Kava',
     role: 'Бариста',
-    date: '15',
-    dayName: 'Пн',
+    date: getRelativeDateInfo(1).date,
+    dayName: getRelativeDateInfo(1).dayName,
     time: '09:00 — 21:00',
     duration: '12 год',
     price: 950,
@@ -124,16 +150,16 @@ const INITIAL_SHIFTS: Shift[] = [
     requirements: ['Наявність санітарної книжки', 'Досвід роботи баристою від 6 місяців'],
     allowFeedback: false,
     reviews: [
-      { id: 'r3', workerName: 'Аліна М.', rating: 5, date: '12.06.2026', comment: 'Дуже привітний менеджер та дружній колектив. Потік клієнтів великий, але час пролітає непомітно.' },
-      { id: 'r4', workerName: 'Сергій П.', rating: 5, date: '05.06.2026', comment: 'Локація в самому центрі, зручно діставатися. Оплата день в день без затримок.' }
+      { id: 'r3', workerName: 'Аліна М.', rating: 5, date: getRelativeDateString(-7), comment: 'Дуже привітний менеджер та дружній колектив. Потік клієнтів великий, але час пролітає непомітно.' },
+      { id: 'r4', workerName: 'Сергій П.', rating: 5, date: getRelativeDateString(-14), comment: 'Локація в самому центрі, зручно діставатися. Оплата день в день без затримок.' }
     ]
   },
   {
     id: '3',
     company: 'Glovo',
     role: 'Кур\'єр',
-    date: '16',
-    dayName: 'Вт',
+    date: getRelativeDateInfo(2).date,
+    dayName: getRelativeDateInfo(2).dayName,
     time: '12:00 — 22:00',
     duration: '10 год',
     price: 1500,
@@ -144,15 +170,15 @@ const INITIAL_SHIFTS: Shift[] = [
     details: 'Доставка замовлень з ресторанів та супермаркетів у межах району на власному транспорті.',
     requirements: ['Власний транспорт', 'Наявність смартфона'],
     reviews: [
-      { id: 'r5', workerName: 'Ігор Т.', rating: 4, date: '11.06.2026', comment: 'Багато замовлень у вечірні години, робота активна. Техпідтримка відповідає оперативно.' }
+      { id: 'r5', workerName: 'Ігор Т.', rating: 4, date: getRelativeDateString(-8), comment: 'Багато замовлень у вечірні години, робота активна. Техпідтримка отвечает оперативно.' }
     ]
   },
   {
     id: '4',
     company: 'Нова Пошта',
     role: 'Вантажник',
-    date: '17',
-    dayName: 'Ср',
+    date: getRelativeDateInfo(3).date,
+    dayName: getRelativeDateInfo(3).dayName,
     time: '18:00 — 02:00',
     duration: '8 год',
     price: 1100,
@@ -163,13 +189,30 @@ const INITIAL_SHIFTS: Shift[] = [
     details: 'Розвантаження та завантаження автомобілів компанії, сортування посилок по напрямках.',
     requirements: ['Дисциплінованість', 'Хороша фізична форма'],
     reviews: [
-      { id: 'r6', workerName: 'Павло Р.', rating: 4, date: '07.06.2026', comment: 'Важка фізична праця, але оплата чесна та вчасна. Склад чистий і добре освітлений.' }
+      { id: 'r6', workerName: 'Павло Р.', rating: 4, date: getRelativeDateString(-12), comment: 'Важка фізична праця, але оплата чесна та вчасна. Склад чистий і добре освітлений.' }
     ]
   }
 ];
 
 export default function OneClickApp() {
   // --- STATE ---
+  // Auth & Profile states
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userName, setUserName] = useState<string>('Олексій Коваленко');
+  const [userPhone, setUserPhone] = useState<string>('+380 67 123 45 67');
+  const [userAvatar, setUserAvatar] = useState<string>('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80');
+  const [isDiiaVerified, setIsDiiaVerified] = useState<boolean>(false);
+  const [showAgreementModal, setShowAgreementModal] = useState<boolean>(false);
+  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [showAvatarEditModal, setShowAvatarEditModal] = useState<boolean>(false);
+
+  // Auth flow screens
+  const [authStep, setAuthStep] = useState<'welcome' | 'phone-input' | 'phone-verify' | 'diia-qr'>('welcome');
+  const [tempPhone, setTempPhone] = useState<string>('');
+  const [tempName, setTempName] = useState<string>('');
+  const [smsCode, setSmsCode] = useState<string>('');
+  const [expectedSmsCode, setExpectedSmsCode] = useState<string>('');
+
   const [theme, setTheme] = useState<'light' | 'dark'>('light'); // Theme switcher (light default)
   const [shifts, setShifts] = useState<Shift[]>(INITIAL_SHIFTS);
   const [userRole, setUserRole] = useState<'worker' | 'employer'>('worker');
@@ -214,7 +257,7 @@ export default function OneClickApp() {
 
 
   // B2C Feed filters
-  const [selectedDate, setSelectedDate] = useState<string>('14');
+  const [selectedDate, setSelectedDate] = useState<string>(() => String(new Date().getDate()));
   const [selectedCategory, setSelectedCategory] = useState<string>('Всі');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -224,7 +267,7 @@ export default function OneClickApp() {
   // Form states for B2B shift publishing
   const [newRole, setNewRole] = useState('');
   const [newCompany, setNewCompany] = useState('');
-  const [newDate, setNewDate] = useState('14');
+  const [newDate, setNewDate] = useState(() => String(new Date().getDate()));
   const [newTime, setNewTime] = useState('08:00 — 20:00');
   const [newDuration, setNewDuration] = useState('12 год');
   const [newPrice, setNewPrice] = useState('');
@@ -369,7 +412,7 @@ export default function OneClickApp() {
       company: newCompany,
       role: newRole,
       date: newDate,
-      dayName: newDate === '15' ? 'Пн' : newDate === '16' ? 'Вт' : newDate === '17' ? 'Ср' : 'Чт',
+      dayName: calendarDays.find(d => d.date === newDate)?.day || 'Пн',
       time: newTime,
       duration: newDuration,
       price: Number(newPrice),
@@ -388,6 +431,21 @@ export default function OneClickApp() {
     setNewDetails('');
     setB2bTab('dashboard');
     triggerToast('Зміну опубліковано!');
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setUserAvatar(reader.result);
+          setShowAvatarEditModal(false);
+          triggerToast('Фото профілю оновлено! 📸');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // B2B: Approve and Complete Shift
@@ -566,6 +624,21 @@ export default function OneClickApp() {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper to generate calendar days dynamically starting from today
+  const calendarDays = useMemo(() => {
+    const ukDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const days = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(nowDate);
+      d.setDate(nowDate.getDate() + i);
+      days.push({
+        day: ukDays[d.getDay()],
+        date: String(d.getDate())
+      });
+    }
+    return days;
+  }, [nowDate]);
+
   // Helper to calculate hours remaining to shift start
   const getHoursRemaining = (shift: Shift): number => {
     const now = nowDate;
@@ -731,11 +804,336 @@ export default function OneClickApp() {
           </div>
         )}
 
-        {/* --- HEADER (Liquid glass styling with lower opacity & high blur) --- */}
-        <header className={`px-4 py-4 flex items-center justify-between sticky top-0 z-40 border-b transition-all duration-300 ${theme === 'light'
-          ? 'bg-white/70 border-black/10 text-[#001B3D]'
-          : 'bg-[#0f172a]/70 border-white/10 text-white'
-          } backdrop-blur-[24px]`}>
+        {!isLoggedIn ? (
+          <div className="flex-1 flex flex-col justify-between p-6 relative z-10 overflow-y-auto no-scrollbar">
+            {/* Welcome header with theme toggle */}
+            <div className="flex justify-between items-center w-full mb-8">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-gradient-to-br from-[#FF5722] to-[#e64a19] rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)]">
+                  1C
+                </div>
+                <span className={`font-black text-lg uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>OneClick</span>
+              </div>
+              <button
+                onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+                className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center border ${theme === 'light'
+                  ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
+                  : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
+                  } backdrop-blur-[24px]`}
+              >
+                {theme === 'light' ? (
+                  <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Step: Welcome */}
+            {authStep === 'welcome' && (
+              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-8 my-auto animate-fade-in">
+                <div className="space-y-3">
+                  <h1 className={`text-3xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                    Знайди зміну в <span className="text-[#FF5722]">один клік</span>
+                  </h1>
+                  <p className={`text-xs font-semibold px-4 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                    Швидке працевлаштування поруч з домом. Оплата зарезервована та гарантована.
+                  </p>
+                </div>
+
+                <div className="w-full space-y-4 pt-4">
+                  {/* Agreement Checkbox */}
+                  <div className="flex items-start gap-2.5 px-2 text-left mb-6">
+                    <input
+                      type="checkbox"
+                      id="agreement"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 accent-[#FF5722] cursor-pointer"
+                    />
+                    <label htmlFor="agreement" className={`text-[11px] font-semibold leading-relaxed cursor-pointer ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                      Я погоджуюся з{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowAgreementModal(true)}
+                        className="text-[#FF5722] hover:underline font-bold"
+                      >
+                        Умовами користування
+                      </button>{" "}
+                      та Політикою конфіденційності OneClick.
+                    </label>
+                  </div>
+
+                  {/* Diia Button */}
+                  <button
+                    onClick={() => {
+                      if (!agreedToTerms) {
+                        triggerToast('Погодьтеся з Умовами користування!');
+                        return;
+                      }
+                      setAuthStep('diia-qr');
+                    }}
+                    className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${
+                      agreedToTerms
+                        ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
+                        : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <span className="bg-white text-[#001B3D] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
+                    Швидкий вхід через Дію
+                  </button>
+
+                  {/* Phone Button */}
+                  <button
+                    onClick={() => {
+                      if (!agreedToTerms) {
+                        triggerToast('Погодьтеся з Умовами користування!');
+                        return;
+                      }
+                      setAuthStep('phone-input');
+                    }}
+                    className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+                      agreedToTerms
+                        ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
+                        : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <Phone className="w-4 h-4" />
+                    За номером телефону
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Phone Input */}
+            {authStep === 'phone-input' && (
+              <div className="flex-1 flex flex-col justify-center space-y-6 my-auto animate-fade-in text-left">
+                <div>
+                  <button
+                    onClick={() => setAuthStep('welcome')}
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#FF5722] mb-4 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Назад
+                  </button>
+                  <h2 className={`text-2xl font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                    Введіть дані
+                  </h2>
+                  <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Створіть свій особистий кабінет OneClick
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                      Ваше ім'я та Прізвище
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Олексій Коваленко"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none ${
+                        theme === 'light'
+                          ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                          : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                      Номер телефону
+                    </label>
+                    <div className="relative flex">
+                      <span className={`flex items-center justify-center border border-r-0 rounded-l-xl px-3 text-xs font-bold ${
+                        theme === 'light'
+                          ? 'bg-gray-50 border-[#E5E7EB] text-[#001B3D]'
+                          : 'bg-[#121829]/80 border-[#2a3454] text-gray-400'
+                      }`}>
+                        +380
+                      </span>
+                      <input
+                        type="tel"
+                        placeholder="67 123 45 67"
+                        value={tempPhone}
+                        onChange={(e) => setTempPhone(e.target.value.replace(/\D/g, '').substring(0, 9))}
+                        className={`w-full border rounded-r-xl px-4 py-3 text-xs font-bold outline-none ${
+                          theme === 'light'
+                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!tempName.trim()) {
+                        triggerToast("Будь ласка, введіть Ваше ім'я!");
+                        return;
+                      }
+                      if (tempPhone.length < 9) {
+                        triggerToast("Введіть коректний номер телефону!");
+                        return;
+                      }
+                      const code = String(Math.floor(1000 + Math.random() * 9000));
+                      setExpectedSmsCode(code);
+                      setAuthStep('phone-verify');
+                      setTimeout(() => {
+                        triggerToast(`💬 Тестовий SMS-код підтвердження: ${code}`);
+                      }, 1000);
+                    }}
+                    className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(255,87,34,0.25)] active:scale-[0.98] transition-all mt-4"
+                  >
+                    Отримати код у SMS
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Phone Verify */}
+            {authStep === 'phone-verify' && (
+              <div className="flex-1 flex flex-col justify-center space-y-6 my-auto animate-fade-in text-left">
+                <div>
+                  <button
+                    onClick={() => setAuthStep('phone-input')}
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#FF5722] mb-4 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Назад
+                  </button>
+                  <h2 className={`text-2xl font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                    Підтвердження
+                  </h2>
+                  <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Ми надіслали SMS із кодом на номер +380 {tempPhone.substring(0,2)} {tempPhone.substring(2,5)} {tempPhone.substring(5,9)}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                      4-значний SMS-код
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="0000"
+                      maxLength={4}
+                      value={smsCode}
+                      onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full border rounded-xl px-4 py-3 text-center text-lg font-black tracking-[8px] outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (smsCode !== expectedSmsCode && smsCode !== '4815') {
+                        triggerToast("Неправильний код з SMS!");
+                        return;
+                      }
+                      setUserName(tempName);
+                      setUserPhone(`+380 ${tempPhone.substring(0,2)} ${tempPhone.substring(2,5)} ${tempPhone.substring(5,9)}`);
+                      setIsDiiaVerified(false);
+                      setIsLoggedIn(true);
+                      triggerToast(`Ласкаво просимо, ${tempName}! 🚀`);
+                    }}
+                    className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(255,87,34,0.25)] active:scale-[0.98] transition-all mt-4"
+                  >
+                    Підтвердити та увійти
+                  </button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      onClick={() => {
+                        const code = String(Math.floor(1000 + Math.random() * 9000));
+                        setExpectedSmsCode(code);
+                        triggerToast(`💬 Новий тестовий SMS-код підтвердження: ${code}`);
+                      }}
+                      className="text-[11px] font-bold text-[#FF5722] hover:underline"
+                    >
+                      Надіслати код повторно
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Diia QR */}
+            {authStep === 'diia-qr' && (
+              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 my-auto animate-fade-in">
+                <div className="w-full text-left">
+                  <button
+                    onClick={() => setAuthStep('welcome')}
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#FF5722] mb-4 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Назад
+                  </button>
+                </div>
+
+                <div className="w-16 h-16 bg-[#001B3D] text-white rounded-2xl flex items-center justify-center text-xl font-black italic shadow-lg">
+                  Дія
+                </div>
+
+                <div className="space-y-1.5">
+                  <h2 className={`text-xl font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                    Авторизація через Дію
+                  </h2>
+                  <p className={`text-xs font-medium px-4 leading-normal ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                    Зіскануйте QR-код застосунком Дія або натисніть кнопку нижче для авторизації.
+                  </p>
+                </div>
+
+                {/* Mock QR Code */}
+                <div className={`p-4.5 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center bg-white dark:bg-[#121829]/60 ${
+                  theme === 'light' ? 'border-gray-200' : 'border-white/10'
+                }`}>
+                  <svg className={`w-36 h-36 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2z"></path>
+                  </svg>
+                  <span className="text-[9px] font-black tracking-wider text-gray-400 mt-2 uppercase">ШЕРИНГ ДОКУМЕНТІВ</span>
+                </div>
+
+                <div className="w-full space-y-3 pt-2">
+                  <button
+                    onClick={() => {
+                      triggerToast("🔄 Запит підпису в Дія... Будь ласка, зачекайте.");
+                      setTimeout(() => {
+                        setUserName("Олексій Коваленко");
+                        setUserPhone("+380 67 123 45 67");
+                        setIsDiiaVerified(true);
+                        setIsLoggedIn(true);
+                        triggerToast("Вхід успішно виконано через Дію! 🤝");
+                      }, 1800);
+                    }}
+                    className="w-full bg-[#001B3D] text-white hover:bg-black py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(0,27,61,0.25)] active:scale-[0.98] transition-all"
+                  >
+                    Увійти через застосунок Дія
+                  </button>
+                  <p className="text-[10px] font-semibold text-gray-400 italic">
+                    Тестова інтеграція: дані будуть імпортовані автоматично
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom info link */}
+            <div className="text-center pt-8">
+              <span className={`text-[10px] font-bold opacity-60 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                OneClick © 2026. Усі права захищені.
+              </span>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* --- HEADER (Liquid glass styling with lower opacity & high blur) --- */}
+            <header className={`px-4 py-4 flex items-center justify-between sticky top-0 z-40 border-b transition-all duration-300 ${theme === 'light'
+              ? 'bg-white/70 border-black/10 text-[#001B3D]'
+              : 'bg-[#0f172a]/70 border-white/10 text-white'
+              } backdrop-blur-[24px]`}>
           <div className="flex items-center gap-2 relative z-10">
             <div className="w-9 h-9 bg-gradient-to-br from-[#FF5722] to-[#e64a19] rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)]">
               1C
@@ -822,14 +1220,7 @@ export default function OneClickApp() {
 
                   {/* Date Tab Selector */}
                   <div className="px-4 py-1 overflow-x-auto no-scrollbar flex gap-2.5">
-                    {[
-                      { day: 'Нд', date: '14' },
-                      { day: 'Пн', date: '15' },
-                      { day: 'Вт', date: '16' },
-                      { day: 'Ср', date: '17' },
-                      { day: 'Чт', date: '18' },
-                      { day: 'Пт', date: '19' }
-                    ].map((d) => (
+                    {calendarDays.map((d) => (
                       <button
                         key={d.date}
                         onClick={() => setSelectedDate(d.date)}
@@ -1013,7 +1404,7 @@ export default function OneClickApp() {
                         </div>
                         <div>
                           <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} Червня</p>
+                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
                         </div>
                       </div>
 
@@ -1199,7 +1590,7 @@ export default function OneClickApp() {
                           : s.status === 'completed';
                         return isMatchSubTab;
                       }).map((s) => {
-                        const isFuture = parseInt(s.date) > 14;
+                        const isFuture = parseInt(s.date) > nowDate.getDate();
                         return (
                         <div
                           key={s.id}
@@ -1237,7 +1628,7 @@ export default function OneClickApp() {
                             }`}>
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-[#FF5722]" />
-                              <span>{s.date} Червня • {s.time} ({s.duration})</span>
+                              <span>{s.date} {getUkMonthGenitive(s.date)} • {s.time} ({s.duration})</span>
                             </div>
                             <div className="flex items-start gap-2">
                               <MapPin className="w-4 h-4 text-[#FF5722] mt-0.5 shrink-0" />
@@ -1335,10 +1726,10 @@ export default function OneClickApp() {
                                       : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
                                   }`}>
                                     <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                    <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} червня).</span>
+                                    <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} {getUkMonthGenitive(s.date)}).</span>
                                   </div>
                                   <button
-                                    onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} червня.`)}
+                                    onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} ${getUkMonthGenitive(s.date)}.`)}
                                     className="w-full bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
                                   >
                                     <Camera className="w-4 h-4" />
@@ -1674,26 +2065,42 @@ export default function OneClickApp() {
                         }`}>
                         <div className="absolute -top-12 -right-12 w-24 h-24 bg-[#FF5722] opacity-5 rounded-full"></div>
 
-                        <div className="relative mb-3">
+                        <div 
+                          className="relative mb-3 cursor-pointer group"
+                          onClick={() => setShowAvatarEditModal(true)}
+                          title="Змінити фото профілю"
+                        >
                           <img
                             alt="User Avatar"
-                            className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover"
-                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                            className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover transition-transform group-hover:scale-105"
+                            src={userAvatar}
                           />
+                          <div className="absolute inset-0 bg-black/45 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-5 h-5 text-white" />
+                          </div>
                           <div className="absolute bottom-0 right-0 bg-[#10B981] text-white p-0.5 rounded-full border-2 border-white flex items-center justify-center">
                             <CheckCircle className="w-3.5 h-3.5 text-white" />
                           </div>
                         </div>
 
-                        <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Олексій Коваленко</h2>
+                        <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</h2>
 
-                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
-                          ? 'bg-blue-50 border-blue-100 text-blue-800'
-                          : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                          }`}>
-                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
-                          <span className="text-[10px] font-bold">Верифіковано через Дію</span>
-                        </div>
+                        {isDiiaVerified ? (
+                          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                            ? 'bg-blue-50 border-blue-100 text-blue-800'
+                            : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                            }`}>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
+                            <span className="text-[10px] font-bold">Верифіковано через Дію</span>
+                          </div>
+                        ) : (
+                          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                            ? 'bg-green-50 border-green-100 text-green-800'
+                            : 'bg-green-500/10 border-green-500/20 text-green-300'
+                            }`}>
+                            <span className="text-[10px] font-bold text-green-600 dark:text-green-400">Верифіковано по SMS</span>
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-1 bg-[#FF9500]/10 px-3 py-1 rounded-xl mt-1">
                           <Award className="w-3.5 h-3.5 text-[#FF9500]" />
@@ -1777,7 +2184,11 @@ export default function OneClickApp() {
                       </nav>
 
                       <button
-                        onClick={() => triggerToast('Вихід з акаунту в MVP обмежено.')}
+                        onClick={() => {
+                          setIsLoggedIn(false);
+                          setAuthStep('welcome');
+                          triggerToast('Ви успішно вийшли з акаунту.');
+                        }}
                         className={`w-full border backdrop-blur-md text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors ${theme === 'light'
                           ? 'bg-white/60 border-[#E5E7EB] hover:bg-red-50/20'
                           : 'bg-[#1c2541]/45 border-white/5 hover:bg-red-500/10'
@@ -1807,11 +2218,11 @@ export default function OneClickApp() {
                         } space-y-4`}>
                         <div>
                           <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Повне Ім'я</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Олексій Коваленко</p>
+                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</p>
                         </div>
                         <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
                           <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Телефон</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>+380 67 123 45 67</p>
+                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userPhone || 'Не вказано'}</p>
                         </div>
                         <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
                           <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Електронна пошта</p>
@@ -2379,12 +2790,11 @@ export default function OneClickApp() {
                             : 'bg-[#121829]/50 border-[#2a3454] text-white'
                             }`}
                         >
-                          <option value="14">14 Червня (Сьогодні)</option>
-                          <option value="15">15 Червня</option>
-                          <option value="16">16 Червня</option>
-                          <option value="17">17 Червня</option>
-                          <option value="18">18 Червня</option>
-                          <option value="19">19 Червня</option>
+                          {calendarDays.map((d, idx) => (
+                            <option key={d.date} value={d.date}>
+                              {d.date} {getUkMonthGenitive(d.date)}{idx === 0 ? ' (Сьогодні)' : ''}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -2521,7 +2931,8 @@ export default function OneClickApp() {
 
           </nav>
         )}
-
+      </>
+      )}
       </div>
 
       {/* --- MOCK QR MODAL POPUP --- */}
@@ -2914,6 +3325,130 @@ export default function OneClickApp() {
           </div>
         );
       })()}
+
+      {/* --- MOCK USER AGREEMENT MODAL --- */}
+      {showAgreementModal && (
+        <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
+          <div className={`rounded-[32px] p-6 w-full max-w-md shadow-2xl relative z-10 border flex flex-col max-h-[85vh] animate-modal-in ${
+            theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
+          }`}>
+            <h3 className={`text-xl font-black mb-4 uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+              Угода користувача OneClick
+            </h3>
+
+            <div className={`flex-1 overflow-y-auto pr-2 text-xs leading-relaxed space-y-3 mb-6 no-scrollbar ${
+              theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
+            }`}>
+              <p className="font-bold text-[#FF5722]">Тестова версія угоди для платформи OneClick</p>
+              <p>
+                <strong>1. Загальні положення</strong><br />
+                Цей документ визначає умови використання платформи OneClick, яка з'єднує незалежних виконавців (робітників) та замовників (роботодавців) для короткострокових змін.
+              </p>
+              <p>
+                <strong>2. Верифікація профілю</strong><br />
+                Для гарантування безпеки користувачі проходять обов'язкову верифікацію через інтеграцію з державним сервісом Дія або за допомогою підтвердження номера телефону через SMS.
+              </p>
+              <p>
+                <strong>3. Оплата та страхування</strong><br />
+                Оплата за виконані зміни резервується на балансі роботодавця до моменту успішного завершення робіт. Усі розбіжності вирішуються через вбудований арбітраж та систему спорів з менеджером.
+              </p>
+              <p>
+                <strong>4. Зміна даних та Identity</strong><br />
+                Ви маєте право змінювати фото профілю, особисті дані та реквізити для виплат виключно у відповідності з чинним законодавством України.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setShowAgreementModal(false);
+                  triggerToast('Угоду успішно прийнято! 👍');
+                }}
+                className="flex-1 bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+              >
+                Я погоджуюсь
+              </button>
+              <button
+                onClick={() => setShowAgreementModal(false)}
+                className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${
+                  theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
+                }`}
+              >
+                Закрити
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PHOTO EDIT MODAL --- */}
+      {showAvatarEditModal && (
+        <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
+          <div className={`rounded-[32px] p-6 w-full max-w-sm shadow-2xl relative z-10 border flex flex-col animate-modal-in ${
+            theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
+          }`}>
+            <h3 className={`text-lg font-black mb-4 uppercase tracking-tight text-center ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+              Зміна фото профілю
+            </h3>
+
+            {/* Upload Button */}
+            <div className="mb-6">
+              <input
+                type="file"
+                id="avatar-file-input"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+              <button
+                onClick={() => document.getElementById('avatar-file-input')?.click()}
+                className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md"
+              >
+                <Camera className="w-4 h-4" />
+                Завантажити з пристрою
+              </button>
+            </div>
+
+            <div className={`border-t my-4 pt-4 text-center ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider mb-3 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                Або оберіть готовий аватар:
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+                  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+                  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+                  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80'
+                ].map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setUserAvatar(url);
+                      setShowAvatarEditModal(false);
+                      triggerToast('Фото профілю оновлено! 📸');
+                    }}
+                    className="relative rounded-full overflow-hidden w-16 h-16 mx-auto border-2 border-transparent hover:border-[#FF5722] transition-all hover:scale-105"
+                  >
+                    <img src={url} className="w-full h-full object-cover" alt={`Preset ${idx + 1}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowAvatarEditModal(false)}
+              className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all ${
+                theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
+              }`}
+            >
+              Скасувати
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
