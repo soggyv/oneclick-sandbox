@@ -215,6 +215,8 @@ export default function OneClickApp() {
   const [showAgreementModal, setShowAgreementModal] = useState<boolean>(false);
   const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
   const [showAvatarEditModal, setShowAvatarEditModal] = useState<boolean>(false);
+  const [arbitratorModalShiftId, setArbitratorModalShiftId] = useState<string | null>(null);
+
 
   // B2B Company states
   const [companyName, setCompanyName] = useState<string>('Кав’ярня «OneClick Coffee»');
@@ -1106,6 +1108,197 @@ export default function OneClickApp() {
             {toast}
           </div>
         )}
+
+        {/* Fullscreen Arbitrator Modal */}
+        {arbitratorModalShiftId && (() => {
+          const shift = shifts.find(s => s.id === arbitratorModalShiftId);
+          if (!shift) return null;
+          const chatMessages = disputeChats[shift.id] || [];
+          const isUnderReview = shift.disputeStatus === 'under_review';
+
+          return (
+            <div className={`absolute inset-0 z-50 flex flex-col animate-modal-in transition-colors duration-300 ${
+              theme === 'light' ? 'bg-[#fcfbf9]' : 'bg-[#0f1424]'
+            }`}>
+              {/* Header */}
+              <div className={`p-4 border-b flex items-center justify-between backdrop-blur-md sticky top-0 z-10 ${
+                theme === 'light' ? 'bg-white/95 border-gray-150 text-[#001B3D]' : 'bg-[#161d33]/95 border-white/5 text-white'
+              }`}>
+                <button
+                  onClick={() => setArbitratorModalShiftId(null)}
+                  className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all"
+                >
+                  <ArrowLeft className="w-5 h-5 text-[#FF5722]" />
+                </button>
+                <div className="flex-1 text-center px-2">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className="font-black text-sm uppercase tracking-wider">Арбітраж OneClick</span>
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                  </div>
+                  <p className={`text-[10px] font-bold opacity-60 truncate`}>
+                    Зміна #{shift.id.slice(0, 8).toUpperCase()} • {shift.role}
+                  </p>
+                </div>
+                <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 font-extrabold text-xs">
+                  ⚖️
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+                
+                {/* Dispute Summary Card */}
+                <div className={`p-4 rounded-3xl border text-left space-y-3 ${
+                  theme === 'light' 
+                    ? 'bg-white border-[#E5E7EB] text-[#001B3D] shadow-sm' 
+                    : 'bg-[#161d33] border-white/5 text-white'
+                }`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-black text-sm">{shift.role}</h4>
+                      <p className="text-[11px] font-bold opacity-65">{shift.company}</p>
+                    </div>
+                    <span className="text-sm font-black text-[#FF5722]">
+                      {shift.price} ₴
+                    </span>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-dashed border-black/10 dark:border-white/10 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs text-red-500 font-bold">
+                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                      <span>Причина спору: {shift.disputeReason}</span>
+                    </div>
+                    {shift.disputeComment && (
+                      <p className={`text-[11px] italic p-2.5 rounded-xl ${
+                        theme === 'light' ? 'bg-[#fcfbf9] text-gray-600' : 'bg-[#0f1424]/50 text-gray-300'
+                      }`}>
+                        &ldquo;{shift.disputeComment}&rdquo;
+                      </p>
+                    )}
+                  </div>
+
+                  <div className={`p-3 rounded-2xl text-[10px] font-semibold flex items-start gap-2 ${
+                    isUnderReview
+                      ? theme === 'light' ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-blue-950/20 border border-blue-900/40 text-blue-400'
+                      : theme === 'light' ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-amber-950/20 border border-amber-900/40 text-amber-400'
+                  }`}>
+                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      {isUnderReview 
+                        ? 'Справу розглядає незалежний арбітр. Менеджер вивчає фотозвіти та аргументи сторін.'
+                        : 'Кошти за зміну заморожені на транзитному рахунку OneClick до винесення рішення.'
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dispute Chat Section */}
+                {isUnderReview ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-[10px] font-black text-blue-500 px-1">
+                      <span>ЧАТ З АРБІТРОМ</span>
+                      <span className="text-[9px] opacity-75 font-semibold">Арбітр у мережі</span>
+                    </div>
+
+                    <div className={`p-3 rounded-2xl space-y-3 flex flex-col text-[11px] leading-relaxed min-h-[180px] ${
+                      theme === 'light' ? 'bg-white border border-[#E5E7EB]' : 'bg-[#161d33] border-white/5'
+                    }`}>
+                      {chatMessages.map((msg) => {
+                        if (msg.sender === 'system') {
+                          return (
+                            <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1.5 bg-gray-500/5 rounded-xl border border-dashed border-gray-500/10 self-stretch">
+                              {msg.text}
+                            </div>
+                          );
+                        }
+
+                        const isMe = msg.sender === 'worker';
+                        const isMgr = msg.sender === 'manager';
+                        
+                        let bubbleStyle = '';
+                        let alignStyle = '';
+                        
+                        if (isMe) {
+                          alignStyle = 'self-end';
+                          bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3.5 py-2.5 max-w-[85%] text-right font-semibold';
+                        } else if (isMgr) {
+                          alignStyle = 'self-start';
+                          bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3.5 py-2.5 max-w-[85%] font-semibold';
+                        } else {
+                          alignStyle = 'self-start';
+                          bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 max-w-[85%] font-semibold';
+                        }
+
+                        return (
+                          <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
+                            <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
+                              {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Роботодавець'}
+                            </span>
+                            <div className={bubbleStyle}>
+                              {msg.text}
+                            </div>
+                            <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center space-y-4">
+                    <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center text-3xl">
+                      ⚖️
+                    </div>
+                    <div className="space-y-1 px-4">
+                      <h3 className={`font-black text-sm ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                        Передати справу на розгляд арбітру?
+                      </h3>
+                      <p className={`text-[11px] leading-relaxed font-semibold ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                        Арбітр OneClick детально вивчить фотозвіт, коментарі та чат з роботодавцем, щоб прийняти рішення про виплату протягом 10 секунд.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleSummonArbitrator(shift.id)}
+                      className="w-full max-w-[280px] mx-auto bg-blue-500 hover:bg-blue-600 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95"
+                    >
+                      ⚖️ Залучити Арбітраж
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input Footer (Only when under review) */}
+              {isUnderReview && (
+                <div className={`p-4 border-t sticky bottom-0 z-10 flex gap-2 ${
+                  theme === 'light' ? 'bg-white border-gray-150' : 'bg-[#161d33] border-white/5'
+                }`}>
+                  <input
+                    type="text"
+                    value={disputeMessageText}
+                    onChange={(e) => setDisputeMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSendDisputeMessage(shift.id, 'worker');
+                    }}
+                    placeholder="Повідомлення арбітру про виконану роботу..."
+                    className={`flex-1 px-4 py-3 text-xs font-semibold rounded-2xl border outline-none transition-all ${
+                      theme === 'light'
+                        ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                        : 'bg-[#0f1424] border-[#2a3454] text-white focus:border-[#FF5722]'
+                    }`}
+                  />
+                  <button
+                    onClick={() => handleSendDisputeMessage(shift.id, 'worker')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center"
+                  >
+                    Надіслати
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {!isLoggedIn ? (
           <div className="flex-1 flex flex-col justify-between p-6 relative z-10 overflow-y-auto no-scrollbar">
@@ -2221,101 +2414,13 @@ export default function OneClickApp() {
                                           &ldquo;{s.disputeComment}&rdquo;
                                         </p>
                                       )}
-
-                                      {s.disputeStatus === 'under_review' ? (
-                                        <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2 text-left">
-                                          <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
-                                            <span>ЧАТ З АРБІТРОМ ONECLICK</span>
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                          </div>
-
-                                          {/* Message area */}
-                                          <div className={`max-h-48 overflow-y-auto p-2.5 rounded-xl space-y-2 flex flex-col text-[11px] leading-relaxed ${
-                                            theme === 'light' ? 'bg-[#f6f3f2]' : 'bg-[#121829]/40'
-                                          }`}>
-                                            {(disputeChats[s.id] || []).map((msg) => {
-                                              if (msg.sender === 'system') {
-                                                return (
-                                                  <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1 bg-gray-500/5 rounded-lg border border-dashed border-gray-500/10 self-stretch">
-                                                    {msg.text}
-                                                  </div>
-                                                );
-                                              }
-
-                                              const isMe = msg.sender === 'worker';
-                                              const isMgr = msg.sender === 'manager';
-                                              
-                                              let bubbleStyle = '';
-                                              let alignStyle = '';
-                                              
-                                              if (isMe) {
-                                                alignStyle = 'self-end';
-                                                bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] text-right font-semibold';
-                                              } else if (isMgr) {
-                                                alignStyle = 'self-start';
-                                                bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
-                                              } else {
-                                                alignStyle = 'self-start';
-                                                bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
-                                              }
-
-                                              return (
-                                                <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
-                                                  <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
-                                                    {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Роботодавець'}
-                                                  </span>
-                                                  <div className={bubbleStyle}>
-                                                    {msg.text}
-                                                  </div>
-                                                  <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
-                                                    {msg.timestamp}
-                                                  </span>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-
-                                          {/* Send message form */}
-                                          <div className="flex gap-1.5 pt-1.5 border-t border-dashed border-gray-200 dark:border-white/10">
-                                            <input
-                                              type="text"
-                                              value={disputeMessageText}
-                                              onChange={(e) => setDisputeMessageText(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleSendDisputeMessage(s.id, 'worker');
-                                              }}
-                                              placeholder="Напишіть повідомлення арбітру..."
-                                              className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-xl border outline-none transition-all ${
-                                                theme === 'light'
-                                                  ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                                                  : 'bg-[#121829]/60 border-[#2a3454] text-white focus:border-[#FF5722]'
-                                              }`}
-                                            />
-                                            <button
-                                              onClick={() => handleSendDisputeMessage(s.id, 'worker')}
-                                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
-                                            >
-                                              Надіслати
-                                            </button>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2">
-                                          <div className={`rounded-xl p-2.5 text-[10px] font-bold ${
-                                            theme === 'light'
-                                              ? 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
-                                              : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
-                                          }`}>
-                                            Кошти за зміну тимчасово заморожено. Очікується погодження сторін або втручання арбітражу.
-                                          </div>
-                                          <button
-                                            onClick={() => handleSummonArbitrator(s.id)}
-                                            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                                          >
-                                            ⚖️ Передати Справу Арбітру
-                                          </button>
-                                        </div>
-                                      )}
+                                      
+                                      <button
+                                        onClick={() => setArbitratorModalShiftId(s.id)}
+                                        className="w-full bg-[#001B3D] dark:bg-blue-600 hover:opacity-95 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                                      >
+                                        ⚖️ Відкрити Арбітраж та Чат
+                                      </button>
                                     </div>
                                   )}
                                 </div>
