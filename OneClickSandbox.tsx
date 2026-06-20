@@ -31,17 +31,20 @@ import {
   Star,
   Camera,
   AlertTriangle,
-  Phone
+  Phone,
+  Mail
 } from 'lucide-react';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const isSupabaseConfigured = 
-  supabaseUrl !== 'https://placeholder.supabase.co' && 
+const isSupabaseConfigured =
+  supabaseUrl !== 'https://placeholder.supabase.co' &&
   supabaseAnonKey !== 'placeholder-key' &&
   !supabaseUrl.includes('your-supabase-project-id');
+
+const POPULAR_ROLES = ["Бариста", "Вантажник", "Продавець", "Касир", "Офіціант", "Кур'єр", "Координатор", "Волонтер"];
 
 // --- TYPES ---
 interface DisputeMessage {
@@ -70,7 +73,7 @@ interface Shift {
   price: number;
   address: string;
   status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'disputed' | 'completed';
-  category: 'Кава' | 'Рітейл' | 'Склади';
+  category: 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer';
   logo?: string;
   isHot?: boolean;
   details?: string;
@@ -83,6 +86,7 @@ interface Shift {
   disputeReason?: string;
   disputeComment?: string;
   disputeStatus?: 'under_review' | 'pending_settlement';
+  volunteerReward?: string;
 }
 
 interface Transaction {
@@ -259,7 +263,7 @@ export default function OneClickApp() {
   const [showQRModal, setShowQRModal] = useState<string | null>(null);
   const [showScannerModal, setShowScannerModal] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
-  
+
   // B2B Venue QR code Display
   const [showB2BQRModalId, setShowB2BQRModalId] = useState<string | null>(null);
 
@@ -291,6 +295,7 @@ export default function OneClickApp() {
 
   // Form states for B2B shift publishing
   const [newRole, setNewRole] = useState('');
+  const [isRoleComboOpen, setIsRoleComboOpen] = useState(false);
   const [newCompany, setNewCompany] = useState('');
   const [newDate, setNewDate] = useState(() => String(new Date().getDate()));
   const [newTime, setNewTime] = useState('08:00 — 20:00');
@@ -298,7 +303,7 @@ export default function OneClickApp() {
   const [newPrice, setNewPrice] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newDetails, setNewDetails] = useState('');
-  const [newCategory, setNewCategory] = useState<'Кава' | 'Рітейл' | 'Склади'>('Кава');
+  const [newCategory, setNewCategory] = useState<'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer'>('Кава');
 
   // Active / History subtab inside B2C "My Shifts"
   const [myShiftsSubTab, setMyShiftsSubTab] = useState<'active' | 'history'>('active');
@@ -308,6 +313,57 @@ export default function OneClickApp() {
   const triggerToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Close Combobox on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.role-combobox-container')) {
+        setIsRoleComboOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.error("Error signing out from Supabase:", e);
+    }
+
+    // ЖЕСТКАЯ ЗАЧИСТКА СТЕЙТА (НИКАКИХ ФЕЙКОВЫХ ДАННЫХ)
+    setIsLoggedIn(false);
+    setUserName('');
+    setUserPhone('');
+    setUserAvatar('');
+    setIsDiiaVerified(false);
+    setCompanyName('');
+    setCompanyDetails('');
+    setUserRole('worker');
+    setRegRole('worker');
+    setAuthStep('welcome');
+    setActiveTab('feed');
+    setB2bTab('dashboard');
+    setProfileSubPage('main');
+    setBalance(0);
+    setTransactions([]);
+    setEmployerBalance(0);
+    setEmployerFrozenBalance(0);
+
+    // Тотальная очистка локальной памяти браузера
+    localStorage.removeItem('oneclick_auth_profile');
+    localStorage.removeItem('oneclick_user_id'); // На всякий случай сносим и ID
+
+    triggerToast('Ви успішно вийшли з акаунту.');
+
+    // Жесткая перезагрузка страницы для сброса кэша
+    setTimeout(() => {
+      window.location.reload();
+    }, 300);
   };
 
   // B2C Feedback states
@@ -349,7 +405,8 @@ export default function OneClickApp() {
     const shift = shifts.find(s => s.id === shiftId);
     if (!shift) return;
 
-    if (employerBalance < shift.price) {
+    const isVolunteer = shift.category === 'University Event / Volunteer';
+    if (!isVolunteer && employerBalance < shift.price) {
       triggerToast('У роботодавця недостатньо коштів для гарантування оплати!');
       return;
     }
@@ -358,13 +415,17 @@ export default function OneClickApp() {
       prev.map(s => (s.id === shiftId ? { ...s, status: 'in_progress' as const } : s))
     );
     updateShiftStatusInDb(shiftId, 'in_progress');
-    
-    // Freeze the payment amount
-    setEmployerBalance(prev => prev - shift.price);
-    setEmployerFrozenBalance(prev => prev + shift.price);
-    
+
+    // Freeze the payment amount if not volunteer shift
+    if (!isVolunteer) {
+      setEmployerBalance(prev => prev - shift.price);
+      setEmployerFrozenBalance(prev => prev + shift.price);
+      triggerToast('Зміну розпочато! 🔐 Кошти для оплати успішно заблоковано на сейфі.');
+    } else {
+      triggerToast('Зміну розпочато! 🤝 Симуляція волонтерської діяльності активована.');
+    }
+
     setShowScannerModal(null);
-    triggerToast('Зміну розпочато! 🔐 Кошти для оплати успішно заблоковано на сейфі.');
   };
 
   const handleCheckoutShift = (shiftId: string) => {
@@ -427,7 +488,8 @@ export default function OneClickApp() {
   // B2B: Create Shift
   const handleCreateShift = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRole || !newCompany || !newPrice || !newAddress) {
+    const isVolunteer = newCategory === 'University Event / Volunteer';
+    if (!newRole || !newCompany || (!isVolunteer && !newPrice) || !newAddress) {
       triggerToast('Заповніть всі обов\'язкові поля!');
       return;
     }
@@ -444,12 +506,13 @@ export default function OneClickApp() {
       dayName: calendarDays.find(d => d.date === newDate)?.day || 'Пн',
       time: newTime,
       duration: newDuration,
-      price: Number(newPrice),
+      price: isVolunteer ? 0 : Number(newPrice || 0),
       address: newAddress,
       status: 'open',
       category: newCategory,
       details: newDetails,
-      requirements: ['Охайний вигляд', 'Наявність документов']
+      requirements: ['Охайний вигляд', 'Наявність документів'],
+      volunteerReward: isVolunteer ? (newPrice || 'Волонтерська винагорода') : undefined
     };
 
     if (isSupabaseConfigured) {
@@ -461,11 +524,12 @@ export default function OneClickApp() {
           dayName: calendarDays.find(d => d.date === newDate)?.day || 'Пн',
           time: newTime,
           duration: newDuration,
-          price: Number(newPrice),
+          price: isVolunteer ? 0 : Number(newPrice || 0),
           address: newAddress,
           status: 'open',
           category: newCategory,
-          details: newDetails
+          details: newDetails,
+          volunteerReward: isVolunteer ? (newPrice || 'Волонтерська винагорода') : undefined
         }]);
         if (error) {
           console.error("Error inserting shift:", error);
@@ -655,37 +719,58 @@ export default function OneClickApp() {
 
   // B2B: Approve and Complete Shift
   const handleApproveShift = (shiftId: string, price: number, roleName: string, companyName: string) => {
+    const shift = shifts.find(s => s.id === shiftId);
+    const isVolunteer = shift?.category === 'University Event / Volunteer';
+
     setShifts(prev =>
       prev.map(s => s.id === shiftId ? { ...s, status: 'completed' as const } : s)
     );
     updateShiftStatusInDb(shiftId, 'completed');
 
-    setEmployerFrozenBalance(prev => Math.max(0, prev - price));
-    setBalance(prev => prev + price);
+    if (!isVolunteer) {
+      setEmployerFrozenBalance(prev => Math.max(0, prev - price));
+      setBalance(prev => prev + price);
 
-    setTransactions(prev => [
-      {
-        id: String(Date.now()),
-        title: `Зміна: ${roleName} (${companyName})`,
-        amount: price,
-        date: 'Сьогодні, щойно',
-        status: 'completed',
-        type: 'work'
-      },
-      ...prev
-    ]);
-    triggerToast(`Зміну підтверджено. Заморожені кошти (${price} ₴) успішно виплачено виконавцю! 🔐💸`);
+      setTransactions(prev => [
+        {
+          id: String(Date.now()),
+          title: `Зміна: ${roleName} (${companyName})`,
+          amount: price,
+          date: 'Сьогодні, щойно',
+          status: 'completed',
+          type: 'work'
+        },
+        ...prev
+      ]);
+      triggerToast(`Зміну підтверджено. Заморожені кошти (${price} ₴) успішно виплачено виконавцю! 🔐💸`);
+    } else {
+      const reward = shift?.volunteerReward || 'Волонтерська винагорода';
+      triggerToast(`Виконання підтверджено! Нараховано винагороду: ${reward} 🤝🎉`);
+    }
   };
 
   // B2B/B2C: Clean Dispute settlement handlers
-  const handleResolveDisputeClean = (shiftId: string, resolution: 'pay_full' | 'compromise' | 'refund_full') => {
+  const handleResolveDisputeClean = (shiftId: string, resolution: 'pay_full' | 'compromise' | 'refund_full', decidedBy: 'employer' | 'arbitrator' = 'employer') => {
     const shift = shifts.find(s => s.id === shiftId);
     if (!shift) return;
 
     if (resolution === 'pay_full') {
+      const logText = decidedBy === 'arbitrator'
+        ? '⚖️ Вердикт Арбітра: Фотозвіт підтверджує належне виконання роботи. Кошти виплачено виконавцю.'
+        : '💸 Роботодавець підтвердив виконання та виплатив повну суму. Спір закрито.';
+
+      setDisputeChats(prev => ({
+        ...prev,
+        [shiftId]: [
+          ...(prev[shiftId] || []),
+          { id: `resolve-${Date.now()}-1`, sender: 'system', text: logText, timestamp: 'Щойно' },
+          { id: `resolve-${Date.now()}-2`, sender: 'system', text: '🔒 Спір вирішено. Чат закрито.', timestamp: 'Щойно' }
+        ]
+      }));
+
       setShifts(prev =>
-        prev.map(s => s.id === shiftId ? { 
-          ...s, 
+        prev.map(s => s.id === shiftId ? {
+          ...s,
           status: 'completed' as const,
           disputeReason: undefined,
           disputeComment: undefined,
@@ -694,7 +779,7 @@ export default function OneClickApp() {
       );
       setEmployerFrozenBalance(prev => Math.max(0, prev - shift.price));
       setBalance(prev => prev + shift.price);
-      
+
       setTransactions(prev => [
         {
           id: String(Date.now()),
@@ -709,9 +794,18 @@ export default function OneClickApp() {
       triggerToast(`Спір врегульовано. Виконавцю сплачено повну суму (${shift.price} ₴)! 💸`);
     } else if (resolution === 'compromise') {
       const half = Math.round(shift.price / 2);
+      setDisputeChats(prev => ({
+        ...prev,
+        [shiftId]: [
+          ...(prev[shiftId] || []),
+          { id: `resolve-${Date.now()}-1`, sender: 'system', text: '🤝 Сторони дійшли компромісу (50% на 50%). Спір закрито.', timestamp: 'Щойно' },
+          { id: `resolve-${Date.now()}-2`, sender: 'system', text: '🔒 Спір вирішено. Чат закрито.', timestamp: 'Щойно' }
+        ]
+      }));
+
       setShifts(prev =>
-        prev.map(s => s.id === shiftId ? { 
-          ...s, 
+        prev.map(s => s.id === shiftId ? {
+          ...s,
           status: 'completed' as const,
           disputeReason: undefined,
           disputeComment: undefined,
@@ -721,7 +815,7 @@ export default function OneClickApp() {
       setEmployerFrozenBalance(prev => Math.max(0, prev - shift.price));
       setEmployerBalance(prev => prev + half);
       setBalance(prev => prev + (shift.price - half));
-      
+
       setTransactions(prev => [
         {
           id: String(Date.now()),
@@ -735,18 +829,31 @@ export default function OneClickApp() {
       ]);
       triggerToast(`Угода досягнута! 50% (${half} ₴) повернуто вам, 50% сплачено виконавцю. 🤝`);
     } else if (resolution === 'refund_full') {
+      const logText = decidedBy === 'arbitrator'
+        ? '⚖️ Вердикт Арбітра: Роботу виконано незадовільно. Кошти повернуто роботодавцю.'
+        : '↩️ Спір вирішено скасуванням зміни. Суму повернуто роботодавцю. Спір закрито.';
+
+      setDisputeChats(prev => ({
+        ...prev,
+        [shiftId]: [
+          ...(prev[shiftId] || []),
+          { id: `resolve-${Date.now()}-1`, sender: 'system', text: logText, timestamp: 'Щойно' },
+          { id: `resolve-${Date.now()}-2`, sender: 'system', text: '🔒 Спір вирішено. Чат закрито.', timestamp: 'Щойно' }
+        ]
+      }));
+
       setShifts(prev =>
         prev.map(s =>
           s.id === shiftId
             ? {
-                ...s,
-                status: 'open' as const,
-                workPhoto: undefined,
-                workComment: undefined,
-                disputeReason: undefined,
-                disputeComment: undefined,
-                disputeStatus: undefined
-              }
+              ...s,
+              status: 'open' as const,
+              workPhoto: undefined,
+              workComment: undefined,
+              disputeReason: undefined,
+              disputeComment: undefined,
+              disputeStatus: undefined
+            }
             : s
         )
       );
@@ -776,9 +883,9 @@ export default function OneClickApp() {
       prev.map(s =>
         s.id === shiftId
           ? {
-              ...s,
-              disputeStatus: 'under_review' as const
-            }
+            ...s,
+            disputeStatus: 'under_review' as const
+          }
           : s
       )
     );
@@ -793,7 +900,7 @@ export default function OneClickApp() {
     }));
 
     triggerToast('⚖️ Справу передано Арбітражу OneClick. Почався аналіз фотозвіту!');
-    
+
     // Simulate arbitrator active review messages and final verdict
     setTimeout(() => {
       setDisputeChats(prev => {
@@ -811,7 +918,7 @@ export default function OneClickApp() {
     setTimeout(() => {
       // 75% chance worker wins (due to photo report proof), 25% refund
       const decision = Math.random() > 0.25 ? 'pay_full' : 'refund_full';
-      handleResolveDisputeClean(shiftId, decision as any);
+      handleResolveDisputeClean(shiftId, decision as any, 'arbitrator');
       if (decision === 'pay_full') {
         triggerToast('⚖️ Вердикт Арбітра: Фотозвіт підтверджує роботу! Кошти виплачено виконавцю.');
       } else {
@@ -1114,16 +1221,18 @@ export default function OneClickApp() {
           const shift = shifts.find(s => s.id === arbitratorModalShiftId);
           if (!shift) return null;
           const chatMessages = disputeChats[shift.id] || [];
+
+          // Check if dispute is still active
+          const isDisputeActive = shift.status === 'disputed';
           const isUnderReview = shift.disputeStatus === 'under_review';
+          const isEmployer = userRole === 'employer';
 
           return (
-            <div className={`absolute inset-0 z-50 flex flex-col animate-modal-in transition-colors duration-300 ${
-              theme === 'light' ? 'bg-[#fcfbf9]' : 'bg-[#0f1424]'
-            }`}>
-              {/* Header */}
-              <div className={`p-4 border-b flex items-center justify-between backdrop-blur-md sticky top-0 z-10 ${
-                theme === 'light' ? 'bg-white/95 border-gray-150 text-[#001B3D]' : 'bg-[#161d33]/95 border-white/5 text-white'
+            <div className={`absolute inset-0 z-50 flex flex-col animate-modal-in transition-colors duration-300 ${theme === 'light' ? 'bg-[#fcfbf9]' : 'bg-[#0f1424]'
               }`}>
+              {/* Header */}
+              <div className={`p-4 border-b flex items-center justify-between backdrop-blur-md sticky top-0 z-10 ${theme === 'light' ? 'bg-white/95 border-gray-150 text-[#001B3D]' : 'bg-[#161d33]/95 border-white/5 text-white'
+                }`}>
                 <button
                   onClick={() => setArbitratorModalShiftId(null)}
                   className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 transition-all"
@@ -1131,10 +1240,17 @@ export default function OneClickApp() {
                   <ArrowLeft className="w-5 h-5 text-[#FF5722]" />
                 </button>
                 <div className="flex-1 text-center px-2">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span className="font-black text-sm uppercase tracking-wider">Арбітраж OneClick</span>
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                  </div>
+                  {!isDisputeActive ? (
+                    <div className="flex items-center justify-center gap-1.5 animate-fade-in">
+                      <span className="font-black text-sm uppercase tracking-wider text-green-500">Спір вирішено</span>
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-black text-sm uppercase tracking-wider">Арбітраж OneClick</span>
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    </div>
+                  )}
                   <p className={`text-[10px] font-bold opacity-60 truncate`}>
                     Зміна #{shift.id.slice(0, 8).toUpperCase()} • {shift.role}
                   </p>
@@ -1146,13 +1262,12 @@ export default function OneClickApp() {
 
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-                
+
                 {/* Dispute Summary Card */}
-                <div className={`p-4 rounded-3xl border text-left space-y-3 ${
-                  theme === 'light' 
-                    ? 'bg-white border-[#E5E7EB] text-[#001B3D] shadow-sm' 
-                    : 'bg-[#161d33] border-white/5 text-white'
-                }`}>
+                <div className={`p-4 rounded-3xl border text-left space-y-3 ${theme === 'light'
+                  ? 'bg-white border-[#E5E7EB] text-[#001B3D] shadow-sm'
+                  : 'bg-[#161d33] border-white/5 text-white'
+                  }`}>
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-black text-sm">{shift.role}</h4>
@@ -1166,43 +1281,45 @@ export default function OneClickApp() {
                   <div className="pt-2.5 border-t border-dashed border-black/10 dark:border-white/10 space-y-2">
                     <div className="flex items-center gap-1.5 text-xs text-red-500 font-bold">
                       <AlertTriangle className="w-4 h-4 text-red-500" />
-                      <span>Причина спору: {shift.disputeReason}</span>
+                      <span>Причина спору: {shift.disputeReason || 'Вирішено'}</span>
                     </div>
                     {shift.disputeComment && (
-                      <p className={`text-[11px] italic p-2.5 rounded-xl ${
-                        theme === 'light' ? 'bg-[#fcfbf9] text-gray-600' : 'bg-[#0f1424]/50 text-gray-300'
-                      }`}>
+                      <p className={`text-[11px] italic p-2.5 rounded-xl ${theme === 'light' ? 'bg-[#fcfbf9] text-gray-600' : 'bg-[#0f1424]/50 text-gray-300'
+                        }`}>
                         &ldquo;{shift.disputeComment}&rdquo;
                       </p>
                     )}
                   </div>
 
-                  <div className={`p-3 rounded-2xl text-[10px] font-semibold flex items-start gap-2 ${
-                    isUnderReview
+                  <div className={`p-3 rounded-2xl text-[10px] font-semibold flex items-start gap-2 ${!isDisputeActive
+                    ? theme === 'light' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-green-950/20 border border-green-900/40 text-green-400'
+                    : isUnderReview
                       ? theme === 'light' ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-blue-950/20 border border-blue-900/40 text-blue-400'
                       : theme === 'light' ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-amber-950/20 border border-amber-900/40 text-amber-400'
-                  }`}>
+                    }`}>
                     <Info className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
-                      {isUnderReview 
-                        ? 'Справу розглядає незалежний арбітр. Менеджер вивчає фотозвіти та аргументи сторін.'
-                        : 'Кошти за зміну заморожені на транзитному рахунку OneClick до винесення рішення.'
+                      {!isDisputeActive
+                        ? 'Справу закрито. Кошти успішно розподілено відповідно до рішення.'
+                        : isUnderReview
+                          ? 'Справу розглядає незалежний арбітр. Менеджер вивчає фотозвіти та аргументи сторін.'
+                          : 'Кошти за зміну заморожені на транзитному рахунку OneClick до винесення рішення.'
                       }
                     </span>
                   </div>
                 </div>
 
-                {/* Dispute Chat Section */}
-                {isUnderReview ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-[10px] font-black text-blue-500 px-1">
-                      <span>ЧАТ З АРБІТРОМ</span>
-                      <span className="text-[9px] opacity-75 font-semibold">Арбітр у мережі</span>
+                {/* Dispute Actions or Chat */}
+                {!isDisputeActive ? (
+                  /* Resolved Chat History */
+                  <div className="space-y-3 animate-fade-in">
+                    <div className="flex items-center justify-between text-[10px] font-black text-green-600 dark:text-green-400 px-1">
+                      <span>ЧАТ З АРБІТРОМ (СПІР ЗАКРИТО)</span>
+                      <span className="text-[9px] font-bold">Архів спору</span>
                     </div>
 
-                    <div className={`p-3 rounded-2xl space-y-3 flex flex-col text-[11px] leading-relaxed min-h-[180px] ${
-                      theme === 'light' ? 'bg-white border border-[#E5E7EB]' : 'bg-[#161d33] border-white/5'
-                    }`}>
+                    <div className={`p-3 rounded-2xl space-y-3 flex flex-col text-[11px] leading-relaxed min-h-[180px] ${theme === 'light' ? 'bg-white border border-[#E5E7EB]' : 'bg-[#161d33] border-white/5'
+                      }`}>
                       {chatMessages.map((msg) => {
                         if (msg.sender === 'system') {
                           return (
@@ -1212,12 +1329,12 @@ export default function OneClickApp() {
                           );
                         }
 
-                        const isMe = msg.sender === 'worker';
+                        const isMe = msg.sender === (isEmployer ? 'employer' : 'worker');
                         const isMgr = msg.sender === 'manager';
-                        
+
                         let bubbleStyle = '';
                         let alignStyle = '';
-                        
+
                         if (isMe) {
                           alignStyle = 'self-end';
                           bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3.5 py-2.5 max-w-[85%] text-right font-semibold';
@@ -1232,7 +1349,59 @@ export default function OneClickApp() {
                         return (
                           <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
                             <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
-                              {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Роботодавець'}
+                              {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Виконавець' : 'Роботодавець')}
+                            </span>
+                            <div className={bubbleStyle}>
+                              {msg.text}
+                            </div>
+                            <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : isUnderReview ? (
+                  /* Under Review Chat History */
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-[10px] font-black text-blue-500 px-1">
+                      <span>ЧАТ З АРБІТРОМ</span>
+                      <span className="text-[9px] opacity-75 font-semibold">Арбітр у мережі</span>
+                    </div>
+
+                    <div className={`p-3 rounded-2xl space-y-3 flex flex-col text-[11px] leading-relaxed min-h-[180px] ${theme === 'light' ? 'bg-white border border-[#E5E7EB]' : 'bg-[#161d33] border-white/5'
+                      }`}>
+                      {chatMessages.map((msg) => {
+                        if (msg.sender === 'system') {
+                          return (
+                            <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1.5 bg-gray-500/5 rounded-xl border border-dashed border-gray-500/10 self-stretch">
+                              {msg.text}
+                            </div>
+                          );
+                        }
+
+                        const isMe = msg.sender === (isEmployer ? 'employer' : 'worker');
+                        const isMgr = msg.sender === 'manager';
+
+                        let bubbleStyle = '';
+                        let alignStyle = '';
+
+                        if (isMe) {
+                          alignStyle = 'self-end';
+                          bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3.5 py-2.5 max-w-[85%] text-right font-semibold';
+                        } else if (isMgr) {
+                          alignStyle = 'self-start';
+                          bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3.5 py-2.5 max-w-[85%] font-semibold';
+                        } else {
+                          alignStyle = 'self-start';
+                          bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 max-w-[85%] font-semibold';
+                        }
+
+                        return (
+                          <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
+                            <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
+                              {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Виконавець' : 'Роботодавець')}
                             </span>
                             <div className={bubbleStyle}>
                               {msg.text}
@@ -1246,50 +1415,100 @@ export default function OneClickApp() {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8 text-center space-y-4">
-                    <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center text-3xl">
-                      ⚖️
-                    </div>
-                    <div className="space-y-1 px-4">
-                      <h3 className={`font-black text-sm ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                        Передати справу на розгляд арбітру?
-                      </h3>
-                      <p className={`text-[11px] leading-relaxed font-semibold ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
-                        Арбітр OneClick детально вивчить фотозвіт, коментарі та чат з роботодавцем, щоб прийняти рішення про виплату протягом 10 секунд.
-                      </p>
-                    </div>
+                  /* Pending Initiation actions */
+                  <div className="py-6 text-center space-y-5">
+                    {isEmployer ? (
+                      <div className="space-y-4 text-left">
+                        <div className="rounded-xl p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+                          Виберіть рішення для врегулювання спору або передайте справу арбітру.
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5">
+                          <button
+                            onClick={() => {
+                              handleResolveDisputeClean(shift.id, 'pay_full');
+                              setArbitratorModalShiftId(null);
+                            }}
+                            className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
+                          >
+                            Сплатити повністю ({shift.price} ₴)
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleResolveDisputeClean(shift.id, 'compromise');
+                              setArbitratorModalShiftId(null);
+                            }}
+                            className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
+                          >
+                            🤝 Компроміс (по 50%)
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleResolveDisputeClean(shift.id, 'refund_full');
+                              setArbitratorModalShiftId(null);
+                            }}
+                            className="w-full bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
+                          >
+                            Скасувати зміну та повернути кошти
+                          </button>
+                          <button
+                            onClick={() => handleSummonArbitrator(shift.id)}
+                            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95"
+                          >
+                            ⚖️ Передати Справу Арбітру
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center text-3xl">
+                          ⚖️
+                        </div>
+                        <div className="space-y-1 px-4">
+                          <h3 className={`font-black text-sm ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                            Передати справу на розгляд арбітру?
+                          </h3>
+                          <p className={`text-[11px] leading-relaxed font-semibold ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                            Арбітр OneClick детально вивчить фотозвіт, коментарі та чат з роботодавцем, щоб прийняти рішення про виплату протягом 10 секунд.
+                          </p>
+                        </div>
 
-                    <button
-                      onClick={() => handleSummonArbitrator(shift.id)}
-                      className="w-full max-w-[280px] mx-auto bg-blue-500 hover:bg-blue-600 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95"
-                    >
-                      ⚖️ Залучити Арбітраж
-                    </button>
+                        <button
+                          onClick={() => handleSummonArbitrator(shift.id)}
+                          className="w-full max-w-[280px] mx-auto bg-blue-500 hover:bg-blue-600 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-md transition-all active:scale-95"
+                        >
+                          ⚖️ Залучити Арбітраж
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Chat Input Footer (Only when under review) */}
-              {isUnderReview && (
-                <div className={`p-4 border-t sticky bottom-0 z-10 flex gap-2 ${
-                  theme === 'light' ? 'bg-white border-gray-150' : 'bg-[#161d33] border-white/5'
-                }`}>
+              {/* Chat Input Footer or Closed Chat Banner */}
+              {!isDisputeActive ? (
+                <div className={`p-4 border-t sticky bottom-0 z-10 text-center text-xs font-bold text-gray-500 flex items-center justify-center gap-1.5 ${theme === 'light' ? 'bg-white border-gray-150' : 'bg-[#161d33] border-white/5'
+                  }`}>
+                  <span className="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
+                  <span>🔒 Спір вирішено. Чат закрито для нових повідомлень.</span>
+                </div>
+              ) : isUnderReview && (
+                <div className={`p-4 border-t sticky bottom-0 z-10 flex gap-2 ${theme === 'light' ? 'bg-white border-gray-150' : 'bg-[#161d33] border-white/5'
+                  }`}>
                   <input
                     type="text"
                     value={disputeMessageText}
                     onChange={(e) => setDisputeMessageText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSendDisputeMessage(shift.id, 'worker');
+                      if (e.key === 'Enter') handleSendDisputeMessage(shift.id, isEmployer ? 'employer' : 'worker');
                     }}
-                    placeholder="Повідомлення арбітру про виконану роботу..."
-                    className={`flex-1 px-4 py-3 text-xs font-semibold rounded-2xl border outline-none transition-all ${
-                      theme === 'light'
-                        ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                        : 'bg-[#0f1424] border-[#2a3454] text-white focus:border-[#FF5722]'
-                    }`}
+                    placeholder="Повідомлення арбітру..."
+                    className={`flex-1 px-4 py-3 text-xs font-semibold rounded-2xl border outline-none transition-all ${theme === 'light'
+                      ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                      : 'bg-[#0f1424] border-[#2a3454] text-white focus:border-[#FF5722]'
+                      }`}
                   />
                   <button
-                    onClick={() => handleSendDisputeMessage(shift.id, 'worker')}
+                    onClick={() => handleSendDisputeMessage(shift.id, isEmployer ? 'employer' : 'worker')}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center"
                   >
                     Надіслати
@@ -1343,19 +1562,17 @@ export default function OneClickApp() {
 
                 <div className="w-full space-y-4 pt-2">
                   {/* B2B vs B2C registration role selector */}
-                  <div className={`p-1 rounded-2xl flex border transition-all ${
-                    theme === 'light' 
-                      ? 'bg-white/60 border-black/10' 
-                      : 'bg-[#1c2541]/45 border-white/10'
-                  } mb-2`}>
+                  <div className={`p-1 rounded-2xl flex border transition-all ${theme === 'light'
+                    ? 'bg-white/60 border-black/10'
+                    : 'bg-[#1c2541]/45 border-white/10'
+                    } mb-2`}>
                     <button
                       type="button"
                       onClick={() => setRegRole('worker')}
-                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                        regRole === 'worker'
-                          ? 'bg-[#FF5722] text-white shadow-md'
-                          : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${regRole === 'worker'
+                        ? 'bg-[#FF5722] text-white shadow-md'
+                        : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
+                        }`}
                     >
                       <User className="w-3.5 h-3.5" />
                       Шукач (B2C)
@@ -1363,11 +1580,10 @@ export default function OneClickApp() {
                     <button
                       type="button"
                       onClick={() => setRegRole('employer')}
-                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                        regRole === 'employer'
-                          ? 'bg-[#001B3D] text-white shadow-md'
-                          : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${regRole === 'employer'
+                        ? 'bg-[#001B3D] text-white shadow-md'
+                        : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
+                        }`}
                     >
                       <Building className="w-3.5 h-3.5" />
                       Бізнес (B2B)
@@ -1396,43 +1612,88 @@ export default function OneClickApp() {
                     </label>
                   </div>
 
-                  {/* Diia Button */}
-                  <button
-                    onClick={() => {
-                      if (!agreedToTerms) {
-                        triggerToast('Погодьтеся з Умовами користування!');
-                        return;
-                      }
-                      setAuthStep('diia-qr');
-                    }}
-                    className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${
-                      agreedToTerms
-                        ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
-                        : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
-                    }`}
-                  >
-                    <span className="bg-white text-[#001B3D] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
-                    Швидкий вхід через Дію
-                  </button>
+                  {regRole === 'worker' ? (
+                    <>
+                      {/* Diia Button */}
+                      <button
+                        onClick={() => {
+                          if (!agreedToTerms) {
+                            triggerToast('Погодьтеся з Умовами користування!');
+                            return;
+                          }
+                          setAuthStep('diia-qr');
+                        }}
+                        className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${agreedToTerms
+                          ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
+                          : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                          }`}
+                      >
+                        <span className="bg-white text-[#001B3D] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
+                        Швидкий вхід через Дію
+                      </button>
 
-                  {/* Phone Button */}
-                  <button
-                    onClick={() => {
-                      if (!agreedToTerms) {
-                        triggerToast('Погодьтеся з Умовами користування!');
-                        return;
-                      }
-                      setAuthStep('phone-input');
-                    }}
-                    className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
-                      agreedToTerms
-                        ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
-                        : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
-                    }`}
-                  >
-                    <Phone className="w-4 h-4" />
-                    За номером телефону
-                  </button>
+                      {/* Phone Button */}
+                      <button
+                        onClick={() => {
+                          if (!agreedToTerms) {
+                            triggerToast('Погодьтеся з Умовами користування!');
+                            return;
+                          }
+                          setAuthStep('phone-input');
+                        }}
+                        className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${agreedToTerms
+                          ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
+                          : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                      >
+                        <Phone className="w-4 h-4" />
+                        За номером телефону
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Google Button for B2B */}
+                      <button
+                        onClick={() => {
+                          if (!agreedToTerms) {
+                            triggerToast('Погодьтеся з Умовами користування!');
+                            return;
+                          }
+                          window.location.href = '/auth/b2b';
+                        }}
+                        className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${agreedToTerms
+                          ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
+                          : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                          }`}
+                      >
+                        <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        Продовжити з Google
+                      </button>
+
+                      {/* Email Button for B2B */}
+                      <button
+                        onClick={() => {
+                          if (!agreedToTerms) {
+                            triggerToast('Погодьтеся з Умовами користування!');
+                            return;
+                          }
+                          window.location.href = '/auth/b2b';
+                        }}
+                        className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${agreedToTerms
+                          ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
+                          : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
+                          }`}
+                      >
+                        <Mail className="w-4 h-4" />
+                        Електронна пошта та пароль
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1546,11 +1807,10 @@ export default function OneClickApp() {
                       placeholder="Олексій Коваленко"
                       value={tempName}
                       onChange={(e) => setTempName(e.target.value)}
-                      className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none ${
-                        theme === 'light'
-                          ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                          : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                      }`}
+                      className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none ${theme === 'light'
+                        ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                        : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                        }`}
                     />
                   </div>
 
@@ -1559,11 +1819,10 @@ export default function OneClickApp() {
                       Номер телефону
                     </label>
                     <div className="relative flex">
-                      <span className={`flex items-center justify-center border border-r-0 rounded-l-xl px-3 text-xs font-bold ${
-                        theme === 'light'
-                          ? 'bg-gray-50 border-[#E5E7EB] text-[#001B3D]'
-                          : 'bg-[#121829]/80 border-[#2a3454] text-gray-400'
-                      }`}>
+                      <span className={`flex items-center justify-center border border-r-0 rounded-l-xl px-3 text-xs font-bold ${theme === 'light'
+                        ? 'bg-gray-50 border-[#E5E7EB] text-[#001B3D]'
+                        : 'bg-[#121829]/80 border-[#2a3454] text-gray-400'
+                        }`}>
                         +380
                       </span>
                       <input
@@ -1571,11 +1830,10 @@ export default function OneClickApp() {
                         placeholder="67 123 45 67"
                         value={tempPhone}
                         onChange={(e) => setTempPhone(e.target.value.replace(/\D/g, '').substring(0, 9))}
-                        className={`w-full border rounded-r-xl px-4 py-3 text-xs font-bold outline-none ${
-                          theme === 'light'
-                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                        }`}
+                        className={`w-full border rounded-r-xl px-4 py-3 text-xs font-bold outline-none ${theme === 'light'
+                          ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                          : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                          }`}
                       />
                     </div>
                   </div>
@@ -1619,7 +1877,7 @@ export default function OneClickApp() {
                     Підтвердження
                   </h2>
                   <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-                    Ми надіслали SMS із кодом на номер +380 {tempPhone.substring(0,2)} {tempPhone.substring(2,5)} {tempPhone.substring(5,9)}
+                    Ми надіслали SMS із кодом на номер +380 {tempPhone.substring(0, 2)} {tempPhone.substring(2, 5)} {tempPhone.substring(5, 9)}
                   </p>
                 </div>
 
@@ -1644,7 +1902,7 @@ export default function OneClickApp() {
                         triggerToast("Неправильний код з SMS!");
                         return;
                       }
-                      const formattedPhone = `+380 ${tempPhone.substring(0,2)} ${tempPhone.substring(2,5)} ${tempPhone.substring(5,9)}`;
+                      const formattedPhone = `+380 ${tempPhone.substring(0, 2)} ${tempPhone.substring(2, 5)} ${tempPhone.substring(5, 9)}`;
                       handleLoginSuccess(tempName, formattedPhone, false);
                       triggerToast(`Ласкаво просимо, ${tempName}! 🚀`);
                     }}
@@ -1695,9 +1953,8 @@ export default function OneClickApp() {
                 </div>
 
                 {/* Mock QR Code */}
-                <div className={`p-4.5 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center bg-white dark:bg-[#121829]/60 ${
-                  theme === 'light' ? 'border-gray-200' : 'border-white/10'
-                }`}>
+                <div className={`p-4.5 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center bg-white dark:bg-[#121829]/60 ${theme === 'light' ? 'border-gray-200' : 'border-white/10'
+                  }`}>
                   <svg className={`w-36 h-36 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 0h2v2h-2v-2z"></path>
                   </svg>
@@ -1738,1714 +1995,1692 @@ export default function OneClickApp() {
               ? 'bg-white/70 border-black/10 text-[#001B3D]'
               : 'bg-[#0f172a]/70 border-white/10 text-white'
               } backdrop-blur-[24px]`}>
-          <div className="flex items-center gap-2 relative z-10">
-            <div className="w-9 h-9 bg-gradient-to-br from-[#FF5722] to-[#e64a19] rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)]">
-              1C
-            </div>
-            <span className="font-black text-lg uppercase tracking-tight">OneClick</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 relative z-10">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-              className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center border ${theme === 'light'
-                ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
-                : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
-                } backdrop-blur-[24px]`}
-              title="Переключити тему"
-            >
-              {theme === 'light' ? (
-                <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-
-            {/* B2C/B2B Switcher */}
-            <button
-              onClick={handleToggleUserRole}
-              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all active:scale-95 border ${theme === 'light'
-                ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
-                : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
-                } backdrop-blur-[24px]`}
-            >
-              {userRole === 'worker' ? (
-                <>
-                  <Building className="w-3.5 h-3.5 text-[#FF5722]" />
-                  <span>Бізнес (B2B)</span>
-                </>
-              ) : (
-                <>
-                  <User className="w-3.5 h-3.5 text-[#FF5722]" />
-                  <span>Шукач (B2C)</span>
-                </>
-              )}
-            </button>
-          </div>
-        </header>
-
-        {/* --- MAIN PAGE CONTENT (Layered relative z-10 above background liquid blobs) --- */}
-        <div className="flex-1 overflow-y-auto pb-28 no-scrollbar relative z-10">
-
-          {/* ========================================================= */}
-          {/* ===================== WORKER VIEW (B2C) ================= */}
-          {/* ========================================================= */}
-          {userRole === 'worker' && (
-            <>
-              {/* 1. SHIFT FEED TAB */}
-              {activeTab === 'feed' && !selectedShift && (
-                <div className="animate-fade-in">
-
-                  {/* Search and Filters Trigger */}
-                  <div className="p-4 flex gap-2">
-                    <div className={`rounded-full shadow-sm border flex items-center px-4 py-2.5 gap-2.5 flex-1 transition-all ${theme === 'light'
-                      ? 'bg-white/70 border-[#E5E7EB]'
-                      : 'bg-[#0f172a]/60 border-white/10'
-                      } backdrop-blur-[24px]`}>
-                      <Search className="w-4 h-4 text-[#FF5722]" />
-                      <input
-                        type="text"
-                        placeholder="Пошук вакансії чи закладу..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`bg-transparent text-sm w-full outline-none font-semibold transition-all ${theme === 'light' ? 'text-[#001B3D] placeholder-[#5b4039]/65' : 'text-white placeholder-gray-400'
-                          }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Date Tab Selector */}
-                  <div className="px-4 py-1 overflow-x-auto no-scrollbar flex gap-2.5">
-                    {calendarDays.map((d) => (
-                      <button
-                        key={d.date}
-                        onClick={() => setSelectedDate(d.date)}
-                        className={`flex flex-col items-center justify-center min-w-[68px] h-[82px] rounded-2xl border transition-all ${selectedDate === d.date
-                          ? 'bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white border-transparent shadow-[0_8px_20px_rgba(255,87,34,0.25)] scale-[1.02]'
-                          : theme === 'light'
-                            ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
-                            : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
-                          } backdrop-blur-[24px]`}
-                      >
-                        <span className="text-[11px] font-bold opacity-80 mb-0.5">{d.day}</span>
-                        <span className="text-lg font-black">{d.date}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Category Filter Chips */}
-                  <div className="p-4 overflow-x-auto no-scrollbar flex gap-2">
-                    {['Всі', 'Кава', 'Рітейл', 'Склади'].map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-4.5 py-2 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
-                          ? theme === 'light'
-                            ? 'bg-[#001B3D] text-white border-transparent'
-                            : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
-                          : theme === 'light'
-                            ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
-                            : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
-                          } backdrop-blur-[24px]`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Open Shift Cards */}
-                  <div className="px-4 space-y-4">
-                    <div className="flex justify-between items-center px-1">
-                      <h3 className={`text-xs font-black uppercase tracking-wider transition-colors ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
-                        }`}>
-                        Доступно змін ({feedShifts.length})
-                      </h3>
-                    </div>
-
-                    {feedShifts.length > 0 ? (
-                      feedShifts.map((s) => (
-                        <div
-                          key={s.id}
-                          onClick={() => setSelectedShift(s)}
-                          className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group backdrop-blur-[24px] ${theme === 'light'
-                              ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5'
-                              : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5'
-                            } ${s.isHot
-                              ? theme === 'light'
-                                ? 'shadow-[0_8px_30px_rgba(255,149,0,0.22)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.35)]'
-                                : 'shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.55)]'
-                              : theme === 'light'
-                                ? 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)]'
-                                : 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)]'
-                            }`}
-                        >
-                          <div className="flex justify-between items-start gap-2 relative z-10">
-                            <div className="flex gap-3">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
-                                }`}>
-                                {s.logo ? (
-                                  <img src={s.logo} alt={s.company} className="w-full h-full object-cover" />
-                                ) : (
-                                  <Building className={`w-5 h-5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} />
-                                )}
-                              </div>
-                              <div>
-                                {s.isHot && (
-                                  <span className="bg-[#FF9500] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">
-                                    ГАРЯЧА
-                                  </span>
-                                )}
-                                <h4 className={`text-base font-bold leading-tight group-hover:text-[#FF5722] transition-colors ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
-                                  }`}>{s.role}</h4>
-                                <p className={`text-xs font-semibold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
-                                  }`}>{s.company}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xl font-extrabold text-[#FF5722]">{s.price} ₴</span>
-                              <p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
-                                }`}>за зміну</p>
-                            </div>
-                          </div>
-
-                          <div className={`mt-4 pt-3.5 border-t flex items-center justify-between text-xs font-semibold relative z-10 ${theme === 'light' ? 'border-gray-100 text-[#001B3D]' : 'border-white/5 text-white'
-                            }`}>
-                            <span className={`flex items-center gap-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                              <Clock className="w-4 h-4 text-[#FF5722]" />
-                              {s.time} ({s.duration})
-                            </span>
-                            {(() => {
-                              const hrs = getHoursRemaining(s);
-                              if (hrs > 0 && hrs <= 2) {
-                                return (
-                                  <span className="text-[10px] font-black text-[#FF5722] bg-[#FF5722]/8 px-2 py-0.5 rounded flex items-center gap-1 animate-pulse">
-                                    <span>⏳</span> {formatRemainingTime(hrs)}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
-                        }`}>
-                        <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs font-bold">Усі зміни на цю дату заброньовані.</p>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-center gap-2 relative z-10">
+                <div className="w-9 h-9 bg-gradient-to-br from-[#FF5722] to-[#e64a19] rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-[0_4px_10px_rgba(255,87,34,0.3)]">
+                  1C
                 </div>
-              )}
+                <span className="font-black text-lg uppercase tracking-tight">OneClick</span>
+              </div>
 
-              {/* B2C: SHIFT DETAILS */}
-              {selectedShift && (
-                <div className="p-4 space-y-4 text-left animate-fade-in">
-                  <button
-                    onClick={() => {
-                      setSelectedShift(null);
-                      setSignedContract(false);
-                    }}
-                    className={`flex items-center gap-1 text-xs font-bold hover:underline mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
-                      }`}
-                  >
-                    <ArrowLeft className="w-4 h-4 text-[#FF5722]" />
-                    <span>Назад до пошуку</span>
-                  </button>
+              <div className="flex items-center gap-2.5 relative z-10">
+                {/* Theme Toggle Button */}
+                <button
+                  onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+                  className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center border ${theme === 'light'
+                    ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
+                    : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
+                    } backdrop-blur-[24px]`}
+                  title="Переключити тему"
+                >
+                  {theme === 'light' ? (
+                    <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
 
-                  {/* Header bento */}
-                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
-                    ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
-                    : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
-                    } space-y-4`}>
-                    <div className="flex gap-4">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
-                        }`}>
-                        {selectedShift.logo ? (
-                          <img src={selectedShift.logo} alt={selectedShift.company} className="w-full h-full object-cover" />
-                        ) : (
-                          <Building className={`w-6 h-6 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} />
-                        )}
-                      </div>
-                      <div>
-                        <h2 className={`text-xl font-bold leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.role}</h2>
-                        <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.company}</p>
-                        <div className="flex items-center gap-1 mt-1 text-xs">
-                          <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                          <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>4.9</span>
-                          <span className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>(1.2к відгуків)</span>
-                        </div>
-                      </div>
-                    </div>
+                {/* B2C/B2B Switcher */}
+                <button
+                  onClick={handleToggleUserRole}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all active:scale-95 border ${theme === 'light'
+                    ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D]'
+                    : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white'
+                    } backdrop-blur-[24px]`}
+                >
+                  {userRole === 'worker' ? (
+                    <>
+                      <Building className="w-3.5 h-3.5 text-[#FF5722]" />
+                      <span>Бізнес (B2B)</span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-3.5 h-3.5 text-[#FF5722]" />
+                      <span>Шукач (B2C)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </header>
 
-                    <div className="bg-[#10B981]/8 border border-[#10B981]/25 rounded-2xl p-3.5 flex items-center gap-2.5">
-                      <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0" />
-                      <p className={`text-[11px] font-medium leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
-                        Оплата за зміну зарезервована та гарантується сервісом OneClick.
-                      </p>
-                    </div>
-                  </div>
+            {/* --- MAIN PAGE CONTENT (Layered relative z-10 above background liquid blobs) --- */}
+            <div className="flex-1 overflow-y-auto pb-28 no-scrollbar relative z-10">
 
-                  {/* Details block */}
-                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
-                    ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
-                    : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
-                    } space-y-4`}>
-                    <div className="flex flex-col gap-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
-                          }`}>
-                          <Calendar className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
-                        </div>
-                      </div>
+              {/* ========================================================= */}
+              {/* ===================== WORKER VIEW (B2C) ================= */}
+              {/* ========================================================= */}
+              {userRole === 'worker' && (
+                <>
+                  {/* 1. SHIFT FEED TAB */}
+                  {activeTab === 'feed' && !selectedShift && (
+                    <div className="animate-fade-in">
 
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
-                          }`}>
-                          <Clock className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Час роботи</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.time} ({selectedShift.duration})</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#FF5722]/8 flex items-center justify-center text-[#FF5722]">
-                          <Wallet className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-[#FF5722] uppercase tracking-wider font-bold">Виплата</p>
-                          <p className="text-lg font-black text-[#FF5722] mt-0.5">{selectedShift.price} ₴</p>
+                      {/* Search and Filters Trigger */}
+                      <div className="p-4 flex gap-2">
+                        <div className={`rounded-full shadow-sm border flex items-center px-4 py-2.5 gap-2.5 flex-1 transition-all ${theme === 'light'
+                          ? 'bg-white/70 border-[#E5E7EB]'
+                          : 'bg-[#0f172a]/60 border-white/10'
+                          } backdrop-blur-[24px]`}>
+                          <Search className="w-4 h-4 text-[#FF5722]" />
+                          <input
+                            type="text"
+                            placeholder="Пошук вакансії чи закладу..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={`bg-transparent text-sm w-full outline-none font-semibold transition-all ${theme === 'light' ? 'text-[#001B3D] placeholder-[#5b4039]/65' : 'text-white placeholder-gray-400'
+                              }`}
+                          />
                         </div>
                       </div>
 
-                      {/* Map Location Link */}
-                      <div className="flex items-start gap-3 pt-1">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
-                          }`}>
-                          <MapPin className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Адреса та орієнтир</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.address}</p>
-
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShift.address)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 mt-2 bg-[#FF5722]/10 hover:bg-[#FF5722]/20 text-[#FF5722] px-3.5 py-1.8 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all hover:scale-102 active:scale-98"
+                      {/* Date Tab Selector */}
+                      <div className="px-4 py-1 overflow-x-auto no-scrollbar flex gap-2.5">
+                        {calendarDays.map((d) => (
+                          <button
+                            key={d.date}
+                            onClick={() => setSelectedDate(d.date)}
+                            className={`flex flex-col items-center justify-center min-w-[68px] h-[82px] rounded-2xl border transition-all ${selectedDate === d.date
+                              ? 'bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white border-transparent shadow-[0_8px_20px_rgba(255,87,34,0.25)] scale-[1.02]'
+                              : theme === 'light'
+                                ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
+                                : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
+                              } backdrop-blur-[24px]`}
                           >
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span>Знайти в Google Maps</span>
-                          </a>
+                            <span className="text-[11px] font-bold opacity-80 mb-0.5">{d.day}</span>
+                            <span className="text-lg font-black">{d.date}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Category Filter Chips */}
+                      <div className="p-4 overflow-x-auto no-scrollbar flex gap-2">
+                        {['Всі', 'Кава', 'Рітейл', 'Склади'].map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`px-4.5 py-2 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                              ? theme === 'light'
+                                ? 'bg-[#001B3D] text-white border-transparent'
+                                : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
+                              : theme === 'light'
+                                ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
+                                : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
+                              } backdrop-blur-[24px]`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Open Shift Cards */}
+                      <div className="px-4 space-y-4">
+                        <div className="flex justify-between items-center px-1">
+                          <h3 className={`text-xs font-black uppercase tracking-wider transition-colors ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
+                            }`}>
+                            Доступно змін ({feedShifts.length})
+                          </h3>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className={`border-t pt-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                      <h4 className={`text-xs font-black uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Опис завдань:</h4>
-                      <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Звичайна тимчасова зміна в роздрібній торгівлі/кафе.'}</p>
-                    </div>
-
-                    {/* Worker Reviews Section */}
-                    <div className={`border-t pt-4 space-y-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                      <div className="flex justify-between items-center">
-                        <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                          Відгуки працівників ({selectedShift.reviews?.length || 0})
-                        </h4>
-                        {selectedShift.reviews && selectedShift.reviews.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                            <span className={`text-xs font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                              {(selectedShift.reviews.reduce((acc, r) => acc + r.rating, 0) / selectedShift.reviews.length).toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 no-scrollbar">
-                        {selectedShift.reviews && selectedShift.reviews.length > 0 ? (
-                          selectedShift.reviews.map((rev) => (
-                            <div key={rev.id} className={`p-3 rounded-2xl border transition-all ${theme === 'light' ? 'bg-[#f0edec]/50 border-gray-200/60' : 'bg-[#121829]/30 border-white/5'
-                              } space-y-1`}>
-                              <div className="flex justify-between items-center">
-                                <span className={`font-black text-xs ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                                  {rev.workerName}
-                                </span>
-                                <span className={`text-[9px] font-bold ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
-                                  {rev.date}
-                                </span>
+                        {feedShifts.length > 0 ? (
+                          feedShifts.map((s) => (
+                            <div
+                              key={s.id}
+                              onClick={() => setSelectedShift(s)}
+                              className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group backdrop-blur-[24px] ${theme === 'light'
+                                ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5'
+                                : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5'
+                                } ${s.isHot
+                                  ? theme === 'light'
+                                    ? 'shadow-[0_8px_30px_rgba(255,149,0,0.22)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.35)]'
+                                    : 'shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.55)]'
+                                  : theme === 'light'
+                                    ? 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)]'
+                                    : 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)]'
+                                }`}
+                            >
+                              <div className="flex justify-between items-start gap-2 relative z-10">
+                                <div className="flex gap-3">
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
+                                    }`}>
+                                    {s.logo ? (
+                                      <img src={s.logo} alt={s.company} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <Building className={`w-5 h-5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} />
+                                    )}
+                                  </div>
+                                  <div>
+                                    {s.isHot && (
+                                      <span className="bg-[#FF9500] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">
+                                        ГАРЯЧА
+                                      </span>
+                                    )}
+                                    <h4 className={`text-base font-bold leading-tight group-hover:text-[#FF5722] transition-colors ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
+                                      }`}>{s.role}</h4>
+                                    <p className={`text-xs font-semibold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
+                                      }`}>{s.company}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-xl font-extrabold text-[#FF5722]">
+                                    {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
+                                  </span>
+                                  <p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
+                                    }`}>
+                                    {s.category === 'University Event / Volunteer' ? 'Нагорода' : 'за зміну'}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex gap-0.5">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-3.5 h-3.5 ${i < rev.rating ? 'text-[#FF9500] fill-[#FF9500]' : 'text-gray-300'
-                                      }`}
-                                  />
-                                ))}
+
+                              <div className={`mt-4 pt-3.5 border-t flex items-center justify-between text-xs font-semibold relative z-10 ${theme === 'light' ? 'border-gray-100 text-[#001B3D]' : 'border-white/5 text-white'
+                                }`}>
+                                <span className={`flex items-center gap-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                  <Clock className="w-4 h-4 text-[#FF5722]" />
+                                  {s.time} ({s.duration})
+                                </span>
+                                {(() => {
+                                  const hrs = getHoursRemaining(s);
+                                  if (hrs > 0 && hrs <= 2) {
+                                    return (
+                                      <span className="text-[10px] font-black text-[#FF5722] bg-[#FF5722]/8 px-2 py-0.5 rounded flex items-center gap-1 animate-pulse">
+                                        <span>⏳</span> {formatRemainingTime(hrs)}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
-                              <p className={`text-[10px] leading-relaxed italic ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                                "{rev.comment}"
-                              </p>
                             </div>
                           ))
                         ) : (
-                          <p className={`text-xs text-center italic ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
-                            Ще немає відгуків для цієї зміни.
-                          </p>
+                          <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
+                            }`}>
+                            <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs font-bold">Усі зміни на цю дату заброньовані.</p>
+                          </div>
                         )}
                       </div>
                     </div>
+                  )}
 
-                    {/* DIIA CHECKBOX CONTRACT */}
-                    <div className={`border rounded-2xl p-4 space-y-2.5 transition-all backdrop-blur-[8px] ${theme === 'light' ? 'bg-[#f0f5fc]/80 border-blue-200' : 'bg-[#FF5722]/10 border-[#FF5722]/30'
-                      }`}>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-[#001B3D] text-[#FF5722] px-2 py-0.5 rounded text-[10px] font-black italic">Дія</div>
-                        <span className={`text-[11px] font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Швидкий договір ЦПХ</span>
-                      </div>
-                      <p className={`text-[10px] leading-snug ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                        Підпишіть цифровий договір на надання послуг за допомогою сервісу **Дія.Підпис** перед бронюванням.
-                      </p>
-                      <label className="flex items-start gap-2.5 pt-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={signedContract}
-                          onChange={(e) => setSignedContract(e.target.checked)}
-                          className="w-4.5 h-4.5 border-[#E5E7EB] rounded accent-[#FF5722] mt-0.5 shrink-0"
-                        />
-                        <span className={`text-[10px] font-bold select-none leading-normal ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
-                          Я підписую договір та погоджуюсь вийти на зміну.
-                        </span>
-                      </label>
-                    </div>
+                  {/* B2C: SHIFT DETAILS */}
+                  {selectedShift && (
+                    <div className="p-4 space-y-4 text-left animate-fade-in">
+                      <button
+                        onClick={() => {
+                          setSelectedShift(null);
+                          setSignedContract(false);
+                        }}
+                        className={`flex items-center gap-1 text-xs font-bold hover:underline mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
+                          }`}
+                      >
+                        <ArrowLeft className="w-4 h-4 text-[#FF5722]" />
+                        <span>Назад до пошуку</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleBookShift(selectedShift.id)}
-                      className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-md ${signedContract
-                        ? 'bg-[#FF5722] text-white active:scale-98 shadow-[#FF5722]/20 hover:bg-[#e64a19]'
-                        : theme === 'light'
-                          ? 'bg-[#f0edec] text-[#5b4039]/60 cursor-not-allowed shadow-none'
-                          : 'bg-[#1c2541]/45 text-gray-500 border border-white/5 cursor-not-allowed shadow-none'
-                        }`}
-                    >
-                      Відгукнутися на зміну
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 2. MY BOOKED SHIFTS TAB */}
-              {activeTab === 'my-shifts' && (
-                <div className="p-4 space-y-4 text-left animate-fade-in">
-                  <h3 className={`text-lg font-black tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Мої зміни</h3>
-
-                  {/* Active / History toggles */}
-                  <div className={`flex p-1 rounded-xl mb-4 border ${theme === 'light' ? 'bg-[#f0edec] border-gray-200' : 'bg-[#121829]/40 border-white/5'}`}>
-                    <button
-                      onClick={() => setMyShiftsSubTab('active')}
-                      className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'active'
-                        ? theme === 'light'
-                          ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
-                          : 'bg-[#FF5722] text-white shadow-sm border-transparent'
-                        : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
-                        }`}
-                    >
-                      Активні
-                    </button>
-                    <button
-                      onClick={() => setMyShiftsSubTab('history')}
-                      className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'history'
-                        ? theme === 'light'
-                          ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
-                          : 'bg-[#FF5722] text-white shadow-sm border-transparent'
-                        : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
-                        }`}
-                    >
-                      Історія
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {shifts.filter(s => {
-                      const isMatchSubTab = myShiftsSubTab === 'active'
-                        ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
-                        : s.status === 'completed';
-                      return isMatchSubTab;
-                    }).length > 0 ? (
-                      shifts.filter(s => {
-                        const isMatchSubTab = myShiftsSubTab === 'active'
-                          ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
-                          : s.status === 'completed';
-                        return isMatchSubTab;
-                      }).map((s) => {
-                        const isFuture = parseInt(s.date) > nowDate.getDate();
-                        return (
-                        <div
-                          key={s.id}
-                          className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                            ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
-                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
-                            } relative overflow-hidden animate-fade-in`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider border ${
-                                s.status === 'completed' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/20' :
-                                s.status === 'in_progress' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                s.status === 'pending_approval' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/20'
-                                }`}>
-                                {s.status === 'completed' && 'Виплачено'}
-                                {s.status === 'booked' && 'Заброньовано'}
-                                {s.status === 'in_progress' && 'Працюю'}
-                                {s.status === 'pending_approval' && 'На підтвердженні'}
-                                {s.status === 'disputed' && 'У спорі ⚠️'}
-                              </span>
-                              <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
-                                }`}>{s.role}</h4>
-                              <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
-                                }`}>{s.company}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className={`text-base font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.price} ₴</span>
-                            </div>
-                          </div>
-
-                          <div className={`mt-4 pt-3.5 border-t space-y-2 text-xs font-semibold ${theme === 'light' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
+                      {/* Header bento */}
+                      <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
+                        ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+                        : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                        } space-y-4`}>
+                        <div className="flex gap-4">
+                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
                             }`}>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-[#FF5722]" />
-                              <span>{s.date} {getUkMonthGenitive(s.date)} • {s.time} ({s.duration})</span>
+                            {selectedShift.logo ? (
+                              <img src={selectedShift.logo} alt={selectedShift.company} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building className={`w-6 h-6 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} />
+                            )}
+                          </div>
+                          <div>
+                            <h2 className={`text-xl font-bold leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.role}</h2>
+                            <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.company}</p>
+                            <div className="flex items-center gap-1 mt-1 text-xs">
+                              <Award className="w-3.5 h-3.5 text-[#FF9500]" />
+                              <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>4.9</span>
+                              <span className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>(1.2к відгуків)</span>
                             </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="w-4 h-4 text-[#FF5722] mt-0.5 shrink-0" />
-                              <span className={`leading-snug ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.address}</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#10B981]/8 border border-[#10B981]/25 rounded-2xl p-3.5 flex items-center gap-2.5">
+                          <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0" />
+                          <p className={`text-[11px] font-medium leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
+                            Оплата за зміну зарезервована та гарантується сервісом OneClick.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Details block */}
+                      <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
+                        ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+                        : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                        } space-y-4`}>
+                        <div className="flex flex-col gap-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                              }`}>
+                              <Calendar className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
                             </div>
                           </div>
 
-                          {s.status === 'completed' && (
-                            <div className={`mt-3 pt-3 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                              {s.allowFeedback === false ? (
-                                <div className="text-[10px] font-semibold text-gray-400 italic">
-                                  Для цієї компанії відгуки вимкнено роботодавцем
-                                </div>
-                              ) : s.hasFeedback ? (
-                                <div className="flex items-center gap-1.5 text-[#10B981] text-[11px] font-black uppercase tracking-wider bg-[#10B981]/8 px-2.5 py-1.5 rounded-xl border border-[#10B981]/20 w-fit">
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                  <span>Відгук надіслано</span>
-                                </div>
-                              ) : activeFeedbackShiftId === s.id ? (
-                                <div className="space-y-3 mt-1">
-                                  <p className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
-                                  <div className="flex gap-1.5">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <button
-                                        key={star}
-                                        type="button"
-                                        onClick={() => setFeedbackRating(star)}
-                                        className="focus:outline-none transition-transform active:scale-125"
-                                      >
-                                        <Star
-                                          className={`w-5 h-5 ${star <= feedbackRating
-                                              ? 'text-[#FF9500] fill-[#FF9500]'
-                                              : theme === 'light' ? 'text-gray-300' : 'text-gray-600'
-                                            }`}
-                                        />
-                                      </button>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                              }`}>
+                              <Clock className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Час роботи</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.time} ({selectedShift.duration})</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-[#FF5722]/8 flex items-center justify-center text-[#FF5722]">
+                              <Wallet className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-[#FF5722] uppercase tracking-wider font-bold">
+                                {selectedShift.category === 'University Event / Volunteer' ? 'Винагорода' : 'Виплата'}
+                              </p>
+                              <p className="text-lg font-black text-[#FF5722] mt-0.5">
+                                {selectedShift.category === 'University Event / Volunteer' ? (selectedShift.volunteerReward || 'Волонтерські бали') : `${selectedShift.price} ₴`}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Map Location Link */}
+                          <div className="flex items-start gap-3 pt-1">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                              }`}>
+                              <MapPin className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                              <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Адреса та орієнтир</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.address}</p>
+
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShift.address)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 mt-2 bg-[#FF5722]/10 hover:bg-[#FF5722]/20 text-[#FF5722] px-3.5 py-1.8 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all hover:scale-102 active:scale-98"
+                              >
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>Знайти в Google Maps</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`border-t pt-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                          <h4 className={`text-xs font-black uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Опис завдань:</h4>
+                          <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Звичайна тимчасова зміна в роздрібній торгівлі/кафе.'}</p>
+                        </div>
+
+                        {/* Worker Reviews Section */}
+                        <div className={`border-t pt-4 space-y-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                          <div className="flex justify-between items-center">
+                            <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                              Відгуки працівників ({selectedShift.reviews?.length || 0})
+                            </h4>
+                            {selectedShift.reviews && selectedShift.reviews.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Award className="w-3.5 h-3.5 text-[#FF9500]" />
+                                <span className={`text-xs font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                                  {(selectedShift.reviews.reduce((acc, r) => acc + r.rating, 0) / selectedShift.reviews.length).toFixed(1)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 no-scrollbar">
+                            {selectedShift.reviews && selectedShift.reviews.length > 0 ? (
+                              selectedShift.reviews.map((rev) => (
+                                <div key={rev.id} className={`p-3 rounded-2xl border transition-all ${theme === 'light' ? 'bg-[#f0edec]/50 border-gray-200/60' : 'bg-[#121829]/30 border-white/5'
+                                  } space-y-1`}>
+                                  <div className="flex justify-between items-center">
+                                    <span className={`font-black text-xs ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                                      {rev.workerName}
+                                    </span>
+                                    <span className={`text-[9px] font-bold ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
+                                      {rev.date}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-0.5">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`w-3.5 h-3.5 ${i < rev.rating ? 'text-[#FF9500] fill-[#FF9500]' : 'text-gray-300'
+                                          }`}
+                                      />
                                     ))}
                                   </div>
-                                  <div>
-                                    <textarea
-                                      rows={2}
-                                      value={feedbackComment}
-                                      onChange={(e) => setFeedbackComment(e.target.value)}
-                                      placeholder="Поділіться враженнями від зміни (умови, команда, оплата)..."
-                                      className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                                          ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
-                                          : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
-                                        }`}
-                                    />
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleSubmitFeedback(s.id)}
-                                      className="flex-1 bg-[#FF5722] hover:bg-[#e64a19] text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-sm"
-                                    >
-                                      Надіслати
-                                    </button>
-                                    <button
-                                      onClick={() => setActiveFeedbackShiftId(null)}
-                                      className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${theme === 'light'
-                                          ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
-                                          : 'bg-white/5 hover:bg-white/10 text-white'
-                                        }`}
-                                    >
-                                      Скасувати
-                                    </button>
-                                  </div>
+                                  <p className={`text-[10px] leading-relaxed italic ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                    "{rev.comment}"
+                                  </p>
                                 </div>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setActiveFeedbackShiftId(s.id);
-                                    setFeedbackRating(5);
-                                    setFeedbackComment('');
-                                  }}
-                                  className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${theme === 'light'
-                                      ? 'border-[#FF5722]/30 text-[#FF5722] hover:bg-[#FF5722]/5'
-                                      : 'border-[#FF5722]/40 text-[#FF5722] hover:bg-[#FF5722]/10'
-                                    }`}
-                                >
-                                  <Star className="w-3.5 h-3.5 fill-[#FF5722]/10" />
-                                  Залишити відгук про роботу
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {s.status === 'booked' && (
-                            <div className="mt-3.5 space-y-2">
-                              {isFuture ? (
-                                <>
-                                  <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 ${
-                                    theme === 'light'
-                                      ? 'bg-amber-50 border-amber-200 text-amber-855'
-                                      : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
-                                  }`}>
-                                    <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                    <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} {getUkMonthGenitive(s.date)}).</span>
-                                  </div>
-                                  <button
-                                    onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} ${getUkMonthGenitive(s.date)}.`)}
-                                    className="w-full bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
-                                  >
-                                    <Camera className="w-4 h-4" />
-                                    Відсканувати QR закладу
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => setShowScannerModal(s.id)}
-                                  className="w-full bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all hover:scale-[1.01]"
-                                >
-                                  <Camera className="w-4 h-4" />
-                                  Відсканувати QR закладу
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setShowCancelModal(s.id)}
-                                className="w-full border border-red-500/35 hover:border-red-500/50 bg-red-500/5 text-red-500 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 transition-all"
-                              >
-                                Відмовитись від зміни
-                              </button>
-                            </div>
-                          )}
-
-                          {s.status === 'in_progress' && (
-                            <div className="mt-3.5 space-y-2">
-                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 animate-pulse ${
-                                theme === 'light'
-                                  ? 'bg-green-50 border-green-200 text-green-800'
-                                  : 'bg-green-500/10 border-green-500/20 text-green-300'
-                              }`}>
-                                <Clock className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                                <span>Зміна триває. Не забудьте зробити Чек-аут після завершення роботи!</span>
-                              </div>
-                              <button
-                                onClick={() => setShowReportModalId(s.id)}
-                                className="w-full bg-gradient-to-br from-[#10B981] to-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                Завершити зміну (Чек-аут)
-                              </button>
-                            </div>
-                          )}
-
-                          {s.status === 'pending_approval' && (
-                            <div className="mt-3.5">
-                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold ${
-                                theme === 'light'
-                                  ? 'bg-blue-50 border-blue-200 text-blue-800'
-                                  : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                              }`}>
-                                <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                                <span>Зміну завершено. Очікується підтвердження та виплата від роботодавця.</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {s.status === 'disputed' && (() => {
-                            const isCollapsed = collapsedDisputes[s.id] === true;
-                            return (
-                              <div className="mt-3.5 space-y-3">
-                                <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
-                                  <button
-                                    onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                                    className="w-full flex items-center justify-between text-left focus:outline-none"
-                                  >
-                                    <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
-                                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
-                                      <span>Роботодавець оскаржує виконання</span>
-                                    </div>
-                                    <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
-                                  </button>
-
-                                  {!isCollapsed && (
-                                    <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
-                                      <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
-                                        <strong className="text-red-500">Причина:</strong> {s.disputeReason}
-                                      </p>
-                                      {s.disputeComment && (
-                                        <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
-                                          &ldquo;{s.disputeComment}&rdquo;
-                                        </p>
-                                      )}
-                                      
-                                      <button
-                                        onClick={() => setArbitratorModalShiftId(s.id)}
-                                        className="w-full bg-[#001B3D] dark:bg-blue-600 hover:opacity-95 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
-                                      >
-                                        ⚖️ Відкрити Арбітраж та Чат
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })()}
+                              ))
+                            ) : (
+                              <p className={`text-xs text-center italic ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
+                                Ще немає відгуків для цієї зміни.
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      );
-                    })
-                    ) : (
-                      <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
-                        }`}>
-                        <Calendar className="w-8 h-8 mx-auto mb-1 opacity-55" />
-                        <p className="text-xs font-bold">Немає змін у цьому розділі</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              {/* 3. PROFILE & DIGITAL WALLET TAB */}
-              {activeTab === 'wallet' && (
-                <div className="p-4 space-y-5 text-left animate-fade-in">
+                        {/* DIIA CHECKBOX CONTRACT */}
+                        <div className={`border rounded-2xl p-4 space-y-2.5 transition-all backdrop-blur-[8px] ${theme === 'light' ? 'bg-[#f0f5fc]/80 border-blue-200' : 'bg-[#FF5722]/10 border-[#FF5722]/30'
+                          }`}>
+                          <div className="flex items-center gap-2">
+                            <div className="bg-[#001B3D] text-[#FF5722] px-2 py-0.5 rounded text-[10px] font-black italic">Дія</div>
+                            <span className={`text-[11px] font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Швидкий договір ЦПХ</span>
+                          </div>
+                          <p className={`text-[10px] leading-snug ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                            Підпишіть цифровий договір на надання послуг за допомогою сервісу **Дія.Підпис** перед бронюванням.
+                          </p>
+                          <label className="flex items-start gap-2.5 pt-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={signedContract}
+                              onChange={(e) => setSignedContract(e.target.checked)}
+                              className="w-4.5 h-4.5 border-[#E5E7EB] rounded accent-[#FF5722] mt-0.5 shrink-0"
+                            />
+                            <span className={`text-[10px] font-bold select-none leading-normal ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
+                              Я підписую договір та погоджуюсь вийти на зміну.
+                            </span>
+                          </label>
+                        </div>
 
-                  {/* Balance Card */}
-                  <div className="relative overflow-hidden rounded-[24px] bg-[#001B3D] p-6 shadow-xl text-white border border-white/10">
-                    <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#FF5722] opacity-20 rounded-full blur-3xl"></div>
-                    <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-2xl"></div>
-
-                    <div className="relative z-10">
-                      <span className="text-[11px] font-bold text-white/70 uppercase tracking-widest">Доступний баланс</span>
-                      <div className="mt-2 flex items-baseline gap-1.5">
-                        <span className="text-white font-black text-4xl leading-none">{balance.toLocaleString('en-US')}.00</span>
-                        <span className="text-lg font-bold text-white/80">₴</span>
-                      </div>
-
-                      <div className="mt-7 grid grid-cols-2 gap-3">
                         <button
-                          onClick={() => {
-                            if (balance <= 0) {
-                              triggerToast('Немає коштів для виведення!');
-                              return;
-                            }
-                            setBalance(0);
-                            setTransactions(prev => [
-                              { id: String(Date.now()), title: 'Вивід на картку', amount: -balance, date: 'Сьогодні, щойно', status: 'processing', type: 'withdrawal' },
-                              ...prev
-                            ]);
-                            triggerToast('Виведення коштів успішно ініційовано!');
-                          }}
-                          className="bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,87,34,0.3)]"
+                          onClick={() => handleBookShift(selectedShift.id)}
+                          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-md ${signedContract
+                            ? 'bg-[#FF5722] text-white active:scale-98 shadow-[#FF5722]/20 hover:bg-[#e64a19]'
+                            : theme === 'light'
+                              ? 'bg-[#f0edec] text-[#5b4039]/60 cursor-not-allowed shadow-none'
+                              : 'bg-[#1c2541]/45 text-gray-500 border border-white/5 cursor-not-allowed shadow-none'
+                            }`}
                         >
-                          <Wallet className="w-4 h-4" />
-                          Вивести
+                          Відгукнутися на зміну
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. MY BOOKED SHIFTS TAB */}
+                  {activeTab === 'my-shifts' && (
+                    <div className="p-4 space-y-4 text-left animate-fade-in">
+                      <h3 className={`text-lg font-black tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Мої зміни</h3>
+
+                      {/* Active / History toggles */}
+                      <div className={`flex p-1 rounded-xl mb-4 border ${theme === 'light' ? 'bg-[#f0edec] border-gray-200' : 'bg-[#121829]/40 border-white/5'}`}>
+                        <button
+                          onClick={() => setMyShiftsSubTab('active')}
+                          className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'active'
+                            ? theme === 'light'
+                              ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
+                              : 'bg-[#FF5722] text-white shadow-sm border-transparent'
+                            : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
+                            }`}
+                        >
+                          Активні
                         </button>
                         <button
-                          onClick={() => triggerToast('Історія вивантажується автоматично.')}
-                          className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all"
+                          onClick={() => setMyShiftsSubTab('history')}
+                          className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'history'
+                            ? theme === 'light'
+                              ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
+                              : 'bg-[#FF5722] text-white shadow-sm border-transparent'
+                            : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
+                            }`}
                         >
-                          <Clock className="w-4 h-4" />
                           Історія
                         </button>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Weekly Summary Bento */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                      }`}>
-                      <div className="flex items-center gap-1.5 text-[#10B981] mb-1.5">
-                        <TrendingUp className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase">Нараховано</span>
-                      </div>
-                      <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                        {transactions.filter(t => t.type === 'work').reduce((acc, curr) => acc + curr.amount, 0)} ₴
-                      </p>
-                      <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Цього тижня</p>
-                    </div>
-
-                    <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                      }`}>
-                      <div className="flex items-center gap-1.5 text-[#FF5722] mb-1.5">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-[11px] font-bold uppercase">В обробці</span>
-                      </div>
-                      <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                        {shifts.filter(s => s.status === 'booked').reduce((acc, curr) => acc + curr.price, 0)} ₴
-                      </p>
-                      <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Майбутні зміни</p>
-                    </div>
-                  </div>
-
-                  {/* Transactions list */}
-                  <div>
-                    <div className="flex justify-between items-end mb-3 px-1">
-                      <h2 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
-                        }`}>Останні операції</h2>
-                      <button className="text-[#FF5722] text-xs font-bold hover:underline">Фільтри</button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {transactions.length > 0 ? (
-                        transactions.map((tx) => (
-                          <div
-                            key={tx.id}
-                            className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light'
-                              ? 'bg-white/85 border-[#E5E7EB] hover:bg-[#f0edec]/40 text-[#001B3D] shadow-sm'
-                              : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60 text-white shadow-md'
-                              }`}
-                          >
-                            <div className="flex items-center gap-3.5">
-                              <div className={`w-11 h-11 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-[#10B981]/8 text-[#10B981]' : 'bg-[#FF5722]/8 text-[#FF5722]'
-                                }`}>
-                                {tx.amount > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold">{tx.title}</p>
-                                <span className={`text-[10px] font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>{tx.date}</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className={`text-xs font-extrabold ${tx.amount > 0 ? 'text-[#10B981]' : 'text-white'}`}>
-                                {tx.amount > 0 ? `+${tx.amount}` : `${tx.amount}`} ₴
-                              </p>
-                              <p className={`text-[9px] uppercase font-black ${tx.status === 'completed' ? 'text-[#10B981]' : 'text-[#FF5722]'
-                                }`}>
-                                {tx.status === 'completed' ? 'Виконано' : 'Обробка'}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className={`rounded-3xl border border-dashed p-8 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
-                          }`}>
-                          <TrendingUp className="w-7 h-7 mx-auto mb-1 opacity-55" />
-                          <p className="text-xs font-bold">Історія виплат порожня</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
-              {/* 4. PROFILE TAB */}
-              {activeTab === 'profile' && (
-                <div className="p-4 space-y-5 text-left animate-fade-in">
-
-                  {/* MAIN PROFILE SCREEN */}
-                  {profileSubPage === 'main' && (
-                    <div className="space-y-5 animate-fade-in">
-                      {/* Profile Card */}
-                      <div className={`rounded-[24px] p-5 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB]' : 'bg-[#1c2541]/45 border-white/10'
-                        }`}>
-                        <div className="absolute -top-12 -right-12 w-24 h-24 bg-[#FF5722] opacity-5 rounded-full"></div>
-
-                        <div 
-                          className="relative mb-3 cursor-pointer group"
-                          onClick={() => setShowAvatarEditModal(true)}
-                          title="Змінити фото профілю"
-                        >
-                          <img
-                            alt="User Avatar"
-                            className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover transition-transform group-hover:scale-105"
-                            src={userAvatar}
-                          />
-                          <div className="absolute inset-0 bg-black/45 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="absolute bottom-0 right-0 bg-[#10B981] text-white p-0.5 rounded-full border-2 border-white flex items-center justify-center">
-                            <CheckCircle className="w-3.5 h-3.5 text-white" />
-                          </div>
-                        </div>
-
-                        <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</h2>
-
-                        {isDiiaVerified ? (
-                          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
-                            ? 'bg-blue-50 border-blue-100 text-blue-800'
-                            : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                            }`}>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
-                            <span className="text-[10px] font-bold">Верифіковано через Дію</span>
-                          </div>
-                        ) : (
-                          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
-                            ? 'bg-green-50 border-green-100 text-green-800'
-                            : 'bg-green-500/10 border-green-500/20 text-green-300'
-                            }`}>
-                            <span className="text-[10px] font-bold text-green-600 dark:text-green-400">Верифіковано по SMS</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-1 bg-[#FF9500]/10 px-3 py-1 rounded-xl mt-1">
-                          <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                          <span className={`text-xs font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rating.toFixed(1)}</span>
-                          <span className={`text-[10px] font-medium ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>(18 змін виконано)</span>
-                        </div>
-                      </div>
-
-                      {/* Options Menu List */}
-                      <nav className="space-y-2">
-                        <p className={`text-[10px] font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
-                          }`}>Акаунт</p>
-
-                        <div
-                          onClick={() => setProfileSubPage('personal')}
-                          className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}>
-                              <User className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</p>
-                              <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>ПІБ, телефон, адреса</span>
-                            </div>
-                          </div>
-                          <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
-                        </div>
-
-                        <div
-                          onClick={() => setProfileSubPage('docs')}
-                          className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-orange-50 text-[#FF5722]' : 'bg-[#FF5722]/10 text-[#FF5722]'}`}>
-                              <FileText className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Документи</p>
-                              <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Паспорт, Санкнижка</span>
-                            </div>
-                          </div>
-                          <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
-                        </div>
-
-                        <div
-                          onClick={() => setProfileSubPage('help')}
-                          className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-purple-50 text-purple-600' : 'bg-purple-500/10 text-purple-400'}`}>
-                              <HelpCircle className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</p>
-                              <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>FAQ та підтримка</span>
-                            </div>
-                          </div>
-                          <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
-                        </div>
-
-                        <div
-                          onClick={() => setProfileSubPage('developer')}
-                          className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-red-50 text-red-500' : 'bg-red-500/10 text-red-400'}`}>
-                              <Settings className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Для розробника</p>
-                              <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Панель симуляції та налаштувань</span>
-                            </div>
-                          </div>
-                          <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
-                        </div>
-                      </nav>
-                      <button
-                        onClick={() => {
-                          setIsLoggedIn(false);
-                          setAuthStep('welcome');
-                          localStorage.removeItem('oneclick_auth_profile');
-                          triggerToast('Ви успішно вийшли з акаунту.');
-                        }}
-                        className={`w-full border backdrop-blur-md text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors ${theme === 'light'
-                          ? 'bg-white/60 border-[#E5E7EB] hover:bg-red-50/20'
-                          : 'bg-[#1c2541]/45 border-white/5 hover:bg-red-500/10'
-                          }`}
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Вийти з акаунту
-                      </button>
-                    </div>
-                  )}
-
-                  {/* SUBPAGE: PERSONAL DATA */}
-                  {profileSubPage === 'personal' && (
-                    <div className="space-y-4 animate-fade-in">
-                      <button
-                        onClick={() => setProfileSubPage('main')}
-                        className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
-                      </button>
-
-                      <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</h3>
-
-                      <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                        ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                        : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
-                        } space-y-4`}>
-                        <div>
-                          <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Повне Ім'я</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</p>
-                        </div>
-                        <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                          <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Телефон</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userPhone || 'Не вказано'}</p>
-                        </div>
-                        <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                          <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Електронна пошта</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>oleksii.k@example.com</p>
-                        </div>
-                        <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                          <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Рідне Місто</p>
-                          <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Київ, Україна</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SUBPAGE: DOCUMENTS */}
-                  {profileSubPage === 'docs' && (
-                    <div className="space-y-4 animate-fade-in">
-                      <button
-                        onClick={() => setProfileSubPage('main')}
-                        className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
-                      </button>
-
-                      <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Мої документи</h3>
-
-                      <div className="space-y-3">
-                        <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                          }`}>
-                          <div>
-                            <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Паспорт громадянина</p>
-                            <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>ID-карта верифікована через Дія</p>
-                          </div>
-                          <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
-                            ВЕРИФІКОВАНО
-                          </span>
-                        </div>
-
-                        <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                          }`}>
-                          <div>
-                            <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Індивідуальний податковий номер (ІПН)</p>
-                            <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Підтверджено реєстрами</p>
-                          </div>
-                          <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
-                            ВЕРИФІКОВАНО
-                          </span>
-                        </div>
-
-                        <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                          }`}>
-                          <div>
-                            <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Медична книжка (Санкнижка)</p>
-                            <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дійсна до 12.2024</p>
-                          </div>
-                          <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
-                            АКТИВНА
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SUBPAGE: HELP CENTER */}
-                  {profileSubPage === 'help' && (
-                    <div className="space-y-4 animate-fade-in">
-                      <button
-                        onClick={() => setProfileSubPage('main')}
-                        className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
-                      </button>
-
-                      <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</h3>
-
-                      <div className="space-y-3">
-                        <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                          }`}>
-                          <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Як отримати виплату за виконану зміну?</p>
-                          <p className={`text-[11px] mt-1.5 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                            Оплата нараховується на ваш цифровий гаманець миттєво після того, як роботодавець підтвердить успішне закриття смени в B2B-дашборді. Ви можете вивести гроші на будь-картку в 1 клік.
-                          </p>
-                        </div>
-
-                        <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                          }`}>
-                          <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Що буде, якщо я не приду на заброньовану зміну?</p>
-                          <p className={`text-[11px] mt-1.5 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                            Невиправданий невихід негативно впливає на ваш внутрішній рейтинг. Рекомендуємо скасовувати бронювання заздалегідь або повідомляти службу підтримки.
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => triggerToast('Зв\'язок з підтримкою в Телеграм активовано!')}
-                        className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md mt-2 hover:scale-102 active:scale-98 ${theme === 'light' ? 'bg-[#001B3D] hover:bg-[#001430] text-white' : 'bg-[#FF5722] hover:bg-[#e64a19] text-white'
-                          }`}
-                      >
-                        <span>Зв'язатися з підтримкою</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* SUBPAGE: DEVELOPER PANEL */}
-                  {profileSubPage === 'developer' && (
-                    <div className="space-y-4 animate-fade-in">
-                      <button
-                        onClick={() => setProfileSubPage('main')}
-                        className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
-                      >
-                        <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
-                      </button>
-
-                      <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</h3>
-
-                      <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                        ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                        : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
-                        } space-y-4`}>
-                        <div className="flex items-center justify-between">
-                          <div className="text-left pr-4">
-                            <p className={`text-xs font-black leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                              Симуляція дедлайну (залишилось 2 год)
-                            </p>
-                            <p className={`text-[10px] font-semibold mt-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-                              Робить зміни, до початку яких залишилось менше 2 годин, «гарячими» та переміщує їх на самий верх стрічки пошуку.
-                            </p>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
-                            <input
-                              type="checkbox"
-                              checked={simulateDeadline}
-                              onChange={(e) => {
-                                setSimulateDeadline(e.target.checked);
-                                triggerToast(e.target.checked ? 'Симуляція дедлайну активована! Гарячі зміни підняті вгору стрічки 🔥' : 'Симуляцію дедлайну вимкнено.');
-                              }}
-                              className="sr-only peer"
-                            />
-                            <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF5722]"></div>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ========================================================= */}
-          {/* ==================== EMPLOYER VIEW (B2B) ================ */}
-          {/* ========================================================= */}
-          {userRole === 'employer' && (
-            <>
-              {/* Tabs for B2B portal */}
-              <div className={`px-4 py-2 border-b flex gap-2 transition-colors duration-300 ${theme === 'light' ? 'bg-[#ede8e4] border-black/10' : 'bg-[#121829]/40 border-white/5'
-                } backdrop-blur-md`}>
-                <button
-                  onClick={() => setB2bTab('dashboard')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${b2bTab === 'dashboard'
-                    ? theme === 'light'
-                      ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
-                      : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
-                    : theme === 'light'
-                      ? 'bg-white/60 text-[#001B3D] border-[#E5E7EB]'
-                      : 'bg-[#1c2541]/50 text-white border-transparent'
-                    }`}
-                >
-                  Дашборд
-                </button>
-                <button
-                  onClick={() => setB2bTab('create')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${b2bTab === 'create'
-                    ? theme === 'light'
-                      ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
-                      : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
-                    : theme === 'light'
-                      ? 'bg-white/60 text-[#001B3D] border-[#E5E7EB]'
-                      : 'bg-[#1c2541]/50 text-white border-transparent'
-                    }`}
-                >
-                  + Створити зміну
-                </button>
-              </div>
-
-              {/* 1. B2B DASHBOARD */}
-              {b2bTab === 'dashboard' && (
-                <div className="p-4 space-y-4 text-left animate-fade-in">
-
-                  {/* Employer Balance Header */}
-                  <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
-                    } flex items-center justify-between`}>
-                    <div>
-                      <p className={`text-[10px] uppercase font-bold ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Депозит підприємства</p>
-                      <h4 className={`text-xl font-black mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{employerBalance.toLocaleString()} ₴</h4>
-                    </div>
-                    {employerFrozenBalance > 0 ? (
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase font-black text-amber-500">Заморожено (Сейф)</p>
-                        <h4 className="text-sm font-black mt-0.5 text-amber-500">{employerFrozenBalance.toLocaleString()} ₴</h4>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] font-black uppercase bg-[#10B981]/8 text-[#10B981] px-2 py-1 rounded border border-[#10B981]/25">
-                        АКТИВНИЙ
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className={`text-xs font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
-                    }`}>Всі зміни компанії ({shifts.length})</h3>
-
-                  <div className="space-y-4">
-                    {shifts.map((s) => (
-                      <div
-                        key={s.id}
-                        className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                          ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
-                          : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
-                          } animate-fade-in`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${s.status === 'open' ? 'bg-gray-50 text-gray-600 border-[#E5E7EB]' :
-                              s.status === 'booked' ? 'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/25' :
-                              s.status === 'in_progress' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25' :
-                              s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/25' :
-                                'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25'
-                              }`}>
-                              {s.status === 'open' && 'Вільна'}
-                              {s.status === 'booked' && 'Заброньована'}
-                              {s.status === 'in_progress' && 'Працює'}
-                              {s.status === 'pending_approval' && 'На підтвердженні'}
-                              {s.status === 'disputed' && 'У спорі ⚠️'}
-                              {s.status === 'completed' && 'Виплачено'}
-                            </span>
-                            <h4 className={`text-base font-bold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.role}</h4>
-                            <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{s.company}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-base font-black text-[#FF5722]">{s.price} ₴</span>
-                          </div>
-                        </div>
-
-                        <div className={`mt-3.5 pt-3.5 border-t flex justify-between items-center text-xs font-semibold ${theme === 'light' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
-                          }`}>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-[#FF5722]" />
-                            {s.date} Чер • {s.time}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-[#FF5722]" />
-                            {s.address.split(',')[0]}
-                          </span>
-                        </div>
-
-                        {/* Approve Payout trigger */}
-                        {(s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed') && (
-                          <div className={`mt-4 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} flex flex-col gap-2`}>
-                            <div className={`rounded-2xl p-3 flex items-start gap-2 text-[10px] font-bold ${
-                              s.status === 'pending_approval'
-                                ? 'bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400'
-                                : 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
-                            }`}>
-                              <Info className={`w-4 h-4 shrink-0 mt-0.5 ${s.status === 'pending_approval' ? 'text-green-500' : 'text-[#FF9500]'}`} />
-                              <span>
-                                {s.status === 'booked' && 'Виконавець забронював зміну, але ще не розпочав роботу.'}
-                                {s.status === 'in_progress' && 'Виконавець зараз працює на зміні.'}
-                                {s.status === 'pending_approval' && 'Виконавець завершив зміну (Чек-аут) та очікує перевірки й виплати!'}
-                              </span>
-                            </div>
-                            
-                            {s.status === 'booked' && (
-                              <button
-                                onClick={() => setShowB2BQRModalId(s.id)}
-                                className={`w-full py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all ${
-                                  theme === 'light'
-                                    ? 'border-[#001B3D]/30 text-[#001B3D] hover:bg-gray-50'
-                                    : 'border-white/20 text-white hover:bg-white/5'
-                                }`}
+                      <div className="space-y-4">
+                        {shifts.filter(s => {
+                          const isMatchSubTab = myShiftsSubTab === 'active'
+                            ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
+                            : s.status === 'completed';
+                          return isMatchSubTab;
+                        }).length > 0 ? (
+                          shifts.filter(s => {
+                            const isMatchSubTab = myShiftsSubTab === 'active'
+                              ? (s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed')
+                              : s.status === 'completed';
+                            return isMatchSubTab;
+                          }).map((s) => {
+                            const isFuture = parseInt(s.date) > nowDate.getDate();
+                            return (
+                              <div
+                                key={s.id}
+                                className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
+                                  ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
+                                  : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
+                                  } relative overflow-hidden animate-fade-in`}
                               >
-                                <QrCode className="w-4 h-4" />
-                                Показати QR-код закладу
-                              </button>
-                            )}
-
-                            {s.status === 'pending_approval' && s.workPhoto && (
-                              <div className="my-1 space-y-2 text-left">
-                                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Надісланий фотозвіт роботи:</p>
-                                <div className={`rounded-2xl border p-3 flex flex-col gap-2 ${theme === 'light' ? 'bg-[#fcf9f8] border-gray-150' : 'bg-[#121829]/50 border-white/5'}`}>
-                                  <div className="relative w-full h-36 rounded-xl overflow-hidden bg-black">
-                                    <img src={s.workPhoto} alt="Work Report Proof" className="w-full h-full object-cover" />
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider border ${s.status === 'completed' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/20' :
+                                      s.status === 'in_progress' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                        s.status === 'pending_approval' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                          s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                            'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/20'
+                                      }`}>
+                                      {s.status === 'completed' && 'Виплачено'}
+                                      {s.status === 'booked' && 'Заброньовано'}
+                                      {s.status === 'in_progress' && 'Працюю'}
+                                      {s.status === 'pending_approval' && 'На підтвердженні'}
+                                      {s.status === 'disputed' && 'У спорі ⚠️'}
+                                    </span>
+                                    <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
+                                      }`}>{s.role}</h4>
+                                    <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
+                                      }`}>{s.company}</p>
                                   </div>
-                                  {s.workComment && (
-                                    <p className={`text-xs italic font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                                      &ldquo;{s.workComment}&rdquo;
-                                    </p>
-                                  )}
+                                  <div className="text-right">
+                                    <span className={`text-base font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                                      {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
 
-                            {s.status === 'pending_approval' && (
-                              <div className="space-y-2">
-                                <button
-                                  onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
-                                  className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                  Підтвердити виконання та сплатити
-                                </button>
-                                <button
-                                  onClick={() => setShowDisputeModalId(s.id)}
-                                  className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
-                                >
-                                  <AlertTriangle className="w-4 h-4" />
-                                  Відкрити спір
-                                </button>
-                              </div>
-                            )}
+                                <div className={`mt-4 pt-3.5 border-t space-y-2 text-xs font-semibold ${theme === 'light' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
+                                  }`}>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 text-[#FF5722]" />
+                                    <span>{s.date} {getUkMonthGenitive(s.date)} • {s.time} ({s.duration})</span>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 text-[#FF5722] mt-0.5 shrink-0" />
+                                    <span className={`leading-snug ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.address}</span>
+                                  </div>
+                                </div>
 
-                            {s.status === 'disputed' && (() => {
-                              const isCollapsed = collapsedDisputes[s.id] === true;
-                              return (
-                                <div className="mt-3.5 space-y-3">
-                                  <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
-                                    <button
-                                      onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                                      className="w-full flex items-center justify-between text-left focus:outline-none"
-                                    >
-                                      <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
-                                        <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
-                                        <span>Зміну оскаржено</span>
+                                {s.status === 'completed' && (
+                                  <div className={`mt-3 pt-3 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                                    {s.allowFeedback === false ? (
+                                      <div className="text-[10px] font-semibold text-gray-400 italic">
+                                        Для цієї компанії відгуки вимкнено роботодавцем
                                       </div>
-                                      <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {!isCollapsed && (
-                                      <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
-                                        <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
-                                          <strong className="text-red-500">Причина спору:</strong> {s.disputeReason}
-                                        </p>
-                                        {s.disputeComment && (
-                                          <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
-                                            &ldquo;{s.disputeComment}&rdquo;
-                                          </p>
-                                        )}
-
-                                        {s.disputeStatus === 'under_review' ? (
-                                          <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-2 text-left">
-                                            <div className="flex items-center justify-between text-[10px] font-black text-blue-500">
-                                              <span>ЧАТ З АРБІТРОМ ONECLICK</span>
-                                              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                            </div>
-
-                                            {/* Message area */}
-                                            <div className={`max-h-48 overflow-y-auto p-2.5 rounded-xl space-y-2 flex flex-col text-[11px] leading-relaxed ${
-                                              theme === 'light' ? 'bg-[#f6f3f2]' : 'bg-[#121829]/40'
-                                            }`}>
-                                              {(disputeChats[s.id] || []).map((msg) => {
-                                                if (msg.sender === 'system') {
-                                                  return (
-                                                    <div key={msg.id} className="text-center text-[9px] font-bold text-gray-500 py-1 bg-gray-500/5 rounded-lg border border-dashed border-gray-500/10 self-stretch">
-                                                      {msg.text}
-                                                    </div>
-                                                  );
-                                                }
-
-                                                const isMe = msg.sender === 'employer';
-                                                const isMgr = msg.sender === 'manager';
-                                                
-                                                let bubbleStyle = '';
-                                                let alignStyle = '';
-                                                
-                                                if (isMe) {
-                                                  alignStyle = 'self-end';
-                                                  bubbleStyle = 'bg-[#FF5722] text-white rounded-2xl rounded-tr-none px-3 py-2 max-w-[85%] text-right font-semibold';
-                                                } else if (isMgr) {
-                                                  alignStyle = 'self-start';
-                                                  bubbleStyle = 'bg-blue-500 text-white rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
-                                                } else {
-                                                  alignStyle = 'self-start';
-                                                  bubbleStyle = 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-2xl rounded-tl-none px-3 py-2 max-w-[85%] font-semibold';
-                                                }
-
-                                                return (
-                                                  <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
-                                                    <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
-                                                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : 'Виконавець'}
-                                                    </span>
-                                                    <div className={bubbleStyle}>
-                                                      {msg.text}
-                                                    </div>
-                                                    <span className="text-[8px] text-gray-400/70 font-semibold mt-0.5 px-1 self-end">
-                                                      {msg.timestamp}
-                                                    </span>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-
-                                            {/* Send message form */}
-                                            <div className="flex gap-1.5 pt-1.5 border-t border-dashed border-gray-200 dark:border-white/10">
-                                              <input
-                                                type="text"
-                                                value={disputeMessageText}
-                                                onChange={(e) => setDisputeMessageText(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') handleSendDisputeMessage(s.id, 'employer');
-                                                }}
-                                                placeholder="Напишіть повідомлення арбітру..."
-                                                className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-xl border outline-none transition-all ${
-                                                  theme === 'light'
-                                                    ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                                                    : 'bg-[#121829]/60 border-[#2a3454] text-white focus:border-[#FF5722]'
-                                                }`}
+                                    ) : s.hasFeedback ? (
+                                      <div className="flex items-center gap-1.5 text-[#10B981] text-[11px] font-black uppercase tracking-wider bg-[#10B981]/8 px-2.5 py-1.5 rounded-xl border border-[#10B981]/20 w-fit">
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        <span>Відгук надіслано</span>
+                                      </div>
+                                    ) : activeFeedbackShiftId === s.id ? (
+                                      <div className="space-y-3 mt-1">
+                                        <p className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
+                                        <div className="flex gap-1.5">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                              key={star}
+                                              type="button"
+                                              onClick={() => setFeedbackRating(star)}
+                                              className="focus:outline-none transition-transform active:scale-125"
+                                            >
+                                              <Star
+                                                className={`w-5 h-5 ${star <= feedbackRating
+                                                  ? 'text-[#FF9500] fill-[#FF9500]'
+                                                  : theme === 'light' ? 'text-gray-300' : 'text-gray-600'
+                                                  }`}
                                               />
-                                              <button
-                                                onClick={() => handleSendDisputeMessage(s.id, 'employer')}
-                                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
-                                              >
-                                                Надіслати
-                                              </button>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="grid grid-cols-1 gap-2 pt-2 border-t border-dashed border-gray-200 dark:border-white/10">
-                                            <button
-                                              onClick={() => handleResolveDisputeClean(s.id, 'pay_full')}
-                                              className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                            >
-                                              Сплатити повністю ({s.price} ₴)
                                             </button>
-                                            <button
-                                              onClick={() => handleResolveDisputeClean(s.id, 'compromise')}
-                                              className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                            >
-                                              🤝 Компроміс (по 50%)
-                                            </button>
-                                            <button
-                                              onClick={() => handleResolveDisputeClean(s.id, 'refund_full')}
-                                              className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                            >
-                                              Скасувати зміну та повернути кошти
-                                            </button>
-                                            <button
-                                              onClick={() => handleSummonArbitrator(s.id)}
-                                              className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all animate-fade-in"
-                                            >
-                                              ⚖️ Передати Справу Арбітру
-                                            </button>
-                                          </div>
-                                        )}
+                                          ))}
+                                        </div>
+                                        <div>
+                                          <textarea
+                                            rows={2}
+                                            value={feedbackComment}
+                                            onChange={(e) => setFeedbackComment(e.target.value)}
+                                            placeholder="Поділіться враженнями від зміни (умови, команда, оплата)..."
+                                            className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                                              ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
+                                              : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
+                                              }`}
+                                          />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => handleSubmitFeedback(s.id)}
+                                            className="flex-1 bg-[#FF5722] hover:bg-[#e64a19] text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-sm"
+                                          >
+                                            Надіслати
+                                          </button>
+                                          <button
+                                            onClick={() => setActiveFeedbackShiftId(null)}
+                                            className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${theme === 'light'
+                                              ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
+                                              : 'bg-white/5 hover:bg-white/10 text-white'
+                                              }`}
+                                          >
+                                            Скасувати
+                                          </button>
+                                        </div>
                                       </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          setActiveFeedbackShiftId(s.id);
+                                          setFeedbackRating(5);
+                                          setFeedbackComment('');
+                                        }}
+                                        className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${theme === 'light'
+                                          ? 'border-[#FF5722]/30 text-[#FF5722] hover:bg-[#FF5722]/5'
+                                          : 'border-[#FF5722]/40 text-[#FF5722] hover:bg-[#FF5722]/10'
+                                          }`}
+                                      >
+                                        <Star className="w-3.5 h-3.5 fill-[#FF5722]/10" />
+                                        Залишити відгук про роботу
+                                      </button>
                                     )}
                                   </div>
-                                </div>
-                              );
-                            })()}
+                                )}
+
+                                {s.status === 'booked' && (
+                                  <div className="mt-3.5 space-y-2">
+                                    {isFuture ? (
+                                      <>
+                                        <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 ${theme === 'light'
+                                          ? 'bg-amber-50 border-amber-200 text-amber-855'
+                                          : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                                          }`}>
+                                          <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                          <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} {getUkMonthGenitive(s.date)}).</span>
+                                        </div>
+                                        <button
+                                          onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} ${getUkMonthGenitive(s.date)}.`)}
+                                          className="w-full bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
+                                        >
+                                          <Camera className="w-4 h-4" />
+                                          Відсканувати QR закладу
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        onClick={() => setShowScannerModal(s.id)}
+                                        className="w-full bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all hover:scale-[1.01]"
+                                      >
+                                        <Camera className="w-4 h-4" />
+                                        Відсканувати QR закладу
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => setShowCancelModal(s.id)}
+                                      className="w-full border border-red-500/35 hover:border-red-500/50 bg-red-500/5 text-red-500 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 transition-all"
+                                    >
+                                      Відмовитись від зміни
+                                    </button>
+                                  </div>
+                                )}
+
+                                {s.status === 'in_progress' && (
+                                  <div className="mt-3.5 space-y-2">
+                                    <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 animate-pulse ${theme === 'light'
+                                      ? 'bg-green-50 border-green-200 text-green-800'
+                                      : 'bg-green-500/10 border-green-500/20 text-green-300'
+                                      }`}>
+                                      <Clock className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                      <span>Зміна триває. Не забудьте зробити Чек-аут після завершення роботи!</span>
+                                    </div>
+                                    <button
+                                      onClick={() => setShowReportModalId(s.id)}
+                                      className="w-full bg-gradient-to-br from-[#10B981] to-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                      Завершити зміну (Чек-аут)
+                                    </button>
+                                  </div>
+                                )}
+
+                                {s.status === 'pending_approval' && (
+                                  <div className="mt-3.5">
+                                    <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold ${theme === 'light'
+                                      ? 'bg-blue-50 border-blue-200 text-blue-800'
+                                      : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                                      }`}>
+                                      <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                      <span>Зміну завершено. Очікується підтвердження та виплата від роботодавця.</span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {s.status === 'disputed' && (() => {
+                                  const isCollapsed = collapsedDisputes[s.id] === true;
+                                  return (
+                                    <div className="mt-3.5 space-y-3">
+                                      <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                        <button
+                                          onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                          className="w-full flex items-center justify-between text-left focus:outline-none"
+                                        >
+                                          <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
+                                            <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                                            <span>Роботодавець оскаржує виконання</span>
+                                          </div>
+                                          <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {!isCollapsed && (
+                                          <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
+                                            <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                              <strong className="text-red-500">Причина:</strong> {s.disputeReason}
+                                            </p>
+                                            {s.disputeComment && (
+                                              <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                                                &ldquo;{s.disputeComment}&rdquo;
+                                              </p>
+                                            )}
+
+                                            <button
+                                              onClick={() => setArbitratorModalShiftId(s.id)}
+                                              className="w-full bg-[#001B3D] dark:bg-blue-600 hover:opacity-95 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                                            >
+                                              ⚖️ Відкрити Арбітраж та Чат
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
+                            }`}>
+                            <Calendar className="w-8 h-8 mx-auto mb-1 opacity-55" />
+                            <p className="text-xs font-bold">Немає змін у цьому розділі</p>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
 
-                        {s.status === 'completed' && s.reviews && s.reviews.some(r => r.workerName === 'Олексій К.') && (
-                          <div className={`mt-3.5 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} space-y-2`}>
-                            <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Відгук виконавця:</p>
-                            {s.reviews.filter(r => r.workerName === 'Олексій К.').map((rev) => (
-                              <div key={rev.id} className={`rounded-xl p-3 text-xs font-semibold ${theme === 'light' ? 'bg-[#fcf9f8]' : 'bg-[#121829]/50'}`}>
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rev.workerName}</span>
-                                  <div className="flex items-center gap-0.5 text-[#FF9500]">
-                                    <Star className="w-3.5 h-3.5 fill-[#FF9500]" />
-                                    <span className="text-[11px] font-black">{rev.rating}</span>
+                  {/* 3. PROFILE & DIGITAL WALLET TAB */}
+                  {activeTab === 'wallet' && (
+                    <div className="p-4 space-y-5 text-left animate-fade-in">
+
+                      {/* Balance Card */}
+                      <div className="relative overflow-hidden rounded-[24px] bg-[#001B3D] p-6 shadow-xl text-white border border-white/10">
+                        <div className="absolute -right-8 -top-8 w-32 h-32 bg-[#FF5722] opacity-20 rounded-full blur-3xl"></div>
+                        <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-2xl"></div>
+
+                        <div className="relative z-10">
+                          <span className="text-[11px] font-bold text-white/70 uppercase tracking-widest">Доступний баланс</span>
+                          <div className="mt-2 flex items-baseline gap-1.5">
+                            <span className="text-white font-black text-4xl leading-none">{balance.toLocaleString('en-US')}.00</span>
+                            <span className="text-lg font-bold text-white/80">₴</span>
+                          </div>
+
+                          <div className="mt-7 grid grid-cols-2 gap-3">
+                            <button
+                              onClick={() => {
+                                if (balance <= 0) {
+                                  triggerToast('Немає коштів для виведення!');
+                                  return;
+                                }
+                                setBalance(0);
+                                setTransactions(prev => [
+                                  { id: String(Date.now()), title: 'Вивід на картку', amount: -balance, date: 'Сьогодні, щойно', status: 'processing', type: 'withdrawal' },
+                                  ...prev
+                                ]);
+                                triggerToast('Виведення коштів успішно ініційовано!');
+                              }}
+                              className="bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,87,34,0.3)]"
+                            >
+                              <Wallet className="w-4 h-4" />
+                              Вивести
+                            </button>
+                            <button
+                              onClick={() => triggerToast('Історія вивантажується автоматично.')}
+                              className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all"
+                            >
+                              <Clock className="w-4 h-4" />
+                              Історія
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Weekly Summary Bento */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                          }`}>
+                          <div className="flex items-center gap-1.5 text-[#10B981] mb-1.5">
+                            <TrendingUp className="w-4 h-4" />
+                            <span className="text-[11px] font-bold uppercase">Нараховано</span>
+                          </div>
+                          <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                            {transactions.filter(t => t.type === 'work').reduce((acc, curr) => acc + curr.amount, 0)} ₴
+                          </p>
+                          <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Цього тижня</p>
+                        </div>
+
+                        <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                          }`}>
+                          <div className="flex items-center gap-1.5 text-[#FF5722] mb-1.5">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-[11px] font-bold uppercase">В обробці</span>
+                          </div>
+                          <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                            {shifts.filter(s => s.status === 'booked').reduce((acc, curr) => acc + curr.price, 0)} ₴
+                          </p>
+                          <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Майбутні зміни</p>
+                        </div>
+                      </div>
+
+                      {/* Transactions list */}
+                      <div>
+                        <div className="flex justify-between items-end mb-3 px-1">
+                          <h2 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
+                            }`}>Останні операції</h2>
+                          <button className="text-[#FF5722] text-xs font-bold hover:underline">Фільтри</button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {transactions.length > 0 ? (
+                            transactions.map((tx) => (
+                              <div
+                                key={tx.id}
+                                className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light'
+                                  ? 'bg-white/85 border-[#E5E7EB] hover:bg-[#f0edec]/40 text-[#001B3D] shadow-sm'
+                                  : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60 text-white shadow-md'
+                                  }`}
+                              >
+                                <div className="flex items-center gap-3.5">
+                                  <div className={`w-11 h-11 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-[#10B981]/8 text-[#10B981]' : 'bg-[#FF5722]/8 text-[#FF5722]'
+                                    }`}>
+                                    {tx.amount > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold">{tx.title}</p>
+                                    <span className={`text-[10px] font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>{tx.date}</span>
                                   </div>
                                 </div>
-                                <p className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>{rev.comment}</p>
+                                <div className="text-right">
+                                  <p className={`text-xs font-extrabold ${tx.amount > 0 ? 'text-[#10B981]' : 'text-white'}`}>
+                                    {tx.amount > 0 ? `+${tx.amount}` : `${tx.amount}`} ₴
+                                  </p>
+                                  <p className={`text-[9px] uppercase font-black ${tx.status === 'completed' ? 'text-[#10B981]' : 'text-[#FF5722]'
+                                    }`}>
+                                    {tx.status === 'completed' ? 'Виконано' : 'Обробка'}
+                                  </p>
+                                </div>
                               </div>
-                            ))}
+                            ))
+                          ) : (
+                            <div className={`rounded-3xl border border-dashed p-8 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
+                              }`}>
+                              <TrendingUp className="w-7 h-7 mx-auto mb-1 opacity-55" />
+                              <p className="text-xs font-bold">Історія виплат порожня</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* 4. PROFILE TAB */}
+                  {activeTab === 'profile' && (
+                    <div className="p-4 space-y-5 text-left animate-fade-in">
+
+                      {/* MAIN PROFILE SCREEN */}
+                      {profileSubPage === 'main' && (
+                        <div className="space-y-5 animate-fade-in">
+                          {/* Profile Card */}
+                          <div className={`rounded-[24px] p-5 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB]' : 'bg-[#1c2541]/45 border-white/10'
+                            }`}>
+                            <div className="absolute -top-12 -right-12 w-24 h-24 bg-[#FF5722] opacity-5 rounded-full"></div>
+
+                            <div
+                              className="relative mb-3 cursor-pointer group"
+                              onClick={() => setShowAvatarEditModal(true)}
+                              title="Змінити фото профілю"
+                            >
+                              <img
+                                alt="User Avatar"
+                                className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover transition-transform group-hover:scale-105"
+                                src={userAvatar}
+                              />
+                              <div className="absolute inset-0 bg-black/45 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="absolute bottom-0 right-0 bg-[#10B981] text-white p-0.5 rounded-full border-2 border-white flex items-center justify-center">
+                                <CheckCircle className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            </div>
+
+                            <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</h2>
+
+                            {isDiiaVerified ? (
+                              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                                ? 'bg-blue-50 border-blue-100 text-blue-800'
+                                : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                                }`}>
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
+                                <span className="text-[10px] font-bold">Верифіковано через Дію</span>
+                              </div>
+                            ) : (
+                              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                                ? 'bg-green-50 border-green-100 text-green-800'
+                                : 'bg-green-500/10 border-green-500/20 text-green-300'
+                                }`}>
+                                <span className="text-[10px] font-bold text-green-600 dark:text-green-400">Верифіковано по SMS</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1 bg-[#FF9500]/10 px-3 py-1 rounded-xl mt-1">
+                              <Award className="w-3.5 h-3.5 text-[#FF9500]" />
+                              <span className={`text-xs font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rating.toFixed(1)}</span>
+                              <span className={`text-[10px] font-medium ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>(18 змін виконано)</span>
+                            </div>
                           </div>
+
+                          {/* Options Menu List */}
+                          <nav className="space-y-2">
+                            <p className={`text-[10px] font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
+                              }`}>Акаунт</p>
+
+                            <div
+                              onClick={() => setProfileSubPage('personal')}
+                              className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                                }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}>
+                                  <User className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</p>
+                                  <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>ПІБ, телефон, адреса</span>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
+                            </div>
+
+                            <div
+                              onClick={() => setProfileSubPage('docs')}
+                              className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                                }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-orange-50 text-[#FF5722]' : 'bg-[#FF5722]/10 text-[#FF5722]'}`}>
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Документи</p>
+                                  <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Паспорт, Санкнижка</span>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
+                            </div>
+
+                            <div
+                              onClick={() => setProfileSubPage('help')}
+                              className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                                }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-purple-50 text-purple-600' : 'bg-purple-500/10 text-purple-400'}`}>
+                                  <HelpCircle className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</p>
+                                  <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>FAQ та підтримка</span>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
+                            </div>
+
+                            <div
+                              onClick={() => setProfileSubPage('developer')}
+                              className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                                }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-red-50 text-red-500' : 'bg-red-500/10 text-red-400'}`}>
+                                  <Settings className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Для розробника</p>
+                                  <span className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Панель симуляції та налаштувань</span>
+                                </div>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`} />
+                            </div>
+                          </nav>
+                          <button
+                            onClick={handleSignOut}
+                            className={`w-full border backdrop-blur-md text-red-600 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors ${theme === 'light'
+                              ? 'bg-white/60 border-[#E5E7EB] hover:bg-red-50/20'
+                              : 'bg-[#1c2541]/45 border-white/5 hover:bg-red-500/10'
+                              }`}
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Вийти з акаунту
+                          </button>
+                        </div>
+                      )}
+
+                      {/* SUBPAGE: PERSONAL DATA */}
+                      {profileSubPage === 'personal' && (
+                        <div className="space-y-4 animate-fade-in">
+                          <button
+                            onClick={() => setProfileSubPage('main')}
+                            className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                          >
+                            <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
+                          </button>
+
+                          <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</h3>
+
+                          <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
+                            ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                            } space-y-4`}>
+                            <div>
+                              <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Повне Ім'я</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</p>
+                            </div>
+                            <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                              <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Телефон</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userPhone || 'Не вказано'}</p>
+                            </div>
+                            <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                              <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Електронна пошта</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>oleksii.k@example.com</p>
+                            </div>
+                            <div className={`border-t pt-3 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                              <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Рідне Місто</p>
+                              <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Київ, Україна</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SUBPAGE: DOCUMENTS */}
+                      {profileSubPage === 'docs' && (
+                        <div className="space-y-4 animate-fade-in">
+                          <button
+                            onClick={() => setProfileSubPage('main')}
+                            className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                          >
+                            <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
+                          </button>
+
+                          <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Мої документи</h3>
+
+                          <div className="space-y-3">
+                            <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                              }`}>
+                              <div>
+                                <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Паспорт громадянина</p>
+                                <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>ID-карта верифікована через Дія</p>
+                              </div>
+                              <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
+                                ВЕРИФІКОВАНО
+                              </span>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                              }`}>
+                              <div>
+                                <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Індивідуальний податковий номер (ІПН)</p>
+                                <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Підтверджено реєстрами</p>
+                              </div>
+                              <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
+                                ВЕРИФІКОВАНО
+                              </span>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                              }`}>
+                              <div>
+                                <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Медична книжка (Санкнижка)</p>
+                                <p className={`text-[10px] ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дійсна до 12.2024</p>
+                              </div>
+                              <span className="bg-[#10B981]/8 text-[#10B981] text-[9px] font-black px-2 py-0.5 rounded border border-[#10B981]/25">
+                                АКТИВНА
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SUBPAGE: HELP CENTER */}
+                      {profileSubPage === 'help' && (
+                        <div className="space-y-4 animate-fade-in">
+                          <button
+                            onClick={() => setProfileSubPage('main')}
+                            className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                          >
+                            <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
+                          </button>
+
+                          <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</h3>
+
+                          <div className="space-y-3">
+                            <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                              }`}>
+                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Як отримати виплату за виконану зміну?</p>
+                              <p className={`text-[11px] mt-1.5 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                Оплата нараховується на ваш цифровий гаманець миттєво після того, як роботодавець підтвердить успішне закриття смени в B2B-дашборді. Ви можете вивести гроші на будь-картку в 1 клік.
+                              </p>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                              }`}>
+                              <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Що буде, якщо я не приду на заброньовану зміну?</p>
+                              <p className={`text-[11px] mt-1.5 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                Невиправданий невихід негативно впливає на ваш внутрішній рейтинг. Рекомендуємо скасовувати бронювання заздалегідь або повідомляти службу підтримки.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => triggerToast('Зв\'язок з підтримкою в Телеграм активовано!')}
+                            className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md mt-2 hover:scale-102 active:scale-98 ${theme === 'light' ? 'bg-[#001B3D] hover:bg-[#001430] text-white' : 'bg-[#FF5722] hover:bg-[#e64a19] text-white'
+                              }`}
+                          >
+                            <span>Зв'язатися з підтримкою</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* SUBPAGE: DEVELOPER PANEL */}
+                      {profileSubPage === 'developer' && (
+                        <div className="space-y-4 animate-fade-in">
+                          <button
+                            onClick={() => setProfileSubPage('main')}
+                            className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                          >
+                            <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
+                          </button>
+
+                          <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</h3>
+
+                          <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
+                            ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                            : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                            } space-y-4`}>
+                            <div className="flex items-center justify-between">
+                              <div className="text-left pr-4">
+                                <p className={`text-xs font-black leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                                  Симуляція дедлайну (залишилось 2 год)
+                                </p>
+                                <p className={`text-[10px] font-semibold mt-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                                  Робить зміни, до початку яких залишилось менше 2 годин, «гарячими» та переміщує їх на самий верх стрічки пошуку.
+                                </p>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                                <input
+                                  type="checkbox"
+                                  checked={simulateDeadline}
+                                  onChange={(e) => {
+                                    setSimulateDeadline(e.target.checked);
+                                    triggerToast(e.target.checked ? 'Симуляція дедлайну активована! Гарячі зміни підняті вгору стрічки 🔥' : 'Симуляцію дедлайну вимкнено.');
+                                  }}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF5722]"></div>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ========================================================= */}
+              {/* ==================== EMPLOYER VIEW (B2B) ================ */}
+              {/* ========================================================= */}
+              {userRole === 'employer' && (
+                <>
+                  {/* Tabs for B2B portal */}
+                  <div className={`px-4 py-2 border-b flex gap-2 transition-colors duration-300 ${theme === 'light' ? 'bg-[#ede8e4] border-black/10' : 'bg-[#121829]/40 border-white/5'
+                    } backdrop-blur-md`}>
+                    <button
+                      onClick={() => setB2bTab('dashboard')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${b2bTab === 'dashboard'
+                        ? theme === 'light'
+                          ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
+                          : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
+                        : theme === 'light'
+                          ? 'bg-white/60 text-[#001B3D] border-[#E5E7EB]'
+                          : 'bg-[#1c2541]/50 text-white border-transparent'
+                        }`}
+                    >
+                      Дашборд
+                    </button>
+                    <button
+                      onClick={() => setB2bTab('create')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${b2bTab === 'create'
+                        ? theme === 'light'
+                          ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
+                          : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
+                        : theme === 'light'
+                          ? 'bg-white/60 text-[#001B3D] border-[#E5E7EB]'
+                          : 'bg-[#1c2541]/50 text-white border-transparent'
+                        }`}
+                    >
+                      + Створити зміну
+                    </button>
+                  </div>
+
+                  {/* 1. B2B DASHBOARD */}
+                  {b2bTab === 'dashboard' && (
+                    <div className="p-4 space-y-4 text-left animate-fade-in">
+
+                      {/* Employer Balance Header */}
+                      <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+                        } flex items-center justify-between`}>
+                        <div>
+                          <p className={`text-[10px] uppercase font-bold ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Депозит підприємства</p>
+                          <h4 className={`text-xl font-black mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{employerBalance.toLocaleString()} ₴</h4>
+                        </div>
+                        {employerFrozenBalance > 0 ? (
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase font-black text-amber-500">Заморожено (Сейф)</p>
+                            <h4 className="text-sm font-black mt-0.5 text-amber-500">{employerFrozenBalance.toLocaleString()} ₴</h4>
+                          </div>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase bg-[#10B981]/8 text-[#10B981] px-2 py-1 rounded border border-[#10B981]/25">
+                            АКТИВНИЙ
+                          </span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </div>
+
+                      <h3 className={`text-xs font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
+                        }`}>Всі зміни компанії ({shifts.length})</h3>
+
+                      <div className="space-y-4">
+                        {shifts.map((s) => (
+                          <div
+                            key={s.id}
+                            className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
+                              ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
+                              : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
+                              } animate-fade-in`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${s.status === 'open' ? 'bg-gray-50 text-gray-600 border-[#E5E7EB]' :
+                                  s.status === 'booked' ? 'bg-[#FF9500]/8 text-[#FF9500] border-[#FF9500]/25' :
+                                    s.status === 'in_progress' ? 'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25' :
+                                      s.status === 'disputed' ? 'bg-red-500/10 text-red-500 border-red-500/25' :
+                                        'bg-[#10B981]/8 text-[#10B981] border-[#10B981]/25'
+                                  }`}>
+                                  {s.status === 'open' && 'Вільна'}
+                                  {s.status === 'booked' && 'Заброньована'}
+                                  {s.status === 'in_progress' && 'Працює'}
+                                  {s.status === 'pending_approval' && 'На підтвердженні'}
+                                  {s.status === 'disputed' && 'У спорі ⚠️'}
+                                  {s.status === 'completed' && 'Виплачено'}
+                                </span>
+                                <h4 className={`text-base font-bold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.role}</h4>
+                                <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{s.company}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-base font-black text-[#FF5722]">
+                                  {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className={`mt-3.5 pt-3.5 border-t flex justify-between items-center text-xs font-semibold ${theme === 'light' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
+                              }`}>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-[#FF5722]" />
+                                {s.date} Чер • {s.time}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5 text-[#FF5722]" />
+                                {s.address.split(',')[0]}
+                              </span>
+                            </div>
+
+                            {/* Approve Payout trigger */}
+                            {(s.status === 'booked' || s.status === 'in_progress' || s.status === 'pending_approval' || s.status === 'disputed') && (
+                              <div className={`mt-4 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} flex flex-col gap-2`}>
+                                <div className={`rounded-2xl p-3 flex items-start gap-2 text-[10px] font-bold ${s.status === 'pending_approval'
+                                  ? 'bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400'
+                                  : 'bg-[#fff9e6] border border-[#ffe082] text-[#856404]'
+                                  }`}>
+                                  <Info className={`w-4 h-4 shrink-0 mt-0.5 ${s.status === 'pending_approval' ? 'text-green-500' : 'text-[#FF9500]'}`} />
+                                  <span>
+                                    {s.status === 'booked' && 'Виконавець забронював зміну, але ще не розпочав роботу.'}
+                                    {s.status === 'in_progress' && 'Виконавець зараз працює на зміні.'}
+                                    {s.status === 'pending_approval' && 'Виконавець завершив зміну (Чек-аут) та очікує перевірки й виплати!'}
+                                  </span>
+                                </div>
+
+                                {s.status === 'booked' && (
+                                  <button
+                                    onClick={() => setShowB2BQRModalId(s.id)}
+                                    className={`w-full py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all ${theme === 'light'
+                                      ? 'border-[#001B3D]/30 text-[#001B3D] hover:bg-gray-50'
+                                      : 'border-white/20 text-white hover:bg-white/5'
+                                      }`}
+                                  >
+                                    <QrCode className="w-4 h-4" />
+                                    Показати QR-код закладу
+                                  </button>
+                                )}
+
+                                {s.status === 'pending_approval' && s.workPhoto && (
+                                  <div className="my-1 space-y-2 text-left">
+                                    <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Надісланий фотозвіт роботи:</p>
+                                    <div className={`rounded-2xl border p-3 flex flex-col gap-2 ${theme === 'light' ? 'bg-[#fcf9f8] border-gray-150' : 'bg-[#121829]/50 border-white/5'}`}>
+                                      <div className="relative w-full h-36 rounded-xl overflow-hidden bg-black">
+                                        <img src={s.workPhoto} alt="Work Report Proof" className="w-full h-full object-cover" />
+                                      </div>
+                                      {s.workComment && (
+                                        <p className={`text-xs italic font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                                          &ldquo;{s.workComment}&rdquo;
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {s.status === 'pending_approval' && (
+                                  <div className="space-y-2">
+                                    <button
+                                      onClick={() => handleApproveShift(s.id, s.price, s.role, s.company)}
+                                      className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                      Підтвердити виконання та сплатити
+                                    </button>
+                                    <button
+                                      onClick={() => setShowDisputeModalId(s.id)}
+                                      className="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
+                                    >
+                                      <AlertTriangle className="w-4 h-4" />
+                                      Відкрити спір
+                                    </button>
+                                  </div>
+                                )}
+
+                                {s.status === 'disputed' && (() => {
+                                  const isCollapsed = collapsedDisputes[s.id] === true;
+                                  return (
+                                    <div className="mt-3.5 space-y-3">
+                                      <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                                        <button
+                                          onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                          className="w-full flex items-center justify-between text-left focus:outline-none"
+                                        >
+                                          <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
+                                            <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+                                            <span>Зміну оскаржено</span>
+                                          </div>
+                                          <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {!isCollapsed && (
+                                          <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
+                                            <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                              <strong className="text-red-500">Причина спору:</strong> {s.disputeReason}
+                                            </p>
+                                            {s.disputeComment && (
+                                              <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                                                &ldquo;{s.disputeComment}&rdquo;
+                                              </p>
+                                            )}
+
+                                            <button
+                                              onClick={() => setArbitratorModalShiftId(s.id)}
+                                              className="w-full bg-[#001B3D] dark:bg-blue-600 hover:opacity-95 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
+                                            >
+                                              ⚖️ Відкрити Арбітраж та Чат
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {s.status === 'completed' && s.reviews && s.reviews.some(r => r.workerName === 'Олексій К.') && (
+                              <div className={`mt-3.5 pt-3.5 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'} space-y-2`}>
+                                <p className={`text-[10px] uppercase font-bold tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Відгук виконавця:</p>
+                                {s.reviews.filter(r => r.workerName === 'Олексій К.').map((rev) => (
+                                  <div key={rev.id} className={`rounded-xl p-3 text-xs font-semibold ${theme === 'light' ? 'bg-[#fcf9f8]' : 'bg-[#121829]/50'}`}>
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rev.workerName}</span>
+                                      <div className="flex items-center gap-0.5 text-[#FF9500]">
+                                        <Star className="w-3.5 h-3.5 fill-[#FF9500]" />
+                                        <span className="text-[11px] font-black">{rev.rating}</span>
+                                      </div>
+                                    </div>
+                                    <p className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>{rev.comment}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. B2B CREATE SHIFT PAGE */}
+                  {b2bTab === 'create' && (
+                    <div className="p-4 text-left animate-fade-in">
+                      <form onSubmit={handleCreateShift} className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
+                        ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                        : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                        } space-y-4`}>
+                        <h3 className={`text-base font-bold border-b pb-3 mb-2 ${theme === 'light' ? 'border-[#E5E7EB] text-[#001B3D]' : 'border-white/5 text-white'
+                          }`}>Публікація нової зміни</h3>
+
+                        <div className="relative role-combobox-container">
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Професія / Роль *</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={newRole}
+                              onFocus={() => setIsRoleComboOpen(true)}
+                              onChange={(e) => {
+                                setNewRole(e.target.value);
+                                setIsRoleComboOpen(true);
+                              }}
+                              placeholder="Виберіть або введіть роль..."
+                              className={`w-full border rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
+                                ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
+                                : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
+                                }`}
+                            />
+                            <ChevronDown
+                              className={`w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer transition-transform ${isRoleComboOpen ? 'rotate-180' : ''} ${theme === 'light' ? 'text-slate-400' : 'text-slate-500'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsRoleComboOpen(prev => !prev);
+                              }}
+                            />
+                          </div>
+
+                          {isRoleComboOpen && (
+                            <div className={`absolute z-30 left-0 right-0 mt-1.5 rounded-2xl border shadow-xl max-h-56 overflow-y-auto backdrop-blur-xl ${theme === 'light'
+                              ? 'bg-white/95 border-[#E5E7EB] text-[#001B3D]'
+                              : 'bg-slate-900/95 border-[#2a3454] text-white'
+                              }`}>
+                              <div className="p-1 space-y-0.5">
+                                {/* Option to select custom typed role if not exact match */}
+                                {newRole.trim() !== '' && !POPULAR_ROLES.some(r => r.toLowerCase() === newRole.trim().toLowerCase()) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setNewRole(newRole.trim());
+                                      setIsRoleComboOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${theme === 'light'
+                                      ? 'hover:bg-slate-100 text-[#FF5722]'
+                                      : 'hover:bg-white/5 text-orange-400'
+                                      }`}
+                                  >
+                                    <span className="text-[10px]">✨</span>
+                                    Додати власну роль: "{newRole.trim()}"
+                                  </button>
+                                )}
+
+                                {/* Popular roles list */}
+                                {POPULAR_ROLES.filter(r =>
+                                  newRole === '' || r.toLowerCase().includes(newRole.toLowerCase())
+                                ).map((roleOption) => {
+                                  const isSelected = newRole.toLowerCase() === roleOption.toLowerCase();
+                                  return (
+                                    <button
+                                      key={roleOption}
+                                      type="button"
+                                      onClick={() => {
+                                        setNewRole(roleOption);
+                                        setIsRoleComboOpen(false);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-all ${isSelected
+                                        ? theme === 'light' ? 'bg-slate-100 text-[#001B3D]' : 'bg-white/10 text-white'
+                                        : theme === 'light' ? 'hover:bg-slate-50 text-slate-700' : 'hover:bg-white/5 text-slate-300'
+                                        }`}
+                                    >
+                                      <span>{roleOption}</span>
+                                      {isSelected && <span className="text-[#FF5722] text-xs">✓</span>}
+                                    </button>
+                                  );
+                                })}
+
+                                {/* Fallback if no roles found and nothing typed */}
+                                {newRole !== '' && POPULAR_ROLES.filter(r =>
+                                  r.toLowerCase().includes(newRole.toLowerCase())
+                                ).length === 0 && newRole.trim() === '' && (
+                                    <div className="px-3 py-2 text-xs text-slate-400 text-center font-medium">
+                                      Нічого не знайдено
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Компанія / Заклад *</label>
+                          <input
+                            type="text"
+                            required
+                            value={newCompany}
+                            onChange={(e) => setNewCompany(e.target.value)}
+                            placeholder="Наприклад: Aroma Kava"
+                            className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
+                              ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
+                              : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
+                              }`}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Категорія</label>
+                            <select
+                              value={newCategory}
+                              onChange={(e) => setNewCategory(e.target.value as any)}
+                              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
+                                ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                                : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                                }`}
+                            >
+                              <option value="Кава">Кава</option>
+                              <option value="Рітейл">Рітейл</option>
+                              <option value="Склади">Склади</option>
+                              <option value="University Event / Volunteer">University Event / Volunteer</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                              {newCategory === 'University Event / Volunteer' ? 'Волонтерські бали / Нагорода' : 'Оплата (₴) *'}
+                            </label>
+                            <input
+                              type={newCategory === 'University Event / Volunteer' ? 'text' : 'number'}
+                              required={newCategory !== 'University Event / Volunteer'}
+                              value={newPrice}
+                              onChange={(e) => setNewPrice(e.target.value)}
+                              placeholder={newCategory === 'University Event / Volunteer' ? 'Напр: 50 балів, Футболка' : '1200'}
+                              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
+                                ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                                : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                                }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дата</label>
+                            <select
+                              value={newDate}
+                              onChange={(e) => setNewDate(e.target.value)}
+                              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
+                                ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                                : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                                }`}
+                            >
+                              {calendarDays.map((d, idx) => (
+                                <option key={d.date} value={d.date}>
+                                  {d.date} {getUkMonthGenitive(d.date)}{idx === 0 ? ' (Сьогодні)' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Години</label>
+                            <input
+                              type="text"
+                              required
+                              value={newTime}
+                              onChange={(e) => setNewTime(e.target.value)}
+                              placeholder="08:00 - 17:00"
+                              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
+                                ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                                : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                                }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Адреса локації *</label>
+                          <input
+                            type="text"
+                            required
+                            value={newAddress}
+                            onChange={(e) => setNewAddress(e.target.value)}
+                            placeholder="Київ, вул. Хрещатик, 10"
+                            className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
+                              ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
+                              : 'bg-[#121829]/50 border-[#2a3454] text-white'
+                              }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Опис роботи / Обов'язки *</label>
+                          <textarea
+                            required
+                            rows={3}
+                            value={newDetails}
+                            onChange={(e) => setNewDetails(e.target.value)}
+                            placeholder="Опишіть завдання зміни (напр., викладка товару, приготування напоїв)"
+                            className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                              ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
+                              : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
+                              }`}
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full mt-4 bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(255,87,34,0.3)] active:scale-98 transition-all"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          Опублікувати зміну
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* 2. B2B CREATE SHIFT PAGE */}
-              {b2bTab === 'create' && (
-                <div className="p-4 text-left animate-fade-in">
-                  <form onSubmit={handleCreateShift} className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                    ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                    : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
-                    } space-y-4`}>
-                    <h3 className={`text-base font-bold border-b pb-3 mb-2 ${theme === 'light' ? 'border-[#E5E7EB] text-[#001B3D]' : 'border-white/5 text-white'
-                      }`}>Публікація нової зміни</h3>
+            </div>
 
-                    <div>
-                      <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Професія / Роль *</label>
-                      <input
-                        type="text"
-                        required
-                        value={newRole}
-                        onChange={(e) => setNewRole(e.target.value)}
-                        placeholder="Наприклад: Бариста"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
-                          ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
-                          : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
-                          }`}
-                      />
-                    </div>
+            {/* --- PERSISTENT FLOATING BOTTOM NAVIGATION (B2C Worker only - Glassmorphic overlay) --- */}
+            {userRole === 'worker' && (
+              <nav className={`absolute bottom-4 left-4 right-4 z-40 border h-[76px] rounded-[24px] shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex justify-around items-center px-2 transition-all backdrop-blur-[24px] ${theme === 'light'
+                ? 'bg-white/70 border-black/10'
+                : 'bg-[#0f172a]/70 border-white/10'
+                }`}>
 
-                    <div>
-                      <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Компанія / Заклад *</label>
-                      <input
-                        type="text"
-                        required
-                        value={newCompany}
-                        onChange={(e) => setNewCompany(e.target.value)}
-                        placeholder="Наприклад: Aroma Kava"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
-                          ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
-                          : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
-                          }`}
-                      />
-                    </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('feed');
+                    setSelectedShift(null);
+                    setProfileSubPage('main');
+                  }}
+                  className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'feed'
+                    ? 'text-[#FF5722]'
+                    : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
+                    }`}
+                >
+                  {activeTab === 'feed' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
+                  <Search className="w-5 h-5 relative z-10" />
+                  <span className="text-[10px] font-bold mt-0.5 relative z-10">Пошук</span>
+                </button>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Категорія</label>
-                        <select
-                          value={newCategory}
-                          onChange={(e) => setNewCategory(e.target.value as any)}
-                          className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
-                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                            }`}
-                        >
-                          <option value="Кава">Кава</option>
-                          <option value="Рітейл">Рітейл</option>
-                          <option value="Склади">Склади</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Оплата (₴) *</label>
-                        <input
-                          type="number"
-                          required
-                          value={newPrice}
-                          onChange={(e) => setNewPrice(e.target.value)}
-                          placeholder="1200"
-                          className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
-                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                            }`}
-                        />
-                      </div>
-                    </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('my-shifts');
+                    setSelectedShift(null);
+                    setProfileSubPage('main');
+                  }}
+                  className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'my-shifts'
+                    ? 'text-[#FF5722]'
+                    : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
+                    }`}
+                >
+                  {activeTab === 'my-shifts' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
+                  <Calendar className="w-5 h-5 relative z-10" />
+                  <span className="text-[10px] font-bold mt-0.5 relative z-10">Зміни</span>
+                </button>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дата</label>
-                        <select
-                          value={newDate}
-                          onChange={(e) => setNewDate(e.target.value)}
-                          className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
-                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                            }`}
-                        >
-                          {calendarDays.map((d, idx) => (
-                            <option key={d.date} value={d.date}>
-                              {d.date} {getUkMonthGenitive(d.date)}{idx === 0 ? ' (Сьогодні)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Години</label>
-                        <input
-                          type="text"
-                          required
-                          value={newTime}
-                          onChange={(e) => setNewTime(e.target.value)}
-                          placeholder="08:00 - 17:00"
-                          className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
-                            ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                            : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                            }`}
-                        />
-                      </div>
-                    </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('wallet');
+                    setSelectedShift(null);
+                    setProfileSubPage('main');
+                  }}
+                  className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'wallet'
+                    ? 'text-[#FF5722]'
+                    : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
+                    }`}
+                >
+                  {activeTab === 'wallet' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
+                  <Wallet className="w-5 h-5 relative z-10" />
+                  <span className="text-[10px] font-bold mt-0.5 relative z-10">Гаманець</span>
+                </button>
 
-                    <div>
-                      <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Адреса локації *</label>
-                      <input
-                        type="text"
-                        required
-                        value={newAddress}
-                        onChange={(e) => setNewAddress(e.target.value)}
-                        placeholder="Київ, вул. Хрещатик, 10"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${theme === 'light'
-                          ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
-                          : 'bg-[#121829]/50 border-[#2a3454] text-white'
-                          }`}
-                      />
-                    </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('profile');
+                    setSelectedShift(null);
+                    setProfileSubPage('main');
+                  }}
+                  className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'profile'
+                    ? 'text-[#FF5722]'
+                    : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
+                    }`}
+                >
+                  {activeTab === 'profile' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
+                  <User className="w-5 h-5 relative z-10" />
+                  <span className="text-[10px] font-bold mt-0.5 relative z-10">Профіль</span>
+                </button>
 
-                    <div>
-                      <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Опис роботи / Обов'язки *</label>
-                      <textarea
-                        required
-                        rows={3}
-                        value={newDetails}
-                        onChange={(e) => setNewDetails(e.target.value)}
-                        placeholder="Опишіть завдання зміни (напр., викладка товару, приготування напоїв)"
-                        className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                          ? 'bg-white border-[#E5E7EB] text-[#001B3D] focus:border-[#FF5722]'
-                          : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
-                          }`}
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full mt-4 bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(255,87,34,0.3)] active:scale-98 transition-all"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      Опублікувати зміну
-                    </button>
-                  </form>
-                </div>
-              )}
-            </>
-          )}
-
-        </div>
-
-        {/* --- PERSISTENT FLOATING BOTTOM NAVIGATION (B2C Worker only - Glassmorphic overlay) --- */}
-        {userRole === 'worker' && (
-          <nav className={`absolute bottom-4 left-4 right-4 z-40 border h-[76px] rounded-[24px] shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex justify-around items-center px-2 transition-all backdrop-blur-[24px] ${theme === 'light'
-            ? 'bg-white/70 border-black/10'
-            : 'bg-[#0f172a]/70 border-white/10'
-            }`}>
-
-            <button
-              onClick={() => {
-                setActiveTab('feed');
-                setSelectedShift(null);
-                setProfileSubPage('main');
-              }}
-              className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'feed'
-                ? 'text-[#FF5722]'
-                : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
-                }`}
-            >
-              {activeTab === 'feed' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
-              <Search className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold mt-0.5 relative z-10">Пошук</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveTab('my-shifts');
-                setSelectedShift(null);
-                setProfileSubPage('main');
-              }}
-              className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'my-shifts'
-                ? 'text-[#FF5722]'
-                : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
-                }`}
-            >
-              {activeTab === 'my-shifts' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
-              <Calendar className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold mt-0.5 relative z-10">Зміни</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveTab('wallet');
-                setSelectedShift(null);
-                setProfileSubPage('main');
-              }}
-              className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'wallet'
-                ? 'text-[#FF5722]'
-                : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
-                }`}
-            >
-              {activeTab === 'wallet' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
-              <Wallet className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold mt-0.5 relative z-10">Гаманець</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveTab('profile');
-                setSelectedShift(null);
-                setProfileSubPage('main');
-              }}
-              className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'profile'
-                ? 'text-[#FF5722]'
-                : theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'
-                }`}
-            >
-              {activeTab === 'profile' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
-              <User className="w-5 h-5 relative z-10" />
-              <span className="text-[10px] font-bold mt-0.5 relative z-10">Профіль</span>
-            </button>
-
-          </nav>
+              </nav>
+            )}
+          </>
         )}
-      </>
-      )}
       </div>
 
       {/* --- MOCK QR MODAL POPUP --- */}
@@ -3517,11 +3752,10 @@ export default function OneClickApp() {
                 </button>
                 <button
                   onClick={() => setShowScannerModal(null)}
-                  className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all ${
-                    theme === 'light'
-                      ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
-                      : 'bg-white/5 hover:bg-white/10 text-white'
-                  }`}
+                  className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all ${theme === 'light'
+                    ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
+                    : 'bg-white/5 hover:bg-white/10 text-white'
+                    }`}
                 >
                   Скасувати
                 </button>
@@ -3545,7 +3779,7 @@ export default function OneClickApp() {
               <p className={`text-xs font-semibold leading-normal mb-8 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
                 Попросіть виконавця відсканувати цей QR-код через додаток <span className="font-bold text-[#FF5722]">OneClick</span> для початку зміни в <span className="font-bold">{targetShift?.company}</span>.
               </p>
-              
+
               {/* Employer Venue Check-in QR */}
               <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed ${theme === 'light' ? 'bg-[#fcf9f8]/90 border-[#E5E7EB]' : 'bg-[#121829]/60 border-white/10'
                 }`}>
@@ -3569,7 +3803,7 @@ export default function OneClickApp() {
       {/* --- B2C WORK REPORT & PHOTO CAPTURE MODAL --- */}
       {showReportModalId && (() => {
         const targetShift = shifts.find(s => s.id === showReportModalId);
-        
+
         // select a mock photo based on shift category
         const getMockPhoto = (cat?: string) => {
           if (cat === 'Кава') return 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=80';
@@ -3595,11 +3829,11 @@ export default function OneClickApp() {
             prev.map(s =>
               s.id === showReportModalId
                 ? {
-                    ...s,
-                    status: 'pending_approval' as const,
-                    workPhoto: capturedPhoto,
-                    workComment: reportComment.trim() || 'Роботу виконано успішно та вчасно.'
-                  }
+                  ...s,
+                  status: 'pending_approval' as const,
+                  workPhoto: capturedPhoto,
+                  workComment: reportComment.trim() || 'Роботу виконано успішно та вчасно.'
+                }
                 : s
             )
           );
@@ -3668,8 +3902,8 @@ export default function OneClickApp() {
                   onChange={(e) => setReportComment(e.target.value)}
                   placeholder="Наприклад: роботу завершено, все прибрано, полиці заповнені..."
                   className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                      ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
-                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
+                    ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
+                    : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
                     }`}
                 />
               </div>
@@ -3745,7 +3979,7 @@ export default function OneClickApp() {
       {/* --- B2B OPEN DISPUTE MODAL --- */}
       {showDisputeModalId && (() => {
         const targetShift = shifts.find(s => s.id === showDisputeModalId);
-        
+
         const handleSubmitDispute = () => {
           if (!disputeCommentInput.trim()) {
             triggerToast('Будь ласка, вкажіть опис претензії!');
@@ -3756,12 +3990,12 @@ export default function OneClickApp() {
             prev.map(s =>
               s.id === showDisputeModalId
                 ? {
-                    ...s,
-                    status: 'disputed' as const,
-                    disputeReason: disputeReasonInput,
-                    disputeComment: disputeCommentInput.trim(),
-                    disputeStatus: 'pending_settlement' as const
-                  }
+                  ...s,
+                  status: 'disputed' as const,
+                  disputeReason: disputeReasonInput,
+                  disputeComment: disputeCommentInput.trim(),
+                  disputeStatus: 'pending_settlement' as const
+                }
                 : s
             )
           );
@@ -3798,8 +4032,8 @@ export default function OneClickApp() {
                     value={disputeReasonInput}
                     onChange={(e) => setDisputeReasonInput(e.target.value)}
                     className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
-                        ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                        : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                      ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
                       }`}
                   >
                     <option value="Неякісно виконана робота">Неякісно виконана робота</option>
@@ -3820,8 +4054,8 @@ export default function OneClickApp() {
                     onChange={(e) => setDisputeCommentInput(e.target.value)}
                     placeholder="Детально опишіть, що саме виконано не так..."
                     className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                        ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                        : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                      ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
                       }`}
                   />
                 </div>
@@ -3842,16 +4076,14 @@ export default function OneClickApp() {
       {/* --- MOCK USER AGREEMENT MODAL --- */}
       {showAgreementModal && (
         <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-6 w-full max-w-md shadow-2xl relative z-10 border flex flex-col max-h-[85vh] animate-modal-in ${
-            theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
-          }`}>
+          <div className={`rounded-[32px] p-6 w-full max-w-md shadow-2xl relative z-10 border flex flex-col max-h-[85vh] animate-modal-in ${theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
+            }`}>
             <h3 className={`text-xl font-black mb-4 uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
               Угода користувача OneClick
             </h3>
 
-            <div className={`flex-1 overflow-y-auto pr-2 text-xs leading-relaxed space-y-3 mb-6 no-scrollbar ${
-              theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
-            }`}>
+            <div className={`flex-1 overflow-y-auto pr-2 text-xs leading-relaxed space-y-3 mb-6 no-scrollbar ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
+              }`}>
               <p className="font-bold text-[#FF5722]">Тестова версія угоди для платформи OneClick</p>
               <p>
                 <strong>1. Загальні положення</strong><br />
@@ -3884,9 +4116,8 @@ export default function OneClickApp() {
               </button>
               <button
                 onClick={() => setShowAgreementModal(false)}
-                className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${
-                  theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
-                }`}
+                className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
+                  }`}
               >
                 Закрити
               </button>
@@ -3898,9 +4129,8 @@ export default function OneClickApp() {
       {/* --- PHOTO EDIT MODAL --- */}
       {showAvatarEditModal && (
         <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-6 w-full max-w-sm shadow-2xl relative z-10 border flex flex-col animate-modal-in ${
-            theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
-          }`}>
+          <div className={`rounded-[32px] p-6 w-full max-w-sm shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
+            }`}>
             <h3 className={`text-lg font-black mb-4 uppercase tracking-tight text-center ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
               Зміна фото профілю
             </h3>
@@ -3953,9 +4183,8 @@ export default function OneClickApp() {
 
             <button
               onClick={() => setShowAvatarEditModal(false)}
-              className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all ${
-                theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
-              }`}
+              className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all ${theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
+                }`}
             >
               Скасувати
             </button>
