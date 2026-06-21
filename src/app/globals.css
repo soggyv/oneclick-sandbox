@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-oneclick-orange: #FF5722;
+  --color-oneclick-navy: #001B3D;
+  --color-success-green: #10B981;
+  --color-warning-amber: #FF9500;
+  
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0edec;
+  --color-surface-container-high: #ebe7e7;
+  --color-surface-container-highest: #e5e2e1;
+  
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #5b4039;
+  
+  --shadow-premium: 0 10px 40px -10px rgba(0,0,0,0.08);
+  --shadow-premium-glow: 0 8px 30px rgba(255, 87, 34, 0.25);
+  --shadow-card: 0 4px 14px 0 rgba(255, 87, 34, 0.15);
+}
+
+:root {
+  --background: #fcf9f8;
+  --foreground: #1c1b1b;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100dvh;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom styles */
+.premium-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.premium-card:active {
+  transform: scale(0.98);
+}
+
+.date-tab-active {
+  background: linear-gradient(135deg, #FF5722 0%, #e64a19 100%);
+  color: white;
+  box-shadow: 0 8px 20px rgba(255, 87, 34, 0.25);
+  border-color: transparent;
+}
+
+.orange-glow-btn {
+  box-shadow: 0 10px 15px -3px rgba(255, 87, 34, 0.3), 0 4px 6px -2px rgba(255, 87, 34, 0.1);
+}
