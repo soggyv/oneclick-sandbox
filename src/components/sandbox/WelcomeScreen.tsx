@@ -137,6 +137,15 @@ export function WelcomeScreen({
               </button>
             </div>
 
+            {/* Helper description for the selected role */}
+            <div className={`px-2 py-1.5 text-[11px] font-medium leading-relaxed text-left transition-all duration-300 ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-300/80'}`}>
+              {regRole === 'worker' ? (
+                <p>🙋 <strong>Шукач (B2C):</strong> Для тих, хто шукає підробіток чи волонтерство поруч. Отримуйте оплату за кожну зміну та виводьте на картку.</p>
+              ) : (
+                <p>🏢 <strong>Бізнес (B2B):</strong> Для компаній та брендів. Створюйте вакансії, знаходьте виконавців та керуйте корпоративним бюджетом.</p>
+              )}
+            </div>
+
             {/* Agreement Checkbox */}
             <div className="flex items-start gap-2.5 px-2 text-left mb-4">
               <input

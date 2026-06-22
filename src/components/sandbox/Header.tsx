@@ -1,14 +1,11 @@
 import React from 'react';
-import { Building, User } from 'lucide-react';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
   setTheme: React.Dispatch<React.SetStateAction<'light' | 'dark'>>;
-  userRole: 'worker' | 'employer';
-  handleToggleUserRole: () => void;
 }
 
-export function Header({ theme, setTheme, userRole, handleToggleUserRole }: HeaderProps) {
+export function Header({ theme, setTheme }: HeaderProps) {
   return (
     <header className={`px-4 py-4 flex items-center justify-between sticky top-0 z-40 border-b transition-all duration-300 ${theme === 'light'
       ? 'bg-white/70 border-[#ebe7e7] text-[#001B3D]'
@@ -39,27 +36,6 @@ export function Header({ theme, setTheme, userRole, handleToggleUserRole }: Head
             <svg className="w-4 h-4 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
-          )}
-        </button>
-
-        {/* B2C/B2B Switcher */}
-        <button
-          onClick={handleToggleUserRole}
-          className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] transition-all active:scale-95 border ${theme === 'light'
-            ? 'bg-white/70 hover:bg-white border-black/10 text-[#001B3D] font-bold'
-            : 'bg-[#1c2541]/60 hover:bg-[#252f55]/80 border-white/10 text-white font-bold'
-            } backdrop-blur-[24px]`}
-        >
-          {userRole === 'worker' ? (
-            <>
-              <Building className="w-3.5 h-3.5 text-[#FF5722]" />
-              <span>Бізнес (B2B)</span>
-            </>
-          ) : (
-            <>
-              <User className="w-3.5 h-3.5 text-[#FF5722]" />
-              <span>Шукач (B2C)</span>
-            </>
           )}
         </button>
       </div>

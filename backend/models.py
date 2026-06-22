@@ -13,6 +13,7 @@ class User(Base):
     role = Column(String, default="worker")  # "worker", "employer"
     rating = Column(Float, default=5.0)
     balance = Column(Integer, default=0)
+    employer_balance = Column(Integer, default=0)
     is_verified = Column(Boolean, default=False)
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
 
@@ -47,6 +48,7 @@ class Shift(Base):
     dispute_status = Column(String, nullable=True)  # "under_review", "pending_settlement"
     volunteer_reward = Column(String, nullable=True)
     worker_id = Column(String, ForeignKey("users.id"), nullable=True)
+    employer_id = Column(String, ForeignKey("users.id"), nullable=True)
     is_hot = Column(Boolean, default=False)
     requires_screening = Column(Boolean, default=False)
     template_name = Column(String, nullable=True)

@@ -450,14 +450,14 @@ export function EmployerView({
           <div className="p-4 space-y-4 text-left animate-fade-in">
             <div className="flex justify-between items-center mb-1">
               <h2 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                Нова зміна вручну
+                Нова зміна вручную
               </h2>
             </div>
 
             <form onSubmit={handleCreateShift} className="space-y-4">
               {/* Select branch drop down */}
               <div>
-                <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Оберіть філію компанії</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Оберіть філію компанії</label>
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
@@ -471,10 +471,11 @@ export function EmployerView({
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Заповнить адресу автоматично або оберіть ручне введення.</p>
               </div>
 
               <div className="relative role-combobox-container">
-                <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-350'}`}>Посада / Роль виконавця *</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-355'}`}>Посада / Роль виконавця *</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -492,6 +493,7 @@ export function EmployerView({
                       }`}
                   />
                 </div>
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Введіть назву вакансії, наприклад: Бариста, Касир, Вантажник.</p>
 
                 {isRoleComboOpen && (
                   <div className={`absolute left-0 right-0 z-30 mt-1 border rounded-xl shadow-lg max-h-40 overflow-y-auto no-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829] border-white/10'}`}>
@@ -514,7 +516,7 @@ export function EmployerView({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-350'}`}>Категорія роботи</label>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-350'}`}>Категорія роботи</label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer')}
@@ -528,9 +530,10 @@ export function EmployerView({
                     <option value="Склади">Склади</option>
                     <option value="University Event / Volunteer">University Event / Volunteer</option>
                   </select>
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Сфера діяльності.</p>
                 </div>
                 <div>
-                  <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-350'}`}>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-355'}`}>
                     {newCategory === 'University Event / Volunteer' ? 'Волонтерська винагорода *' : 'Оплата (₴) *'}
                   </label>
                   <input
@@ -544,12 +547,13 @@ export function EmployerView({
                       : 'bg-[#121829]/50 border-[#2a3454] text-white'
                       }`}
                   />
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Оплата за зміну.</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дата</label>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Дата</label>
                   <select
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
@@ -564,9 +568,10 @@ export function EmployerView({
                       </option>
                     ))}
                   </select>
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>День виходу на зміну.</p>
                 </div>
                 <div>
-                  <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Години</label>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Години</label>
                   <input
                     type="text"
                     required
@@ -578,11 +583,12 @@ export function EmployerView({
                       : 'bg-[#121829]/50 border-[#2a3454] text-white'
                       }`}
                   />
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Час роботи.</p>
                 </div>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Адреса локації *</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Адреса локації *</label>
                 <input
                   type="text"
                   required
@@ -594,10 +600,11 @@ export function EmployerView({
                     : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
                     }`}
                 />
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Куди саме потрібно підійти виконавцю.</p>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Опис роботи / Обов’язки *</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Опис роботи / Обов’язки *</label>
                 <textarea
                   required
                   rows={3}
@@ -609,10 +616,11 @@ export function EmployerView({
                     : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
                     }`}
                 />
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'}`}>Детально опишіть завдання зміни, дрес-код чи особливі вимоги.</p>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-bold uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Тип підтвердження виконавця</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>Тип підтвердження виконавця</label>
                 <select
                   value={requiresScreening ? 'screening' : 'instant'}
                   onChange={(e) => setRequiresScreening(e.target.value === 'screening')}

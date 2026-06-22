@@ -59,6 +59,7 @@ class ShiftResponse(BaseModel):
     dispute_status: Optional[str] = None
     volunteer_reward: Optional[str] = None
     worker_id: Optional[str] = None
+    employer_id: Optional[str] = None
     is_hot: Optional[bool] = False
     requires_screening: Optional[bool] = False
     template_name: Optional[str] = None

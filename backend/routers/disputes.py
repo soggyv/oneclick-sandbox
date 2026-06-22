@@ -69,6 +69,25 @@ async def resolve_dispute_internal(
             w_res = await db.execute(worker_stmt)
             worker = w_res.scalar_one_or_none()
             if worker:
+                # Deduct from employer
+                if shift.employer_id:
+                    employer_stmt = select(User).where(User.id == shift.employer_id)
+                    emp_res = await db.execute(employer_stmt)
+                    employer = emp_res.scalar_one_or_none()
+                    if employer:
+                        employer.employer_balance -= shift.price
+                        emp_tx = Transaction(
+                            id=str(uuid.uuid4()),
+                            user_id=shift.employer_id,
+                            title=f"Спір вирішено (Виплата): {shift.role} (виконавець {worker.name})",
+                            amount=-shift.price,
+                            date="Сьогодні, щойно",
+                            status="completed",
+                            type="withdrawal"
+                        )
+                        db.add(emp_tx)
+
+                # Pay worker
                 worker.balance += shift.price
                 tx = Transaction(
                     id=str(uuid.uuid4()),
@@ -90,6 +109,25 @@ async def resolve_dispute_internal(
             w_res = await db.execute(worker_stmt)
             worker = w_res.scalar_one_or_none()
             if worker:
+                # Deduct from employer
+                if shift.employer_id:
+                    employer_stmt = select(User).where(User.id == shift.employer_id)
+                    emp_res = await db.execute(employer_stmt)
+                    employer = emp_res.scalar_one_or_none()
+                    if employer:
+                        employer.employer_balance -= half
+                        emp_tx = Transaction(
+                            id=str(uuid.uuid4()),
+                            user_id=shift.employer_id,
+                            title=f"🤝 Компроміс по спору (Списання): {shift.role} (виконавець {worker.name})",
+                            amount=-half,
+                            date="Сьогодні, щойно",
+                            status="completed",
+                            type="withdrawal"
+                        )
+                        db.add(emp_tx)
+
+                # Pay worker
                 worker.balance += (shift.price - half)
                 tx = Transaction(
                     id=str(uuid.uuid4()),

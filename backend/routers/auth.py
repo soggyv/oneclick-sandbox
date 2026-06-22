@@ -46,6 +46,7 @@ async def verify_sms(req: VerifySmsRequest, db: AsyncSession = Depends(get_db)):
         "role": user.role,
         "is_verified": user.is_verified,
         "balance": user.balance,
+        "employer_balance": getattr(user, 'employer_balance', 0),
         "avatar": user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
     }
 
@@ -80,11 +81,14 @@ async def verify_diia(req: DiiaVerifyRequest, db: AsyncSession = Depends(get_db)
         "role": user.role,
         "is_verified": user.is_verified,
         "balance": user.balance,
+        "employer_balance": getattr(user, 'employer_balance', 0),
         "avatar": user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
     }
 
 @router.post("/register-company")
 async def register_company(req: RegisterCompanyRequest, user_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    if req.edrpou and (not req.edrpou.isdigit() or len(req.edrpou) != 8):
+        raise HTTPException(status_code=400, detail="Код ЄДРПОУ має складатися з 8 цифр")
     # Create or fetch Company
     stmt = select(Company).where(Company.id == req.id)
     res = await db.execute(stmt)
@@ -139,6 +143,7 @@ async def b2b_register(req: B2BRegisterRequest, db: AsyncSession = Depends(get_d
             "role": user.role,
             "is_verified": user.is_verified,
             "balance": user.balance,
+            "employer_balance": getattr(user, 'employer_balance', 0),
             "avatar": user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
             "company_name": company_name,
             "company_details": company_details
@@ -165,7 +170,8 @@ async def b2b_register(req: B2BRegisterRequest, db: AsyncSession = Depends(get_d
         name=req.contact_person,
         role="employer",
         is_verified=True,
-        balance=50000, # starting balance
+        balance=0,
+        employer_balance=50000, # starting balance
         company_id=company_id,
         avatar="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
     )
@@ -185,6 +191,7 @@ async def b2b_register(req: B2BRegisterRequest, db: AsyncSession = Depends(get_d
         "role": user.role,
         "is_verified": user.is_verified,
         "balance": user.balance,
+        "employer_balance": user.employer_balance,
         "avatar": user.avatar,
         "company_name": company.name,
         "company_details": company_details

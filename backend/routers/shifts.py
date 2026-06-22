@@ -85,7 +85,8 @@ async def create_shift(req: ShiftCreateRequest, employer_id: str, db: AsyncSessi
         template_name=req.template_name,
         latitude=lat,
         longitude=lng,
-        is_hot=False
+        is_hot=False,
+        employer_id=employer_id
     )
     db.add(shift)
     await db.commit()
@@ -184,6 +185,16 @@ async def approve_shift(shift_id: str, employer_id: str, db: AsyncSession = Depe
     if not shift:
         raise HTTPException(status_code=404, detail="Shift not found")
 
+    # Verify employer has sufficient funds
+    employer_stmt = select(User).where(User.id == employer_id)
+    emp_res = await db.execute(employer_stmt)
+    employer = emp_res.scalar_one_or_none()
+    if not employer:
+        raise HTTPException(status_code=404, detail="Employer not found")
+    
+    if employer.employer_balance < shift.price:
+        raise HTTPException(status_code=400, detail="Недостатньо коштів на балансі підприємства")
+
     shift.status = "completed"
 
     # Execute payout
@@ -192,6 +203,20 @@ async def approve_shift(shift_id: str, employer_id: str, db: AsyncSession = Depe
         worker_res = await db.execute(worker_stmt)
         worker = worker_res.scalar_one_or_none()
         if worker:
+            # Deduct from employer
+            employer.employer_balance -= shift.price
+            emp_tx = Transaction(
+                id=str(uuid.uuid4()),
+                user_id=employer_id,
+                title=f"Виплата за зміну: {shift.role} (виконавець {worker.name})",
+                amount=-shift.price,
+                date="Сьогодні, щойно",
+                status="completed",
+                type="withdrawal"
+            )
+            db.add(emp_tx)
+
+            # Pay worker
             worker.balance += shift.price
             tx = Transaction(
                 id=str(uuid.uuid4()),

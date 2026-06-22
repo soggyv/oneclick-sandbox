@@ -38,7 +38,8 @@ async def lifespan(app: FastAPI):
                 name="Aroma Kava Manager",
                 role="employer",
                 rating=5.0,
-                balance=50000,
+                balance=0,
+                employer_balance=50000,
                 is_verified=True
             )
             db.add(worker)
@@ -74,7 +75,8 @@ async def lifespan(app: FastAPI):
                     details="Збір та пакування інтернет-замовлень за допомогою ТЗД на теплому складі.",
                     latitude=50.495,
                     longitude=30.505,
-                    is_hot=True
+                    is_hot=True,
+                    employer_id="employer-default"
                 ),
                 Shift(
                     id="2",
@@ -91,7 +93,8 @@ async def lifespan(app: FastAPI):
                     details="Приготування класичних кавових напоїв, робота з касою Poster, підтримання чистоти за баром.",
                     latitude=50.447,
                     longitude=30.522,
-                    is_hot=False
+                    is_hot=False,
+                    employer_id="employer-default"
                 ),
                 Shift(
                     id="3",
@@ -108,7 +111,8 @@ async def lifespan(app: FastAPI):
                     details="Доставка замовлень з ресторанів та супермаркетів у межах району на власному транспорті.",
                     latitude=50.455,
                     longitude=30.518,
-                    is_hot=True
+                    is_hot=True,
+                    employer_id="employer-default"
                 ),
                 Shift(
                     id="4",
@@ -125,7 +129,8 @@ async def lifespan(app: FastAPI):
                     details="Розвантаження та завантаження автомобілів компанії, сортування посилок по напрямках.",
                     latitude=50.462,
                     longitude=30.597,
-                    is_hot=False
+                    is_hot=False,
+                    employer_id="employer-default"
                 )
             ])
             await db.commit()
@@ -176,6 +181,7 @@ async def get_user_profile(user_id: str, db: AsyncSession = Depends(get_db)):
         "role": user.role,
         "rating": user.rating,
         "balance": user.balance,
+        "employer_balance": user.employer_balance,
         "is_verified": user.is_verified,
         "company_id": getattr(user, 'company_id', None),
         "company_name": company_name,
@@ -204,14 +210,24 @@ async def update_user_balance(user_id: str, req: WalletWithdrawalRequest, is_dep
         raise HTTPException(status_code=404, detail="User not found")
 
     amount = req.amount
+    is_employer = user.role == "employer"
+
     if is_deposit:
-        user.balance += amount
-        tx_title = "Поповнення гаманця"
+        if is_employer:
+            user.employer_balance += amount
+        else:
+            user.balance += amount
+        tx_title = "Поповнення гаманця компанії" if is_employer else "Поповнення гаманця"
         tx_type = "work"
     else:
-        if user.balance < amount:
-            raise HTTPException(status_code=400, detail="Insufficient funds")
-        user.balance -= amount
+        if is_employer:
+            if user.employer_balance < amount:
+                raise HTTPException(status_code=400, detail="Insufficient funds")
+            user.employer_balance -= amount
+        else:
+            if user.balance < amount:
+                raise HTTPException(status_code=400, detail="Insufficient funds")
+            user.balance -= amount
         tx_title = "Виведення коштів на карту"
         tx_type = "withdrawal"
 
@@ -226,7 +242,7 @@ async def update_user_balance(user_id: str, req: WalletWithdrawalRequest, is_dep
     )
     db.add(tx)
     await db.commit()
-    return {"balance": user.balance}
+    return {"balance": user.employer_balance if is_employer else user.balance}
 
 @app.get("/users/{user_id}/transactions")
 async def get_user_transactions(user_id: str, db: AsyncSession = Depends(get_db)):

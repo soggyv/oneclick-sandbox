@@ -372,7 +372,8 @@ export function useSandbox() {
   const handleCreateShift = async (e: React.FormEvent) => {
     e.preventDefault();
     const isVolunteer = newCategory === 'University Event / Volunteer';
-    if (!newRole || !newCompany || (!isVolunteer && !newPrice) || !newAddress) {
+    const activeCompany = companyName || 'Aroma Kava';
+    if (!newRole || !activeCompany || (!isVolunteer && !newPrice) || !newAddress) {
       triggerToast('Заповніть всі обов\'язкові поля!');
       return;
     }
@@ -384,7 +385,7 @@ export function useSandbox() {
     const employerId = localStorage.getItem('oneclick_user_id') || 'employer-default';
 
     const body = {
-      company: newCompany,
+      company: activeCompany,
       role: newRole,
       date: newDate,
       dayName: calendarDays.find(d => d.date === newDate)?.day || 'Пн',
@@ -409,7 +410,6 @@ export function useSandbox() {
       if (res.ok) {
 
         setNewRole('');
-        setNewCompany(companyName);
         setNewPrice('');
         setNewAddress('');
         setNewDetails('');
@@ -888,11 +888,8 @@ export function useSandbox() {
             setCompanyDetails('');
           }
 
-          if (userData.role === 'worker') {
-            setBalance(userData.balance);
-          } else {
-            setEmployerBalance(userData.balance);
-          }
+          setBalance(userData.balance || 0);
+          setEmployerBalance(userData.employer_balance || 0);
 
           // Fetch transactions
           const txRes = await fetch(`http://localhost:8000/users/${storedUserId}/transactions`);
@@ -915,6 +912,9 @@ export function useSandbox() {
               type: tx.type
             })));
           }
+        } else if (userRes.status === 404) {
+          console.warn("User not found in database, logging out...");
+          handleSignOut();
         }
       }
     } catch (e) {
