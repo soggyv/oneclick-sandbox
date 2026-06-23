@@ -193,15 +193,17 @@ export default function OneClickApp() {
     <div className="h-[100dvh] md:h-auto w-screen bg-[#070913] text-[#1c1b1b] font-sans flex items-center justify-center p-0 md:p-6 transition-colors duration-300 overflow-hidden">
       {/* Mobile-first Mockup Frame */}
       <div className={`w-full max-w-[450px] h-[100dvh] md:h-[850px] md:min-h-[850px] md:max-h-[850px] md:rounded-[42px] md:shadow-[0_24px_80px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col relative border-none md:border-[8px] md:border-[#0f1424] transition-colors duration-300 ${
-        theme === 'light' ? 'bg-[#eae5e0] theme-light' : 'bg-[#0b0f19] theme-dark'
+        theme === 'minimalist' ? 'bg-[#F9FAFB] theme-light' : theme === 'light' ? 'bg-[#eae5e0] theme-light' : 'bg-[#0b0f19] theme-dark'
       }`}>
 
         {/* LIQUID GLASS: Animated background blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-[#FF5722]/22 dark:bg-[#FF5722]/18 blur-[50px] animate-blob"></div>
-          <div className="absolute top-[280px] -right-16 w-72 h-72 rounded-full bg-blue-500/24 dark:bg-blue-600/16 blur-[55px] animate-blob animation-delay-2000"></div>
-          <div className="absolute bottom-12 -left-16 w-64 h-64 rounded-full bg-purple-500/22 dark:bg-purple-600/16 blur-[50px] animate-blob animation-delay-4000"></div>
-        </div>
+        {theme !== 'minimalist' && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute -top-10 -left-10 w-64 h-64 rounded-full bg-[#FF5722]/22 dark:bg-[#FF5722]/18 blur-[50px] animate-blob"></div>
+            <div className="absolute top-[280px] -right-16 w-72 h-72 rounded-full bg-blue-500/24 dark:bg-blue-600/16 blur-[55px] animate-blob animation-delay-2000"></div>
+            <div className="absolute bottom-12 -left-16 w-64 h-64 rounded-full bg-purple-500/22 dark:bg-purple-600/16 blur-[50px] animate-blob animation-delay-4000"></div>
+          </div>
+        )}
 
         {/* Toast notifications */}
         {toast && (
@@ -271,6 +273,7 @@ export default function OneClickApp() {
             {userRole === 'worker' ? (
               <WorkerView
                 theme={theme}
+                setTheme={setTheme}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 selectedShift={selectedShift}

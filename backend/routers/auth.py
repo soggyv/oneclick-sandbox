@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from backend.database import get_db
 from backend.models import User, Company
-from backend.schemas import PhoneLoginRequest, VerifySmsRequest, DiiaVerifyRequest, RegisterCompanyRequest, B2BRegisterRequest
+from backend.schemas import PhoneLoginRequest, VerifySmsRequest, DiiaVerifyRequest, RegisterCompanyRequest, B2BRegisterRequest, B2BLoginRequest
 import uuid
 from typing import Optional
 
@@ -194,6 +194,44 @@ async def b2b_register(req: B2BRegisterRequest, db: AsyncSession = Depends(get_d
         "employer_balance": user.employer_balance,
         "avatar": user.avatar,
         "company_name": company.name,
+        "company_details": company_details
+    }
+
+@router.post("/b2b-login")
+async def b2b_login(req: B2BLoginRequest, db: AsyncSession = Depends(get_db)):
+    stmt = select(User).where(User.email == req.email)
+    res = await db.execute(stmt)
+    user = res.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача з такою електронною поштою не знайдено")
+
+    if req.auth_method == "email" and req.password:
+        if user.password and user.password != req.password:
+            raise HTTPException(status_code=400, detail="Неправильний пароль")
+
+    company_name = ""
+    company_details = ""
+    if user.company_id:
+        comp_stmt = select(Company).where(Company.id == user.company_id)
+        comp_res = await db.execute(comp_stmt)
+        company = comp_res.scalar_one_or_none()
+        if company:
+            company_name = company.name
+            company_details = f"ТОВ «{company.name}», ЄДРПОУ {company.edrpou or '00000000'}"
+
+    return {
+        "isLoggedIn": True,
+        "user_id": user.id,
+        "phone": user.phone or "",
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "is_verified": user.is_verified,
+        "balance": user.balance,
+        "employer_balance": getattr(user, 'employer_balance', 0),
+        "avatar": user.avatar or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+        "company_name": company_name,
         "company_details": company_details
     }
 

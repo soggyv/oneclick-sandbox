@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { Shift, DisputeMessage } from '../../types/sandbox';
 
 interface ArbitratorModalProps {
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'minimalist';
   arbitratorModalShiftId: string | null;
   setArbitratorModalShiftId: React.Dispatch<React.SetStateAction<string | null>>;
   shifts: Shift[];

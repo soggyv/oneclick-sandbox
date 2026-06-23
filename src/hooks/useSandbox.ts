@@ -49,7 +49,19 @@ export function useSandbox() {
   const [smsCode, setSmsCode] = useState<string>('');
   const [expectedSmsCode, setExpectedSmsCode] = useState<string>('');
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'minimalist'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('oneclick_theme');
+      if (saved === 'light' || saved === 'dark' || saved === 'minimalist') {
+        return saved;
+      }
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('oneclick_theme', theme);
+  }, [theme]);
   const [shifts, setShifts] = useState<Shift[]>(() => {
     return isSupabaseConfigured ? [] : getInitialShifts();
   });
@@ -100,7 +112,7 @@ export function useSandbox() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // B2C Profile subpage control
-  const [profileSubPage, setProfileSubPage] = useState<'main' | 'personal' | 'docs' | 'help' | 'developer'>('main');
+  const [profileSubPage, setProfileSubPage] = useState<'main' | 'personal' | 'docs' | 'help' | 'developer' | 'theme-settings' | 'settings'>('main');
 
   // Form states for B2B shift publishing
   const [newRole, setNewRole] = useState('');

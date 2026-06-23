@@ -19,7 +19,7 @@ import { Shift, UkCalendarDay, Branch, Transaction } from '../../types/sandbox';
 import { getUkMonthGenitive, POPULAR_ROLES } from '../../utils/sandbox';
 
 interface EmployerViewProps {
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'minimalist';
   b2bTab: 'dashboard' | 'shifts' | 'create' | 'wallet' | 'profile';
   setB2bTab: React.Dispatch<React.SetStateAction<'dashboard' | 'shifts' | 'create' | 'wallet' | 'profile'>>;
   employerBalance: number;

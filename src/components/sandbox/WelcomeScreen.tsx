@@ -1,9 +1,9 @@
-import React from 'react';
-import { ArrowLeft, Building, Mail, Phone, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight, Building, Mail, Phone, User } from 'lucide-react';
 
 interface WelcomeScreenProps {
-  theme: 'light' | 'dark';
-  setTheme: React.Dispatch<React.SetStateAction<'light' | 'dark'>>;
+  theme: 'light' | 'dark' | 'minimalist';
+  setTheme: React.Dispatch<React.SetStateAction<'light' | 'dark' | 'minimalist'>>;
   authStep: 'welcome' | 'phone-input' | 'phone-verify' | 'diia-qr' | 'company-register';
   setAuthStep: React.Dispatch<React.SetStateAction<'welcome' | 'phone-input' | 'phone-verify' | 'diia-qr' | 'company-register'>>;
   regRole: 'worker' | 'employer';
@@ -66,6 +66,8 @@ export function WelcomeScreen({
   setIsLoggedIn,
   setUserRole
 }: WelcomeScreenProps) {
+  const [showB2CLoginOptions, setShowB2CLoginOptions] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col justify-between p-6 relative z-10 overflow-y-auto no-scrollbar">
       {/* Welcome header with theme toggle */}
@@ -97,160 +99,186 @@ export function WelcomeScreen({
 
       {/* Step: Welcome */}
       {authStep === 'welcome' && (
-        <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 my-auto animate-fade-in">
-          <div className="space-y-3">
-            <h1 className={`text-3xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-              Знайди зміну в <span className="text-[#FF5722]">один клік</span>
+        <div className="flex-1 flex flex-col justify-between my-auto animate-fade-in text-left">
+          
+          {/* Header text */}
+          <div className="space-y-1 mb-6 text-center">
+            <h1 className={`text-2xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+              Як ви хочете використовувати <span className="text-[#FF5722]">OneClick</span>?
             </h1>
-            <p className={`text-xs font-semibold px-4 leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-              Швидке працевлаштування поруч з домом. Оплата зарезервована та гарантована.
+            <p className={`text-xs font-semibold leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+              Оберіть ваш статус для початку роботи з платформою
             </p>
           </div>
 
-          <div className="w-full space-y-4 pt-2">
-            {/* B2B vs B2C registration role selector */}
-            <div className={`p-1 rounded-2xl flex border transition-all ${theme === 'light'
-              ? 'bg-white/60 border-black/10'
-              : 'bg-[#1c2541]/45 border-white/10'
-              } mb-2`}>
-              <button
-                type="button"
-                onClick={() => setRegRole('worker')}
-                className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${regRole === 'worker'
-                  ? 'bg-[#FF5722] text-white shadow-md'
-                  : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
-                  }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                Шукач (B2C)
-              </button>
-              <button
-                type="button"
-                onClick={() => setRegRole('employer')}
-                className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${regRole === 'employer'
-                  ? 'bg-[#001B3D] text-white shadow-md'
-                  : theme === 'light' ? 'text-[#001B3D]/70 hover:bg-black/5' : 'text-white/70 hover:bg-white/5'
-                  }`}
-              >
-                <Building className="w-3.5 h-3.5" />
-                Бізнес (B2B)
-              </button>
-            </div>
-
-            {/* Helper description for the selected role */}
-            <div className={`px-2 py-1.5 text-[11px] font-medium leading-relaxed text-left transition-all duration-300 ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-300/80'}`}>
-              {regRole === 'worker' ? (
-                <p>🙋 <strong>Шукач (B2C):</strong> Для тих, хто шукає підробіток чи волонтерство поруч. Отримуйте оплату за кожну зміну та виводьте на картку.</p>
-              ) : (
-                <p>🏢 <strong>Бізнес (B2B):</strong> Для компаній та брендів. Створюйте вакансії, знаходьте виконавців та керуйте корпоративним бюджетом.</p>
-              )}
-            </div>
-
-            {/* Agreement Checkbox */}
-            <div className="flex items-start gap-2.5 px-2 text-left mb-4">
-              <input
-                type="checkbox"
-                id="agreement"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 accent-[#FF5722] cursor-pointer"
-              />
-              <label htmlFor="agreement" className={`text-[11px] font-semibold leading-relaxed cursor-pointer ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                Я погоджуюся з{" "}
+          {!showB2CLoginOptions ? (
+            <div className="space-y-4 flex-1 flex flex-col justify-center">
+              {/* Stacked Cards */}
+              <div className="space-y-3">
+                {/* Worker Card */}
                 <button
                   type="button"
-                  onClick={() => setShowAgreementModal(true)}
-                  className="text-[#FF5722] hover:underline font-bold"
+                  onClick={() => setRegRole('worker')}
+                  className={`w-full text-left p-4.5 rounded-[24px] border-2 transition-all flex items-start gap-4 cursor-pointer relative overflow-hidden group ${
+                    regRole === 'worker'
+                      ? theme === 'light'
+                        ? 'bg-[#FF5722]/5 border-[#FF5722] shadow-[0_6px_20px_rgba(255,87,34,0.08)]'
+                        : 'bg-[#FF5722]/10 border-[#FF5722] shadow-[0_6px_24px_rgba(255,87,34,0.15)]'
+                      : theme === 'light'
+                        ? 'bg-white/60 border-[#E5E7EB] hover:border-gray-300'
+                        : 'bg-[#1c2541]/40 border-white/5 hover:border-white/15'
+                  }`}
                 >
-                  Умовами користування
-                </button>{" "}
-                та Політикою конфіденційності OneClick.
-              </label>
+                  <div className={`p-3 rounded-2xl ${
+                    regRole === 'worker' ? 'bg-[#FF5722] text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-350'
+                  }`}>
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                        Виконавець
+                      </span>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                        regRole === 'worker' ? 'bg-[#FF5722]/15 text-[#FF5722]' : 'bg-gray-200 dark:bg-slate-800 text-gray-500'
+                      }`}>
+                        Шукач (B2C)
+                      </span>
+                    </div>
+                    <h3 className={`text-sm font-bold mt-1 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                      Шукаю підробіток та зміни
+                    </h3>
+                    <p className={`text-[11px] font-semibold mt-1 leading-normal ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'}`}>
+                      Вільний графік, швидка оплата та зміни поруч із вашим домом.
+                    </p>
+                  </div>
+                </button>
+
+                {/* Employer Card */}
+                <button
+                  type="button"
+                  onClick={() => setRegRole('employer')}
+                  className={`w-full text-left p-4.5 rounded-[24px] border-2 transition-all flex items-start gap-4 cursor-pointer relative overflow-hidden group ${
+                    regRole === 'employer'
+                      ? theme === 'light'
+                        ? 'bg-[#001B3D]/5 border-[#001B3D] shadow-[0_6px_20px_rgba(0,27,61,0.08)]'
+                        : 'bg-[#001B3D]/30 border-[#001c3d]/80 shadow-[0_6px_24px_rgba(0,27,61,0.35)]'
+                      : theme === 'light'
+                        ? 'bg-white/60 border-[#E5E7EB] hover:border-gray-300'
+                        : 'bg-[#1c2541]/40 border-white/5 hover:border-white/15'
+                  }`}
+                >
+                  <div className={`p-3 rounded-2xl ${
+                    regRole === 'employer' ? 'bg-[#001B3D] text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-350'
+                  }`}>
+                    <Building className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                        Роботодавець
+                      </span>
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                        regRole === 'employer' ? 'bg-[#001B3D]/15 text-[#001B3D] dark:text-[#38bdf8]' : 'bg-gray-200 dark:bg-slate-800 text-gray-500'
+                      }`}>
+                        Бізнес (B2B)
+                      </span>
+                    </div>
+                    <h3 className={`text-sm font-bold mt-1 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                      Шукаю виконавців на зміни
+                    </h3>
+                    <p className={`text-[11px] font-semibold mt-1 leading-normal ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'}`}>
+                      Створення замовлень за 1 хвилину, доступ до перевірених людей, безпечна оплата.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Agreement Checkbox */}
+              <div className="flex items-start gap-2.5 px-1 mt-4">
+                <input
+                  type="checkbox"
+                  id="agreement"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 accent-[#FF5722] cursor-pointer"
+                />
+                <label htmlFor="agreement" className={`text-[11px] font-semibold leading-relaxed cursor-pointer ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                  Я погоджуюся з{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowAgreementModal(true)}
+                    className="text-[#FF5722] hover:underline font-bold"
+                  >
+                    Умовами користування
+                  </button>{" "}
+                  та Політикою конфіденційності OneClick.
+                </label>
+              </div>
+
+              {/* Continue Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!agreedToTerms) {
+                    triggerToast('Погодьтеся з Умовами користування!');
+                    return;
+                  }
+                  if (regRole === 'worker') {
+                    window.location.href = '/auth/b2c';
+                  } else {
+                    window.location.href = '/auth/b2b';
+                  }
+                }}
+                className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-[0_6px_20px_rgba(255,87,34,0.25)] active:scale-[0.98] mt-4 cursor-pointer"
+              >
+                Продовжити
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
+          ) : (
+            <div className="space-y-4 flex-1 flex flex-col justify-center">
+              {/* B2C Worker Login Options */}
+              <div className="text-center space-y-2 mb-4">
+                <div className="inline-block bg-[#FF5722]/10 text-[#FF5722] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  Вхід для Виконавця
+                </div>
+                <p className={`text-xs font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                  Оберіть зручний спосіб підтвердження
+                </p>
+              </div>
 
-            {regRole === 'worker' ? (
-              <>
-                {/* Diia Button */}
-                <button
-                  onClick={() => {
-                    if (!agreedToTerms) {
-                      triggerToast('Погодьтеся з Умовами користування!');
-                      return;
-                    }
-                    setAuthStep('diia-qr');
-                  }}
-                  className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${agreedToTerms
-                    ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
-                    : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
-                    }`}
-                >
-                  <span className="bg-white text-[#001B3D] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
-                  Швидкий вхід через Дію
-                </button>
+              {/* Diia Button */}
+              <button
+                onClick={() => setAuthStep('diia-qr')}
+                className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)] active:scale-[0.98] cursor-pointer"
+              >
+                <span className="bg-white text-[#001B3D] px-1.5 py-0.5 rounded text-[8px] font-black italic">Дія</span>
+                Швидкий вхід через Дію
+              </button>
 
-                {/* Phone Button */}
-                <button
-                  onClick={() => {
-                    if (!agreedToTerms) {
-                      triggerToast('Погодьтеся з Умовами користування!');
-                      return;
-                    }
-                    setAuthStep('phone-input');
-                  }}
-                  className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${agreedToTerms
-                    ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
-                    : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
-                    }`}
-                >
-                  <Phone className="w-4 h-4" />
-                  За номером телефону
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Google Button for B2B */}
-                <button
-                  onClick={() => {
-                    if (!agreedToTerms) {
-                      triggerToast('Погодьтеся з Умовами користування!');
-                      return;
-                    }
-                    window.location.href = '/auth/b2b';
-                  }}
-                  className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${agreedToTerms
-                    ? 'bg-[#001B3D] text-white hover:bg-black shadow-[0_6px_20px_rgba(0,27,61,0.25)]'
-                    : 'bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
-                    }`}
-                >
-                  <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                  </svg>
-                  Продовжити з Google
-                </button>
+              {/* Phone Button */}
+              <button
+                onClick={() => setAuthStep('phone-input')}
+                className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)] active:scale-[0.98] cursor-pointer"
+              >
+                <Phone className="w-4 h-4" />
+                За номером телефону
+              </button>
 
-                {/* Email Button for B2B */}
-                <button
-                  onClick={() => {
-                    if (!agreedToTerms) {
-                      triggerToast('Погодьтеся з Умовами користування!');
-                      return;
-                    }
-                    window.location.href = '/auth/b2b';
-                  }}
-                  className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${agreedToTerms
-                    ? 'bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)]'
-                    : 'bg-transparent border-gray-300 dark:border-gray-800 text-gray-400 cursor-not-allowed opacity-60'
-                    }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  Електронна пошта та пароль
-                </button>
-              </>
-            )}
-          </div>
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={() => setShowB2CLoginOptions(false)}
+                className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  theme === 'light' ? 'border-gray-200 text-[#001B3D] hover:bg-black/5' : 'border-white/10 text-white hover:bg-white/5'
+                }`}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Назад до вибору ролі
+              </button>
+            </div>
+          )}
         </div>
       )}
 

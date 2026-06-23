@@ -17,6 +17,7 @@ import Link from 'next/link';
 
 export default function B2BAuthPage() {
   const [step, setStep] = useState<'auth' | 'company' | 'success'>('auth');
+  const [isRegistering, setIsRegistering] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -25,32 +26,116 @@ export default function B2BAuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState<'google' | 'email' | null>(null);
 
+  const saveProfileAndRedirect = (userData: any) => {
+    const profileData = {
+      isLoggedIn: true,
+      userRole: 'employer' as const,
+      userName: userData.name,
+      userPhone: userData.phone || '+380 93 123 4567',
+      userAvatar: userData.avatar,
+      isDiiaVerified: userData.is_verified,
+      companyName: userData.company_name,
+      companyDetails: userData.company_details
+    };
+    localStorage.setItem('oneclick_auth_profile', JSON.stringify(profileData));
+    localStorage.setItem('oneclick_user_id', userData.user_id);
+    setCompanyName(userData.company_name);
+    setContactPerson(userData.name);
+    setStep('success');
+  };
+
   // Google authentication
   const handleGoogleAuth = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setAuthMethod('google');
     // Simulated delay
-    setTimeout(() => {
-      setIsLoading(false);
-      setEmail('google-user@gmail.com');
-      setStep('company');
-      setAuthMethod(null);
+    setTimeout(async () => {
+      if (isRegistering) {
+        setIsLoading(false);
+        setAuthMethod(null);
+        setEmail('google-user@gmail.com');
+        setStep('company');
+      } else {
+        // Direct Login with Google
+        try {
+          const response = await fetch('http://localhost:8000/auth/b2b-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: 'google-user@gmail.com',
+              auth_method: 'google',
+            }),
+          });
+          setIsLoading(false);
+          setAuthMethod(null);
+          if (response.ok) {
+            const userData = await response.json();
+            saveProfileAndRedirect(userData);
+          } else {
+            // User does not exist, fallback to registration
+            setEmail('google-user@gmail.com');
+            setStep('company');
+            setIsRegistering(true);
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Помилка з’єднання з сервером API');
+          setIsLoading(false);
+          setAuthMethod(null);
+        }
+      }
     }, 1200);
   };
 
   // email authentication
-  const handleEmailAuth = (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setIsLoading(true);
     setAuthMethod('email');
-    // Simulated delay
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('company');
-      setAuthMethod(null);
-    }, 1500);
+
+    if (isRegistering) {
+      // In registration, email/password gets validated/registered
+      setTimeout(() => {
+        setIsLoading(false);
+        setStep('company');
+        setAuthMethod(null);
+      }, 1500);
+    } else {
+      // Direct Login
+      try {
+        const response = await fetch('http://localhost:8000/auth/b2b-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            auth_method: 'email',
+          }),
+        });
+
+        setIsLoading(false);
+        setAuthMethod(null);
+
+        if (response.ok) {
+          const userData = await response.json();
+          saveProfileAndRedirect(userData);
+        } else {
+          const errorData = await response.json();
+          alert(`Помилка входу: ${errorData.detail || 'Невідома помилка'}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Помилка з’єднання з сервером API');
+        setIsLoading(false);
+        setAuthMethod(null);
+      }
+    }
   };
 
   // company registration
@@ -77,23 +162,7 @@ export default function B2BAuthPage() {
 
       if (response.ok) {
         const userData = await response.json();
-        
-        // Save profile to localStorage so OneClickSandbox can pick it up automatically
-        const profileData = {
-          isLoggedIn: true,
-          userRole: 'employer' as const,
-          userName: userData.name,
-          userPhone: userData.phone || '+380 93 123 4567',
-          userAvatar: userData.avatar,
-          isDiiaVerified: userData.is_verified,
-          companyName: userData.company_name,
-          companyDetails: userData.company_details
-        };
-        localStorage.setItem('oneclick_auth_profile', JSON.stringify(profileData));
-        localStorage.setItem('oneclick_user_id', userData.user_id);
-        
-        setIsLoading(false);
-        setStep('success');
+        saveProfileAndRedirect(userData);
       } else {
         const errorData = await response.json();
         alert(`Помилка реєстрації: ${errorData.detail || 'Невідома помилка'}`);
@@ -106,7 +175,6 @@ export default function B2BAuthPage() {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center relative overflow-hidden p-4">
       {/* Background gradients */}
@@ -114,7 +182,7 @@ export default function B2BAuthPage() {
       <div className="absolute bottom-1/4 right-1/4 w-[450px] h-[450px] bg-orange-500/10 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Main Glassmorphic Card Container */}
-      <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[32px] p-8 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[32px] p-8 shadow-2xl relative z-10 animate-fade-in">
         
         {/* Logo / Header */}
         <div className="flex flex-col items-center mb-8">
@@ -124,15 +192,37 @@ export default function B2BAuthPage() {
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
             OneClick <span className="text-xs font-black uppercase bg-orange-500/10 text-[#FF5722] px-2 py-0.5 rounded border border-orange-500/25">B2B Business</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-2 font-medium">Кабінет Організатора Смен & Волонтерства</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Кабінет Організатора Змін & Волонтерства</p>
         </div>
 
         {/* STEP 1: AUTHENTICATION */}
         {step === 'auth' && (
           <div className="space-y-6">
+            {/* Toggle between Login and Register */}
+            <div className="grid grid-cols-2 p-1 bg-white/5 rounded-2xl border border-white/5">
+              <button
+                type="button"
+                onClick={() => setIsRegistering(true)}
+                className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${isRegistering ? 'bg-[#FF5722] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                Реєстрація
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRegistering(false)}
+                className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${!isRegistering ? 'bg-[#FF5722] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                Вхід
+              </button>
+            </div>
+
             <div className="text-center space-y-1">
-              <h2 className="text-lg font-bold text-white">Реєстрація компанії</h2>
-              <p className="text-xs text-slate-400">Створіть кабінет для запуску бета-тесту події</p>
+              <h2 className="text-lg font-bold text-white">
+                {isRegistering ? 'Реєстрація компанії' : 'Вхід до кабінету'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {isRegistering ? 'Створіть кабінет для запуску бета-тесту події' : 'Увійдіть під своїми корпоративними даними'}
+              </p>
             </div>
 
             {/* Google Authentication Button */}
@@ -151,7 +241,7 @@ export default function B2BAuthPage() {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
               )}
-              Продовжити з Google
+              {isRegistering ? 'Зареєструватися з Google' : 'Увійти з Google'}
             </button>
 
             {/* Divider */}
@@ -202,7 +292,7 @@ export default function B2BAuthPage() {
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
                   <>
-                    Зареєструватися
+                    {isRegistering ? 'Зареєструватися' : 'Увійти'}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -302,8 +392,12 @@ export default function B2BAuthPage() {
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-xl font-bold text-white">Вітаємо! Кабінет створено</h2>
-              <p className="text-xs text-slate-400">Ви успішно підключилися до системи OneClick B2B.</p>
+              <h2 className="text-xl font-bold text-white">
+                {isRegistering ? 'Вітаємо! Кабінет створено' : 'Успішний вхід'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {isRegistering ? 'Ви успішно підключилися до системи OneClick B2B.' : 'Раді знову бачити вас!'}
+              </p>
             </div>
 
             <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left space-y-2.5">
@@ -314,10 +408,6 @@ export default function B2BAuthPage() {
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Контакт:</span>
                 <span className="font-bold text-white">{contactPerson}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Тип:</span>
-                <span className="font-bold text-orange-400">{eventType}</span>
               </div>
             </div>
 

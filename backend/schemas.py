@@ -102,3 +102,9 @@ class B2BRegisterRequest(BaseModel):
     event_type: str
     auth_method: str  # "google" or "email"
 
+class B2BLoginRequest(BaseModel):
+    email: str
+    password: Optional[str] = None
+    auth_method: str  # "google" or "email"
+
+
