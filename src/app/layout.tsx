@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -18,6 +19,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 };
+
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 export default function RootLayout({
   children,
@@ -37,14 +40,16 @@ export default function RootLayout({
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           crossOrigin=""
         />
-        <script
+        <Script
           src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           crossOrigin=""
-          defer
-        ></script>
+          strategy="beforeInteractive"
+        />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-[#fcf9f8] text-[#1c1b1b] overflow-x-hidden">
-        {children}
+      <body suppressHydrationWarning className="min-h-full flex flex-col font-sans bg-[#fcf9f8] text-[#1c1b1b] overflow-x-hidden">
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          {children}
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

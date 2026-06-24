@@ -107,4 +107,5 @@ class B2BLoginRequest(BaseModel):
     password: Optional[str] = None
     auth_method: str  # "google" or "email"
 
-
+class GoogleLoginRequest(BaseModel):
+    id_token: str

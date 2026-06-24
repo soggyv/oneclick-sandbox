@@ -3,12 +3,121 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from backend.database import get_db
 from backend.models import User, Company
-from backend.schemas import PhoneLoginRequest, VerifySmsRequest, DiiaVerifyRequest, RegisterCompanyRequest, B2BRegisterRequest, B2BLoginRequest
+from backend.schemas import PhoneLoginRequest, VerifySmsRequest, DiiaVerifyRequest, RegisterCompanyRequest, B2BRegisterRequest, B2BLoginRequest, GoogleLoginRequest
 import uuid
 from typing import Optional
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
+GOOGLE_CLIENT_ID = "604999474013-vbn98u78alve3m054hcavkl6u8trkm1k.apps.googleusercontent.com"
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+@router.post("/google")
+async def google_auth(req: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        id_info = id_token.verify_oauth2_token(
+            req.id_token, 
+            google_requests.Request(), 
+            GOOGLE_CLIENT_ID
+        )
+        email = id_info.get("email")
+        name = id_info.get("name")
+        avatar = id_info.get("picture")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Google account has no email")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
+
+    stmt = select(User).where(User.email == email)
+    res = await db.execute(stmt)
+    user = res.scalar_one_or_none()
+
+    if not user:
+        user = User(
+            id=str(uuid.uuid4()),
+            email=email,
+            phone="",
+            name=name,
+            avatar=avatar,
+            role="worker",
+            is_verified=True,
+            balance=0,
+            employer_balance=0
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    return {
+        "isLoggedIn": True,
+        "user_id": user.id,
+        "email": user.email,
+        "phone": user.phone,
+        "name": user.name,
+        "role": user.role,
+        "is_verified": user.is_verified,
+        "balance": user.balance,
+        "employer_balance": getattr(user, 'employer_balance', 0),
+        "avatar": user.avatar
+    }
+
+@router.post("/b2b-google")
+async def b2b_google(req: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        id_info = id_token.verify_oauth2_token(
+            req.id_token, 
+            google_requests.Request(), 
+            GOOGLE_CLIENT_ID
+        )
+        email = id_info.get("email")
+        name = id_info.get("name")
+        avatar = id_info.get("picture")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Google account has no email")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
+
+    stmt = select(User).where(User.email == email)
+    res = await db.execute(stmt)
+    user = res.scalar_one_or_none()
+
+    if user:
+        company_name = ""
+        company_details = ""
+        if user.company_id:
+            comp_stmt = select(Company).where(Company.id == user.company_id)
+            comp_res = await db.execute(comp_stmt)
+            company = comp_res.scalar_one_or_none()
+            if company:
+                company_name = company.name
+                company_details = f"ТОВ «{company.name}», ЄДРПОУ {company.edrpou or '00000000'}"
+
+        return {
+            "exists": True,
+            "isLoggedIn": True,
+            "user_id": user.id,
+            "phone": user.phone or "",
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "is_verified": user.is_verified,
+            "balance": user.balance,
+            "employer_balance": getattr(user, 'employer_balance', 0),
+            "avatar": user.avatar or avatar,
+            "company_name": company_name,
+            "company_details": company_details
+        }
+    else:
+        return {
+            "exists": False,
+            "email": email,
+            "name": name,
+            "avatar": avatar
+        }
 
 @router.post("/login-phone")
 async def login_phone(req: PhoneLoginRequest):

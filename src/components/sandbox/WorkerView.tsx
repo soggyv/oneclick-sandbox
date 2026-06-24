@@ -288,10 +288,10 @@ export function WorkerView({
             {/* Search and Filters Trigger */}
             <div className="p-4 flex gap-2">
               <div className={`rounded-full shadow-sm border flex items-center px-4 py-2.5 gap-2.5 flex-1 transition-all ${theme === 'minimalist'
-                  ? 'bg-white border-gray-150 shadow-none'
-                  : theme === 'light'
-                    ? 'bg-white/70 border-[#ebe7e7] backdrop-blur-[24px]'
-                    : 'bg-[#0f172a]/60 border-white/10 backdrop-blur-[24px]'
+                ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-none'
+                : theme !== 'dark'
+                  ? 'bg-white/70 border-[#ebe7e7] backdrop-blur-[24px]'
+                  : 'bg-[#0f172a]/60 border-white/10 backdrop-blur-[24px]'
                 }`}>
                 <Search className="w-4 h-4 text-[#FF5722]" />
                 <input
@@ -299,7 +299,7 @@ export function WorkerView({
                   placeholder="Пошук вакансії чи закладу..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`bg-transparent text-sm w-full outline-none font-semibold transition-all ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D] placeholder-[#5b4039]/65' : 'text-white placeholder-gray-400'
+                  className={`bg-transparent text-sm w-full outline-none font-semibold transition-all ${theme !== 'dark' ? 'text-[#001B3D] placeholder-[#5b4039]/65' : 'text-white placeholder-gray-400'
                     }`}
                 />
               </div>
@@ -313,8 +313,8 @@ export function WorkerView({
                     key={d.date}
                     onClick={() => setSelectedDate(d.date)}
                     className={`flex flex-col items-center justify-center min-w-[50px] h-[64px] rounded-xl transition-all ${selectedDate === d.date
-                        ? 'bg-[#FF5722] text-white font-black scale-105 shadow-sm'
-                        : 'bg-transparent text-slate-700 hover:bg-gray-50'
+                      ? 'bg-[#FF5722] text-white font-black scale-105 shadow-sm'
+                      : 'bg-transparent text-slate-700 hover:bg-gray-50'
                       }`}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-0.5">{d.day}</span>
@@ -330,7 +330,7 @@ export function WorkerView({
                     onClick={() => setSelectedDate(d.date)}
                     className={`flex flex-col items-center justify-center min-w-[68px] h-[82px] rounded-2xl border transition-all ${selectedDate === d.date
                       ? 'bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white border-transparent shadow-[0_8px_20px_rgba(255,87,34,0.25)] scale-[1.02]'
-                      : theme === 'light'
+                      : theme !== 'dark'
                         ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
                         : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
                       } backdrop-blur-[24px]`}
@@ -356,8 +356,8 @@ export function WorkerView({
                   <button
                     onClick={() => setShowFiltersModal(true)}
                     className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-all border ${(filterStartTime || filterEndTime || filterDuration !== 'all' || filterCategories.length > 0 || filterCustomSearch)
-                        ? 'bg-[#FF5722] text-white border-transparent'
-                        : 'bg-white border border-gray-200 text-slate-850'
+                      ? 'bg-[#FF5722] text-white border-transparent'
+                      : 'bg-white border border-gray-200 text-slate-850'
                       }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -378,10 +378,10 @@ export function WorkerView({
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-4.5 py-2 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
-                      ? theme === 'light'
+                      ? theme !== 'dark'
                         ? 'bg-[#001B3D] text-white border-transparent'
                         : 'bg-[#FF5722] text-white border-transparent shadow-[0_4px_12px_rgba(255,87,34,0.2)]'
-                      : theme === 'light'
+                      : theme !== 'dark'
                         ? 'bg-white/70 text-[#001B3D] border-[#E5E7EB] hover:bg-white'
                         : 'bg-[#1c2541]/60 text-gray-300 border-white/10 hover:bg-[#252f55]/80'
                       } backdrop-blur-[24px]`}
@@ -398,12 +398,12 @@ export function WorkerView({
                 type="button"
                 onClick={() => setShowMap(!showMap)}
                 className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all border flex items-center gap-1.5 ml-auto cursor-pointer ${showMap
-                    ? 'bg-[#FF5722] text-white border-transparent'
-                    : theme === 'minimalist'
-                      ? 'bg-white text-[#001B3D] border-gray-250 hover:bg-gray-50'
-                      : theme === 'light'
-                        ? 'bg-white text-[#001B3D] border-[#E5E7EB]'
-                        : 'bg-[#1c2541]/60 text-gray-300 border-white/10'
+                  ? 'bg-[#FF5722] text-white border-transparent'
+                  : theme === 'minimalist'
+                    ? 'bg-white text-[#001B3D] border-gray-250 hover:bg-gray-50'
+                    : theme !== 'dark'
+                      ? 'bg-white text-[#001B3D] border-[#E5E7EB]'
+                      : 'bg-[#1c2541]/60 text-gray-300 border-white/10'
                   }`}
               >
                 <span>🗺️</span>
@@ -417,7 +417,7 @@ export function WorkerView({
                 <div
                   id="shifts-map"
                   className="h-[280px] w-full rounded-[24px] border overflow-hidden relative z-10 shadow-inner"
-                  style={{ border: theme === 'minimalist' ? '1px solid #E2E8F0' : theme === 'light' ? '1px solid #E5E7EB' : '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ border: theme === 'minimalist' ? '1px solid #E2E8F0' : theme !== 'dark' ? '1px solid #E5E7EB' : '1px solid rgba(255,255,255,0.1)' }}
                 ></div>
               </div>
             )}
@@ -425,7 +425,7 @@ export function WorkerView({
             {/* Open Shift Cards */}
             <div className="px-4 space-y-4">
               <div className="flex justify-between items-center px-1">
-                <h3 className={`text-xs font-black uppercase tracking-wider transition-colors ${theme === 'light' || theme === 'minimalist' ? 'text-slate-500' : 'text-gray-400'
+                <h3 className={`text-xs font-black uppercase tracking-wider transition-colors ${theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                   }`}>
                   Доступно змін ({filteredShifts.length})
                 </h3>
@@ -436,20 +436,17 @@ export function WorkerView({
                   <div
                     key={s.id}
                     onClick={() => setSelectedShift(s)}
-                    className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${theme === 'minimalist'
-                        ? 'bg-white border-gray-150 hover:border-[#FF5722]/50 shadow-sm'
-                        : theme === 'light'
-                          ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5 backdrop-blur-[24px]'
-                          : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5 backdrop-blur-[24px]'
+                    className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:border-[#FF5722]/50 shadow-sm' : theme === 'light' ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5 backdrop-blur-[24px]'
+                        : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5 backdrop-blur-[24px]'
                       } ${s.isHot
                         ? theme === 'minimalist'
                           ? 'border-[#FF9500]/60'
-                          : theme === 'light'
+                          : theme !== 'dark'
                             ? 'shadow-[0_8px_30px_rgba(255,149,0,0.22)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.35)]'
                             : 'shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.55)]'
                         : theme === 'minimalist'
                           ? ''
-                          : theme === 'light'
+                          : theme !== 'dark'
                             ? 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)]'
                             : 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)]'
                       }`}
@@ -457,15 +454,15 @@ export function WorkerView({
                     <div className="flex justify-between items-start gap-2 relative z-10">
                       <div className="flex gap-3">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden border ${theme === 'minimalist'
-                            ? 'bg-gray-50 border-gray-250'
-                            : theme === 'light'
-                              ? 'bg-white border-gray-200'
-                              : 'bg-[#121829]/60 border-white/5'
+                          ? 'bg-gray-50 border-gray-250'
+                          : theme !== 'dark'
+                            ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
+                            : 'bg-[#121829]/60 border-white/5'
                           }`}>
                           {s.logo ? (
                             <img src={s.logo} alt={s.company} className="w-full h-full object-cover" />
                           ) : (
-                            <Building className={`w-5 h-5 ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`} />
+                            <Building className={`w-5 h-5 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`} />
                           )}
                         </div>
                         <div>
@@ -474,9 +471,9 @@ export function WorkerView({
                               ГАРЯЧА
                             </span>
                           )}
-                          <h4 className={`text-base font-bold leading-tight group-hover:text-[#FF5722] transition-colors ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'
+                          <h4 className={`text-base font-bold leading-tight group-hover:text-[#FF5722] transition-colors ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'
                             }`}>{s.role}</h4>
-                          <p className={`text-xs font-semibold mt-0.5 ${theme === 'light' || theme === 'minimalist' ? 'text-gray-500' : 'text-gray-300'
+                          <p className={`text-xs font-semibold mt-0.5 ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-300'
                             }`}>{s.company}</p>
                         </div>
                       </div>
@@ -484,7 +481,7 @@ export function WorkerView({
                         <span className="text-xl font-extrabold text-[#FF5722]">
                           {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
                         </span>
-                        <p className={`text-[9px] font-bold uppercase tracking-wider ${theme === 'light' || theme === 'minimalist' ? 'text-gray-400' : 'text-gray-450'
+                        <p className={`text-[9px] font-bold uppercase tracking-wider ${theme !== 'dark' ? 'text-gray-400' : 'text-gray-450'
                           }`}>
                           {s.category === 'University Event / Volunteer' ? 'Нагорода' : 'за зміну'}
                         </p>
@@ -492,12 +489,12 @@ export function WorkerView({
                     </div>
 
                     <div className={`mt-4 pt-3.5 border-t flex items-center justify-between text-xs font-semibold relative z-10 ${theme === 'minimalist'
-                        ? 'border-gray-100 text-slate-700'
-                        : theme === 'light'
-                          ? 'border-gray-100 text-[#001B3D]'
-                          : 'border-white/5 text-white'
+                      ? 'border-gray-100 text-slate-700'
+                      : theme !== 'dark'
+                        ? 'border-gray-100 text-[#001B3D]'
+                        : 'border-white/5 text-white'
                       }`}>
-                      <span className={`flex items-center gap-1.5 ${theme === 'light' || theme === 'minimalist' ? 'text-slate-600' : 'text-gray-300'
+                      <span className={`flex items-center gap-1.5 ${theme !== 'dark' ? 'text-slate-600' : 'text-gray-300'
                         }`}>
                         <Clock className="w-4 h-4 text-[#FF5722]" />
                         {s.time} ({s.duration})
@@ -517,11 +514,8 @@ export function WorkerView({
                   </div>
                 ))
               ) : (
-                <div className={`rounded-3xl border border-dashed p-10 text-center transition-all ${theme === 'minimalist'
-                    ? 'bg-white border-gray-200 text-slate-800'
-                    : theme === 'light'
-                      ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[12px]'
-                      : 'bg-[#1c2541]/44 border-white/10 text-gray-400 backdrop-blur-[12px]'
+                <div className={`rounded-3xl border border-dashed p-10 text-center transition-all ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[12px]'
+                    : 'bg-[#1c2541]/44 border-white/10 text-gray-400 backdrop-blur-[12px]'
                   }`}>
                   <BriefcaseIcon className="w-10 h-10 mx-auto mb-2 opacity-50 text-[#FF5722]" />
                   <p className="text-xs font-bold">Не знайдено змін з такими фільтрами.</p>
@@ -539,7 +533,7 @@ export function WorkerView({
                 setSelectedShift(null);
                 setSignedContract(false);
               }}
-              className={`flex items-center gap-1 text-xs font-bold hover:underline mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
+              className={`flex items-center gap-1 text-xs font-bold hover:underline mb-2 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'
                 }`}
             >
               <ArrowLeft className="w-4 h-4 text-[#FF5722]" />
@@ -547,63 +541,61 @@ export function WorkerView({
             </button>
 
             {/* Header bento */}
-            <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
-              ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+            <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
               : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
               } space-y-4`}>
               <div className="flex gap-4">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121829]/60 border-white/5'
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 ${theme !== 'dark' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : 'bg-[#121829]/60 border-white/5'
                   }`}>
                   {selectedShift.logo ? (
                     <img src={selectedShift.logo} alt={selectedShift.company} className="w-full h-full object-cover" />
                   ) : (
-                    <Building className={`w-6 h-6 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`} />
+                    <Building className={`w-6 h-6 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`} />
                   )}
                 </div>
                 <div>
-                  <h2 className={`text-xl font-bold leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.role}</h2>
-                  <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.company}</p>
+                  <h2 className={`text-xl font-bold leading-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.role}</h2>
+                  <p className={`text-sm font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.company}</p>
                   <div className="flex items-center gap-1 mt-1 text-xs">
                     <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                    <span className={`font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>4.9</span>
-                    <span className={theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}>(1.2к відгуків)</span>
+                    <span className={`font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>4.9</span>
+                    <span className={theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}>(1.2к відгуків)</span>
                   </div>
                 </div>
               </div>
 
               <div className="bg-[#10B981]/8 border border-[#10B981]/25 rounded-2xl p-3.5 flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0" />
-                <p className={`text-[11px] font-medium leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
+                <p className={`text-[11px] font-medium leading-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
                   Оплата за зміну зарезервована та гарантується сервісом OneClick.
                 </p>
               </div>
             </div>
 
             {/* Details block */}
-            <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'light'
-              ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
+            <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[24px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/70 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)]'
               : 'bg-[#1c2541]/60 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
               } space-y-4`}>
               <div className="flex flex-col gap-3.5">
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme !== 'dark' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
                     }`}>
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
-                    <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
+                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
+                    <p className={`text-sm font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${theme !== 'dark' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
                     }`}>
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Час роботи</p>
-                    <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.time} ({selectedShift.duration})</p>
+                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Час роботи</p>
+                    <p className={`text-sm font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.time} ({selectedShift.duration})</p>
                   </div>
                 </div>
 
@@ -623,13 +615,13 @@ export function WorkerView({
 
                 {/* Map Location Link */}
                 <div className="flex items-start gap-3 pt-1">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${theme !== 'dark' ? 'bg-[#f0edec] text-[#001B3D] border border-gray-200' : 'bg-[#121829]/60 text-gray-300'
                     }`}>
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div className="flex-1">
-                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Адреса та орієнтир</p>
-                    <p className={`text-sm font-bold mt-0.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.address}</p>
+                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Адреса та орієнтир</p>
+                    <p className={`text-sm font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.address}</p>
 
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedShift.address)}`}
@@ -644,21 +636,21 @@ export function WorkerView({
                 </div>
               </div>
 
-              <div className={`border-t pt-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                <h4 className={`text-xs font-black uppercase tracking-wider mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Опис завдань:</h4>
-                <p className={`text-xs leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Звичайна тимчасова зміна в роздрібній торгівлі/кафе.'}</p>
+              <div className={`border-t pt-4 ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
+                <h4 className={`text-xs font-black uppercase tracking-wider mb-2 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Опис завдань:</h4>
+                <p className={`text-xs leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Звичайна тимчасова зміна в роздрібній торгівлі/кафе.'}</p>
               </div>
 
               {/* Worker Reviews Section */}
-              <div className={`border-t pt-4 space-y-4 ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+              <div className={`border-t pt-4 space-y-4 ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
                 <div className="flex justify-between items-center">
-                  <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                  <h4 className={`text-xs font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                     Відгуки працівників ({selectedShift.reviews?.length || 0})
                   </h4>
                   {selectedShift.reviews && selectedShift.reviews.length > 0 && (
                     <div className="flex items-center gap-1">
                       <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                      <span className={`text-xs font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                      <span className={`text-xs font-extrabold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                         {(selectedShift.reviews.reduce((acc, r) => acc + r.rating, 0) / selectedShift.reviews.length).toFixed(1)}
                       </span>
                     </div>
@@ -668,13 +660,13 @@ export function WorkerView({
                 <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 no-scrollbar">
                   {selectedShift.reviews && selectedShift.reviews.length > 0 ? (
                     selectedShift.reviews.map((rev) => (
-                      <div key={rev.id} className={`p-3 rounded-2xl border transition-all ${theme === 'light' ? 'bg-[#f0edec]/50 border-gray-200/60' : 'bg-[#121829]/30 border-white/5'
+                      <div key={rev.id} className={`p-3 rounded-2xl border transition-all ${theme !== 'dark' ? 'bg-[#f0edec]/50 border-gray-200/60' : 'bg-[#121829]/30 border-white/5'
                         } space-y-1`}>
                         <div className="flex justify-between items-center">
-                          <span className={`font-black text-xs ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                          <span className={`font-black text-xs ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                             {rev.workerName}
                           </span>
-                          <span className={`text-[9px] font-bold ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
+                          <span className={`text-[9px] font-bold ${theme !== 'dark' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
                             {rev.date}
                           </span>
                         </div>
@@ -687,13 +679,13 @@ export function WorkerView({
                             />
                           ))}
                         </div>
-                        <p className={`text-[10px] leading-relaxed italic ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                        <p className={`text-[10px] leading-relaxed italic ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
                           {`"${rev.comment}"`}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <p className={`text-xs text-center italic ${theme === 'light' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
+                    <p className={`text-xs text-center italic ${theme !== 'dark' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
                       Ще немає відгуків для цієї зміни.
                     </p>
                   )}
@@ -701,13 +693,13 @@ export function WorkerView({
               </div>
 
               {/* DIIA CHECKBOX CONTRACT */}
-              <div className={`border rounded-2xl p-4 space-y-2.5 transition-all backdrop-blur-[8px] ${theme === 'light' ? 'bg-[#f0f5fc]/80 border-blue-200' : 'bg-[#FF5722]/10 border-[#FF5722]/30'
+              <div className={`border rounded-2xl p-4 space-y-2.5 transition-all backdrop-blur-[8px] ${theme !== 'dark' ? 'bg-[#f0f5fc]/80 border-blue-200' : 'bg-[#FF5722]/10 border-[#FF5722]/30'
                 }`}>
                 <div className="flex items-center gap-2">
                   <div className="bg-[#001B3D] text-[#FF5722] px-2 py-0.5 rounded text-[10px] font-black italic">Дія</div>
-                  <span className={`text-[11px] font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Швидкий договір ЦПХ</span>
+                  <span className={`text-[11px] font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Швидкий договір ЦПХ</span>
                 </div>
-                <p className={`text-[10px] leading-snug ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                <p className={`text-[10px] leading-snug ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
                   Підпишіть цифровий договір на надання послуг за допомогою сервісу **Дія.Підпис** перед бронюванням.
                 </p>
                 <label className="flex items-start gap-2.5 pt-1.5 cursor-pointer">
@@ -717,7 +709,7 @@ export function WorkerView({
                     onChange={(e) => setSignedContract(e.target.checked)}
                     className="w-4.5 h-4.5 border-[#E5E7EB] rounded accent-[#FF5722] mt-0.5 shrink-0"
                   />
-                  <span className={`text-[10px] font-bold select-none leading-normal ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
+                  <span className={`text-[10px] font-bold select-none leading-normal ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
                     Я підписую договір та погоджуюсь вийти на зміну.
                   </span>
                 </label>
@@ -727,7 +719,7 @@ export function WorkerView({
                 onClick={() => handleBookShift(selectedShift.id)}
                 className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-md ${signedContract
                   ? 'bg-[#FF5722] text-white active:scale-98 shadow-[#FF5722]/20 hover:bg-[#e64a19]'
-                  : theme === 'light'
+                  : theme !== 'dark'
                     ? 'bg-[#f0edec] text-[#5b4039]/60 cursor-not-allowed shadow-none'
                     : 'bg-[#1c2541]/45 text-gray-500 border border-white/5 cursor-not-allowed shadow-none'
                   }`}
@@ -741,17 +733,17 @@ export function WorkerView({
         {/* 2. MY BOOKED SHIFTS TAB */}
         {activeTab === 'my-shifts' && (
           <div className="p-4 space-y-4 text-left animate-fade-in">
-            <h3 className={`text-lg font-black tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Мої зміни</h3>
+            <h3 className={`text-lg font-black tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Мої зміни</h3>
 
             {/* Active / History toggles */}
-            <div className={`flex p-1 rounded-xl mb-4 border ${theme === 'light' ? 'bg-[#f0edec] border-gray-200' : 'bg-[#121829]/40 border-white/5'}`}>
+            <div className={`flex p-1 rounded-xl mb-4 border ${theme === 'minimalist' ? 'bg-[#f5f5f7] border-transparent shadow-inner' : theme === 'light' ? 'bg-[#f0edec] border-gray-200' : 'bg-[#121829]/40 border-white/5'}`}>
               <button
                 onClick={() => setMyShiftsSubTab('active')}
                 className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'active'
-                  ? theme === 'light'
-                    ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
+                  ? theme !== 'dark'
+                    ? 'bg-white text-[#001B3D] shadow-[0_4px_16px_rgba(0,0,0,0.08)] border-transparent'
                     : 'bg-[#FF5722] text-white shadow-sm border-transparent'
-                  : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
+                  : theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                   }`}
               >
                 Активні
@@ -759,10 +751,10 @@ export function WorkerView({
               <button
                 onClick={() => setMyShiftsSubTab('history')}
                 className={`flex-1 py-2 text-center rounded-lg font-bold text-xs transition-all ${myShiftsSubTab === 'history'
-                  ? theme === 'light'
-                    ? 'bg-white text-[#001B3D] shadow-sm border border-gray-150'
+                  ? theme !== 'dark'
+                    ? 'bg-white text-[#001B3D] shadow-[0_4px_16px_rgba(0,0,0,0.08)] border-transparent'
                     : 'bg-[#FF5722] text-white shadow-sm border-transparent'
-                  : theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'
+                  : theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                   }`}
               >
                 Історія
@@ -786,8 +778,7 @@ export function WorkerView({
                   return (
                     <div
                       key={s.id}
-                      className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                        ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
+                      className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)] hover:bg-white/95'
                         : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:bg-[#1c2541]/60'
                         } relative overflow-hidden animate-fade-in`}
                     >
@@ -805,19 +796,19 @@ export function WorkerView({
                             {s.status === 'pending_approval' && 'На підтвердженні'}
                             {s.status === 'disputed' && 'У спорі ⚠️'}
                           </span>
-                          <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'
+                          <h4 className={`text-base font-extrabold mt-2 leading-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'
                             }`}>{s.role}</h4>
-                          <p className={`text-xs font-bold mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
+                          <p className={`text-xs font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'
                             }`}>{s.company}</p>
                         </div>
                         <div className="text-right">
-                          <span className={`text-base font-extrabold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                          <span className={`text-base font-extrabold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                             {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
                           </span>
                         </div>
                       </div>
 
-                      <div className={`mt-4 pt-3.5 border-t space-y-2 text-xs font-semibold ${theme === 'light' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
+                      <div className={`mt-4 pt-3.5 border-t space-y-2 text-xs font-semibold ${theme !== 'dark' ? 'border-gray-100 text-[#5b4039]' : 'border-white/5 text-gray-300'
                         }`}>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-[#FF5722]" />
@@ -825,12 +816,12 @@ export function WorkerView({
                         </div>
                         <div className="flex items-start gap-2">
                           <MapPin className="w-4 h-4 text-[#FF5722] mt-0.5 shrink-0" />
-                          <span className={`leading-snug ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{s.address}</span>
+                          <span className={`leading-snug ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{s.address}</span>
                         </div>
                       </div>
 
                       {s.status === 'completed' && (
-                        <div className={`mt-3 pt-3 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                        <div className={`mt-3 pt-3 border-t ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
                           {s.allowFeedback === false ? (
                             <div className="text-[10px] font-semibold text-gray-400 italic">
                               Для цієї компанії відгуки вимкнено роботодавцем
@@ -842,7 +833,7 @@ export function WorkerView({
                             </div>
                           ) : activeFeedbackShiftId === s.id ? (
                             <div className="space-y-3 mt-1">
-                              <p className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
+                              <p className={`text-[10px] font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
                               <div className="flex gap-1.5">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <button
@@ -854,7 +845,7 @@ export function WorkerView({
                                     <Star
                                       className={`w-5 h-5 ${star <= feedbackRating
                                         ? 'text-[#FF9500] fill-[#FF9500]'
-                                        : theme === 'light' ? 'text-gray-300' : 'text-gray-600'
+                                        : theme !== 'dark' ? 'text-gray-300' : 'text-gray-600'
                                         }`}
                                     />
                                   </button>
@@ -866,7 +857,7 @@ export function WorkerView({
                                   value={feedbackComment}
                                   onChange={(e) => setFeedbackComment(e.target.value)}
                                   placeholder="Поділіться враженнями від зміни (умови, команда, оплата)..."
-                                  className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
+                                  className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme !== 'dark'
                                     ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
                                     : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
                                     }`}
@@ -881,7 +872,7 @@ export function WorkerView({
                                 </button>
                                 <button
                                   onClick={() => setActiveFeedbackShiftId(null)}
-                                  className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${theme === 'light'
+                                  className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${theme !== 'dark'
                                     ? 'bg-gray-100 hover:bg-gray-200 text-[#001B3D]'
                                     : 'bg-white/5 hover:bg-white/10 text-white'
                                     }`}
@@ -897,7 +888,7 @@ export function WorkerView({
                                 setFeedbackRating(5);
                                 setFeedbackComment('');
                               }}
-                              className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${theme === 'light'
+                              className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${theme !== 'dark'
                                 ? 'border-[#FF5722]/30 text-[#FF5722] hover:bg-[#FF5722]/5'
                                 : 'border-[#FF5722]/40 text-[#FF5722] hover:bg-[#FF5722]/10'
                                 }`}
@@ -913,7 +904,7 @@ export function WorkerView({
                         <div className="mt-3.5 space-y-2">
                           {isFuture ? (
                             <>
-                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 ${theme === 'light'
+                              <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 ${theme !== 'dark'
                                 ? 'bg-amber-50 border-amber-200 text-amber-800'
                                 : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
                                 }`}>
@@ -948,7 +939,7 @@ export function WorkerView({
 
                       {s.status === 'in_progress' && (
                         <div className="mt-3.5 space-y-2">
-                          <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 animate-pulse ${theme === 'light'
+                          <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold mb-2 animate-pulse ${theme !== 'dark'
                             ? 'bg-green-50 border-green-200 text-green-800'
                             : 'bg-green-500/10 border-green-500/20 text-green-300'
                             }`}>
@@ -967,7 +958,7 @@ export function WorkerView({
 
                       {s.status === 'pending_approval' && (
                         <div className="mt-3.5">
-                          <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold ${theme === 'light'
+                          <div className={`p-3 rounded-2xl border flex items-start gap-2 text-[11px] font-bold ${theme !== 'dark'
                             ? 'bg-blue-50 border-blue-200 text-blue-800'
                             : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
                             }`}>
@@ -981,7 +972,7 @@ export function WorkerView({
                         const isCollapsed = collapsedDisputes[s.id] === true;
                         return (
                           <div className="mt-3.5 space-y-3">
-                            <div className={`p-3.5 rounded-2xl border ${theme === 'light' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
+                            <div className={`p-3.5 rounded-2xl border ${theme !== 'dark' ? 'bg-red-50/50 border-red-200' : 'bg-red-500/5 border-red-500/20'} space-y-2`}>
                               <button
                                 onClick={() => setCollapsedDisputes(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
                                 className="w-full flex items-center justify-between text-left focus:outline-none"
@@ -995,11 +986,11 @@ export function WorkerView({
 
                               {!isCollapsed && (
                                 <div className="space-y-3 pt-2 border-t border-dashed border-red-200/40 dark:border-red-500/10">
-                                  <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>
+                                  <p className={`text-[11px] font-semibold ${theme !== 'dark' ? 'text-gray-600' : 'text-gray-300'}`}>
                                     <strong className="text-red-500">Причина:</strong> {s.disputeReason}
                                   </p>
                                   {s.disputeComment && (
-                                    <p className={`text-[11px] italic ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    <p className={`text-[11px] italic ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                                       &ldquo;{s.disputeComment}&rdquo;
                                     </p>
                                   )}
@@ -1020,7 +1011,8 @@ export function WorkerView({
                   );
                 })
               ) : (
-                <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
+                <div className={`rounded-3xl border border-dashed p-10 text-center transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' :
+                      'bg-[#1c2541]/40 border-white/10 text-gray-400'
                   }`}>
                   <Calendar className="w-8 h-8 mx-auto mb-1 opacity-55 text-[#FF5722]" />
                   <p className="text-xs font-bold">Немає змін у цьому розділі</p>
@@ -1066,28 +1058,28 @@ export function WorkerView({
 
             {/* Weekly Summary Bento */}
             <div className="grid grid-cols-2 gap-4">
-              <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+              <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
                 }`}>
                 <div className="flex items-center gap-1.5 text-[#10B981] mb-1.5">
                   <TrendingUp className="w-4 h-4" />
                   <span className="text-[11px] font-bold uppercase">Нараховано</span>
                 </div>
-                <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                <p className={`text-xl font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                   {transactions.filter(t => t.type === 'work').reduce((acc, curr) => acc + curr.amount, 0)} ₴
                 </p>
-                <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Цього тижня</p>
+                <p className={`text-[10px] font-semibold mt-1 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Цього тижня</p>
               </div>
 
-              <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
+              <div className={`p-4 rounded-2xl border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] shadow-sm' : 'bg-[#1c2541]/45 border-white/10 shadow-md'
                 }`}>
                 <div className="flex items-center gap-1.5 text-[#FF5722] mb-1.5">
                   <Clock className="w-4 h-4" />
                   <span className="text-[11px] font-bold uppercase">В обробці</span>
                 </div>
-                <p className={`text-xl font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                <p className={`text-xl font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                   {shifts.filter(s => s.status === 'booked').reduce((acc, curr) => acc + curr.price, 0)} ₴
                 </p>
-                <p className={`text-[10px] font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Майбутні зміни</p>
+                <p className={`text-[10px] font-semibold mt-1 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Майбутні зміни</p>
               </div>
             </div>
 
@@ -1095,11 +1087,8 @@ export function WorkerView({
             <div className="grid grid-cols-2 gap-3">
               <div
                 onClick={() => triggerToast("Акції дня: Отримуйте додаткові бонуси за нічні та святкові зміни! 🚀")}
-                className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist'
-                    ? 'bg-white border-gray-150 text-slate-800'
-                    : theme === 'light'
-                      ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
-                      : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
+                className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
+                    : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
                   }`}
               >
                 <div className="text-left">
@@ -1113,11 +1102,8 @@ export function WorkerView({
               </div>
               <div
                 onClick={() => triggerToast("Приведи друга та отримай 500 ₴ після його першої зміни! 🎁")}
-                className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist'
-                    ? 'bg-white border-gray-150 text-slate-800'
-                    : theme === 'light'
-                      ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
-                      : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
+                className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
+                    : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
                   }`}
               >
                 <div className="text-left">
@@ -1134,7 +1120,7 @@ export function WorkerView({
             {/* Transactions list */}
             <div>
               <div className="flex justify-between items-end mb-3 px-1">
-                <h2 className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'
+                <h2 className={`text-xs font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#5b4039]/80' : 'text-gray-400'
                   }`}>Останні операції</h2>
                 <button className="text-[#FF5722] text-xs font-bold hover:underline" onClick={() => triggerToast('Усі фільтри активовані')}>Фільтри</button>
               </div>
@@ -1144,8 +1130,7 @@ export function WorkerView({
                   transactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'light'
-                        ? 'bg-white/85 border-[#E5E7EB] hover:bg-[#f0edec]/40 text-[#001B3D] shadow-sm'
+                      className={`p-4 rounded-2xl flex items-center justify-between border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-[#f0edec]/40 text-[#001B3D] shadow-sm'
                         : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60 text-white shadow-md'
                         }`}
                     >
@@ -1156,11 +1141,11 @@ export function WorkerView({
                         </div>
                         <div>
                           <p className="text-xs font-bold">{tx.title}</p>
-                          <span className={`text-[10px] font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>{tx.date}</span>
+                          <span className={`text-[10px] font-semibold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>{tx.date}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-xs font-extrabold ${tx.amount > 0 ? 'text-[#10B981]' : 'text-white'}`}>
+                        <p className={`text-xs font-extrabold ${tx.amount > 0 ? 'text-[#10B981]' : (theme !== 'dark' ? 'text-[#001B3D]' : 'text-white')}`}>
                           {tx.amount > 0 ? `+${tx.amount}` : `${tx.amount}`} ₴
                         </p>
                         <p className={`text-[9px] uppercase font-black ${tx.status === 'completed' ? 'text-[#10B981]' : 'text-[#FF5722]'
@@ -1171,7 +1156,7 @@ export function WorkerView({
                     </div>
                   ))
                 ) : (
-                  <div className={`rounded-3xl border border-dashed p-8 text-center transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
+                  <div className={`rounded-3xl border border-dashed p-8 text-center transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
                     }`}>
                     <TrendingUp className="w-7 h-7 mx-auto mb-1 opacity-55 text-[#FF5722]" />
                     <p className="text-xs font-bold">Історія виплат порожня</p>
@@ -1189,7 +1174,7 @@ export function WorkerView({
             {profileSubPage === 'main' && (
               <div className="space-y-5 animate-fade-in">
                 {/* Profile Card */}
-                <div className={`rounded-[24px] p-5 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-all backdrop-blur-[16px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB]' : 'bg-[#1c2541]/45 border-white/10'
+                <div className={`rounded-[24px] p-5 shadow-sm border flex flex-col items-center text-center relative overflow-hidden transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB]' : 'bg-[#1c2541]/45 border-white/10'
                   }`}>
                   <div className="absolute -top-12 -right-12 w-24 h-24 bg-[#FF5722] opacity-5 rounded-full"></div>
 
@@ -1211,18 +1196,18 @@ export function WorkerView({
                     </div>
                   </div>
 
-                  <h2 className={`text-lg font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</h2>
+                  <h2 className={`text-lg font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{userName}</h2>
 
                   {isDiiaVerified ? (
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme !== 'dark'
                       ? 'bg-blue-50 border-blue-100 text-blue-800'
                       : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
                       }`}>
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme === 'light' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black italic ${theme !== 'dark' ? 'bg-[#001B3D] text-[#FF5722]' : 'bg-white text-[#FF5722]'}`}>Дія</span>
                       <span className="text-[10px] font-bold">Верифіковано через Дію</span>
                     </div>
                   ) : (
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme === 'light'
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border my-2 ${theme !== 'dark'
                       ? 'bg-green-50 border-green-100 text-green-800'
                       : 'bg-green-500/10 border-green-500/20 text-green-300'
                       }`}>
@@ -1232,28 +1217,29 @@ export function WorkerView({
 
                   <div className="flex items-center gap-1 bg-[#FF9500]/10 px-3 py-1 rounded-xl mt-1">
                     <Award className="w-3.5 h-3.5 text-[#FF9500]" />
-                    <span className={`text-xs font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>{rating.toFixed(1)}</span>
-                    <span className={`text-[10px] font-medium ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>(18 змін виконано)</span>
+                    <span className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{rating.toFixed(1)}</span>
+                    <span className={`text-[10px] font-medium ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>(18 змін виконано)</span>
                   </div>
                 </div>
 
                 {/* Options Menu List */}
                 <nav className="space-y-2">
-                  <p className={`text-[10px] font-black uppercase tracking-wider px-1 ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
+                  <p className={`text-[10px] font-black uppercase tracking-wider px-1 ${theme !== 'dark' ? 'text-[#5b4039]/70' : 'text-gray-400'
                     }`}>Акаунт</p>
 
                   <div
                     onClick={() => setProfileSubPage('personal')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' :
+                          'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-blue-50 text-blue-600' : 'bg-blue-500/10 text-blue-400'}`}>
                         <User className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ім’я, телефон, аватар</p>
+                        <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ім’я, телефон, аватар</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
@@ -1261,16 +1247,17 @@ export function WorkerView({
 
                   <div
                     onClick={() => setProfileSubPage('docs')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : theme === 'minimalist' ? 'bg-white border-gray-150 hover:bg-gray-50' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' :
+                          'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-purple-50 text-purple-600' : theme === 'minimalist' ? 'bg-purple-50 text-purple-500' : 'bg-purple-500/10 text-purple-400'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-purple-50 text-purple-600' : 'bg-purple-500/10 text-purple-400'}`}>
                         <ShieldCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-xs font-bold ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}>Документи та підписи</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' || theme === 'minimalist' ? 'text-[#5b4039]' : 'text-gray-400'}`}>КПК контракти, верифікація Дії</p>
+                        <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Документи та підписи</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>КПК контракти, верифікація Дії</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
@@ -1278,36 +1265,38 @@ export function WorkerView({
 
                   <div
                     onClick={() => setProfileSubPage('settings')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : theme === 'minimalist' ? 'bg-white border-gray-150 hover:bg-gray-50' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' :
+                          'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-orange-50 text-orange-600' : theme === 'minimalist' ? 'bg-orange-50 text-orange-500' : 'bg-orange-500/10 text-orange-400'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-orange-50 text-orange-600' : 'bg-orange-500/10 text-orange-400'}`}>
                         <Settings className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-xs font-bold ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}>Налаштування</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' || theme === 'minimalist' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Тема та оформлення застосунку</p>
+                        <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Налаштування</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Тема та оформлення застосунку</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
                   </div>
 
-                  <p className={`text-[10px] font-black uppercase tracking-wider px-1 pt-3 ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-gray-400'
+                  <p className={`text-[10px] font-black uppercase tracking-wider px-1 pt-3 ${theme !== 'dark' ? 'text-[#5b4039]/70' : 'text-gray-400'
                     }`}>Про додаток</p>
 
                   <div
                     onClick={() => setProfileSubPage('help')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' :
+                          'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-amber-50 text-amber-600' : 'bg-amber-500/10 text-amber-400'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-amber-50 text-amber-600' : 'bg-amber-500/10 text-amber-400'}`}>
                         <HelpCircle className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>FAQ, правила штрафів, підтримка</p>
+                        <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>FAQ, правила штрафів, підтримка</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
@@ -1315,16 +1304,16 @@ export function WorkerView({
 
                   <div
                     onClick={() => setProfileSubPage('developer')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white' : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-slate-350'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-slate-350'}`}>
                         <Settings className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Симуляція дедлайну, таймери</p>
+                        <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Симуляція дедлайну, таймери</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
@@ -1349,20 +1338,19 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in">
                 <button
                   onClick={() => setProfileSubPage('main')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Особисті дані</h3>
 
-                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                  ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
                   : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
                   <div>
-                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваше ім’я та прізвище</label>
-                    <div className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none cursor-not-allowed ${theme === 'light'
+                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваше ім’я та прізвище</label>
+                    <div className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none cursor-not-allowed ${theme !== 'dark'
                       ? 'bg-gray-100/60 border-[#E5E7EB] text-[#5b4039]'
                       : 'bg-[#121829]/30 border-white/5 text-gray-400'
                       }`}>
@@ -1371,8 +1359,8 @@ export function WorkerView({
                   </div>
 
                   <div>
-                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Номер телефону</label>
-                    <div className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none cursor-not-allowed ${theme === 'light'
+                    <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Номер телефону</label>
+                    <div className={`w-full border rounded-xl px-4 py-3 text-xs font-bold outline-none cursor-not-allowed ${theme !== 'dark'
                       ? 'bg-gray-100/60 border-[#E5E7EB] text-[#5b4039]'
                       : 'bg-[#121829]/30 border-white/5 text-gray-400'
                       }`}>
@@ -1380,7 +1368,7 @@ export function WorkerView({
                     </div>
                   </div>
 
-                  <div className={`p-3 rounded-2xl text-[10px] font-semibold flex items-start gap-2 ${theme === 'light'
+                  <div className={`p-3 rounded-2xl text-[10px] font-semibold flex items-start gap-2 ${theme !== 'dark'
                     ? 'bg-amber-50 border border-amber-250 text-amber-800'
                     : 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
                     }`}>
@@ -1396,29 +1384,28 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in">
                 <button
                   onClick={() => setProfileSubPage('main')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Цифрові документи</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Цифрові документи</h3>
 
-                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                  ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
                   : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
                   <div className="flex items-center justify-between border-b pb-3.5 border-dashed border-black/10 dark:border-white/10">
                     <div className="text-left">
-                      <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Податковий статус</p>
-                      <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Гіг-контракт або ФОП 3 група</p>
+                      <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Податковий статус</p>
+                      <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Гіг-контракт або ФОП 3 група</p>
                     </div>
                     <span className="text-[10px] bg-green-500/10 text-green-500 px-2.5 py-1 rounded font-black border border-green-500/20">АКТИВНИЙ</span>
                   </div>
 
                   <div className="flex items-center justify-between border-b pb-3.5 border-dashed border-black/10 dark:border-white/10">
                     <div className="text-left">
-                      <p className={`text-xs font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Цифровий паспорт (Дія)</p>
-                      <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Паспорт верифіковано держ.реєстром</p>
+                      <p className={`text-xs font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Цифровий паспорт (Дія)</p>
+                      <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Паспорт верифіковано держ.реєстром</p>
                     </div>
                     {isDiiaVerified ? (
                       <span className="text-[10px] bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded font-black border border-blue-500/20">ВЕРИФІКОВАНО</span>
@@ -1450,27 +1437,26 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in max-h-[500px] overflow-y-auto pr-1 no-scrollbar">
                 <button
                   onClick={() => setProfileSubPage('main')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Центр допомоги</h3>
 
-                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                  ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
                   : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
                   <div className="text-left space-y-1">
-                    <p className={`text-xs font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Як працює виплата грошей?</p>
-                    <p className={`text-[10px] leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Як працює виплата грошей?</p>
+                    <p className={`text-[10px] leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
                       Гроші за зміну резервуються роботодавцем заздалегідь. Оплата зараховується на ваш цифровий баланс одразу після того, як роботодавець підтвердить виконання (Чек-аут). Вивести накопичені кошти на картку будь-якого банку України можна в розділі «Гаманець».
                     </p>
                   </div>
 
                   <div className="text-left space-y-1 pt-2 border-t border-dashed border-black/10 dark:border-white/10">
-                    <p className={`text-xs font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Що станеться при скасуванні зміни?</p>
-                    <p className={`text-[10px] leading-relaxed ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Що станеться при скасуванні зміни?</p>
+                    <p className={`text-[10px] leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
                       Безкоштовно відмовитись від зміни можна більше ніж за 2 години до початку. Якщо до зміни залишилося менше 2 годин, то скасування вважається терміновим. У цьому випадку нараховується штраф у розмірі 250 ₴.
                     </p>
                   </div>
@@ -1483,23 +1469,22 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in">
                 <button
                   onClick={() => setProfileSubPage('main')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Панель розробника</h3>
 
-                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'light'
-                  ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                <div className={`rounded-3xl p-5 border transition-all backdrop-blur-[16px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
                   : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
                   <div className="flex items-center justify-between">
                     <div className="text-left pr-4">
-                      <p className={`text-xs font-black leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                      <p className={`text-xs font-black leading-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
                         Симуляція дедлайну (залишилось 2 год)
                       </p>
-                      <p className={`text-[10px] font-semibold mt-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                      <p className={`text-[10px] font-semibold mt-1.5 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
                         Робить зміни, до початку яких залишилось менше 2 годин, «гарячими» та переміщує їх на самий верх стрічки пошуку.
                       </p>
                     </div>
@@ -1525,30 +1510,27 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in">
                 <button
                   onClick={() => setProfileSubPage('main')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}>Налаштування</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Налаштування</h3>
 
                 <div className="space-y-2">
                   <div
                     onClick={() => setProfileSubPage('theme-settings')}
-                    className={`rounded-2xl p-4 flex items-center justify-between border cursor-pointer transition-all ${theme === 'minimalist'
-                        ? 'bg-white border-gray-150 hover:bg-gray-50 text-slate-800'
-                        : theme === 'light'
-                          ? 'bg-white/85 border-[#E5E7EB] hover:bg-white text-[#001B3D]'
-                          : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60 text-white'
+                    className={`rounded-[24px] p-4 flex items-center justify-between border cursor-pointer transition-all ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-gray-50 text-slate-800' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] hover:bg-white text-[#001B3D]'
+                        : 'bg-[#1c2541]/45 border-white/10 hover:bg-[#252f55]/60 text-white'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme === 'light' ? 'bg-orange-50 text-orange-600' : theme === 'minimalist' ? 'bg-orange-50 text-orange-500' : 'bg-orange-500/10 text-orange-400'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${theme !== 'dark' ? 'bg-orange-50 text-orange-600' : 'bg-orange-500/10 text-orange-400'}`}>
                         <Settings className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="text-xs font-bold">Тема та дизайн застосунку</p>
-                        <p className={`text-[10px] font-medium mt-0.5 ${theme === 'light' || theme === 'minimalist' ? 'text-gray-500' : 'text-gray-400'}`}>Зміна стилю інтерфейсу та теми оформлення</p>
+                        <p className={`text-[10px] font-medium mt-0.5 ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Зміна стилю інтерфейсу та теми оформлення</p>
                       </div>
                     </div>
                     <ChevronDown className="w-4 h-4 opacity-50 -rotate-90" />
@@ -1562,20 +1544,17 @@ export function WorkerView({
               <div className="space-y-4 animate-fade-in">
                 <button
                   onClick={() => setProfileSubPage('settings')}
-                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}
+                  className={`flex items-center gap-1 text-xs font-bold hover:underline ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#FF5722]" /> Назад
                 </button>
 
-                <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]' : 'text-white'}`}>Тема та оформлення</h3>
+                <h3 className={`text-base font-black uppercase tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Тема та оформлення</h3>
 
-                <div className={`rounded-3xl p-5 border transition-all ${theme === 'minimalist'
-                    ? 'bg-white border-gray-150 shadow-sm'
-                    : theme === 'light'
-                      ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
-                      : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
+                <div className={`rounded-3xl p-5 border transition-all ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] shadow-sm' : theme === 'light' ? 'bg-white/90 border-[#E5E7EB] shadow-[0_8px_30px_-6px_rgba(255,87,34,0.08)]'
+                    : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
-                  <p className={`text-[10px] font-bold uppercase ${theme === 'light' || theme === 'minimalist' ? 'text-gray-500' : 'text-gray-400'}`}>Оберіть стиль оформлення інтерфейсу:</p>
+                  <p className={`text-[10px] font-bold uppercase ${theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Оберіть стиль оформлення інтерфейсу:</p>
 
                   <div className="space-y-2.5">
                     {/* Minimalist style selection */}
@@ -1585,8 +1564,8 @@ export function WorkerView({
                         triggerToast('Активовано Мінімалістичний стиль інтерфейсу! ✨');
                       }}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${theme === 'minimalist'
-                          ? 'border-[#FF5722] bg-[#FF5722]/5 text-[#001B3D]'
-                          : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
+                        ? 'border-[#FF5722] bg-[#FF5722]/5 text-[#001B3D]'
+                        : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
                         }`}
                     >
                       <div className="text-left">
@@ -1602,16 +1581,16 @@ export function WorkerView({
                         setTheme('light');
                         triggerToast('Активовано Преміум Світлу тему з градієнтами! 🌅');
                       }}
-                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${theme === 'light'
-                          ? 'border-[#FF5722] bg-[#FF5722]/5 text-[#001B3D]'
-                          : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${theme !== 'dark'
+                        ? 'border-[#FF5722] bg-[#FF5722]/5 text-[#001B3D]'
+                        : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
                         }`}
                     >
                       <div className="text-left">
                         <p className="text-xs font-bold">Преміум Світла</p>
                         <p className="text-[9px] text-gray-500 font-semibold mt-0.5">Елегантні градієнти, розмиття та об'єм</p>
                       </div>
-                      {theme === 'light' && <span className="text-xs text-[#FF5722] font-black">●</span>}
+                      {theme !== 'dark' && <span className="text-xs text-[#FF5722] font-black">●</span>}
                     </div>
 
                     {/* Dark style selection */}
@@ -1621,8 +1600,8 @@ export function WorkerView({
                         triggerToast('Активовано Темну тему! 🌃');
                       }}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${theme === 'dark'
-                          ? 'border-[#FF5722] bg-[#FF5722]/5 text-white'
-                          : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
+                        ? 'border-[#FF5722] bg-[#FF5722]/5 text-white'
+                        : 'border-gray-250 bg-white text-[#001B3D] hover:bg-gray-50'
                         }`}
                     >
                       <div className="text-left">
@@ -1640,12 +1619,7 @@ export function WorkerView({
       </div>
 
       {/* --- PERSISTENT FLOATING BOTTOM NAVIGATION (B2C Worker only - Glassmorphic overlay) --- */}
-      <nav className={`absolute bottom-4 left-4 right-4 z-40 border h-[76px] rounded-[24px] shadow-[0_12px_32px_rgba(0,0,0,0.12)] flex justify-around items-center px-2 transition-all backdrop-blur-[24px] ${theme === 'minimalist'
-          ? 'bg-[#F3F4F6] border-gray-250 shadow-none'
-          : theme === 'light'
-            ? 'bg-white/70 border-black/10'
-            : 'bg-[#0f172a]/70 border-white/10'
-        }`}>
+      <nav className={`absolute bottom-6 left-4 right-4 z-40 border h-[76px] rounded-[32px] flex justify-around items-center px-2 transition-all backdrop-blur-[24px] ${theme === 'minimalist' ? 'bg-white/95 border-transparent shadow-[0_12px_40px_rgba(0,0,0,0.08)]' : theme !== 'dark' ? 'bg-white/70 border-black/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)]' : 'bg-[#0f172a]/70 border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)]'}`}>
         <button
           onClick={() => {
             setActiveTab('feed');
@@ -1654,7 +1628,7 @@ export function WorkerView({
           }}
           className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'feed'
             ? 'text-[#FF5722]'
-            : theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]/80' : 'text-gray-300'
+            : theme !== 'dark' ? 'text-[#001B3D]/80' : 'text-gray-300'
             }`}
         >
           {activeTab === 'feed' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
@@ -1670,7 +1644,7 @@ export function WorkerView({
           }}
           className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'my-shifts'
             ? 'text-[#FF5722]'
-            : theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]/80' : 'text-gray-300'
+            : theme !== 'dark' ? 'text-[#001B3D]/80' : 'text-gray-300'
             }`}
         >
           {activeTab === 'my-shifts' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
@@ -1686,7 +1660,7 @@ export function WorkerView({
           }}
           className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'wallet'
             ? 'text-[#FF5722]'
-            : theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]/80' : 'text-gray-300'
+            : theme !== 'dark' ? 'text-[#001B3D]/80' : 'text-gray-300'
             }`}
         >
           {activeTab === 'wallet' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
@@ -1702,7 +1676,7 @@ export function WorkerView({
           }}
           className={`flex flex-col items-center justify-center w-[64px] h-[58px] rounded-[18px] relative transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${activeTab === 'profile'
             ? 'text-[#FF5722]'
-            : theme === 'light' || theme === 'minimalist' ? 'text-[#001B3D]/80' : 'text-gray-300'
+            : theme !== 'dark' ? 'text-[#001B3D]/80' : 'text-gray-300'
             }`}
         >
           {activeTab === 'profile' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
@@ -1713,10 +1687,10 @@ export function WorkerView({
 
       {/* --- B2C SHIFT FILTERS DRAWER / MODAL --- */}
       {showFiltersModal && (
-        <div className={`absolute inset-0 z-50 flex flex-col animate-modal-in ${theme === 'minimalist' ? 'bg-[#F9FAFB]' : theme === 'light' ? 'bg-[#fcfbf9]' : 'bg-[#0f1424]'
+        <div className={`absolute inset-0 z-50 flex flex-col animate-modal-in ${theme === 'minimalist' ? 'bg-[#F9FAFB]' : theme !== 'dark' ? 'bg-[#fcfbf9]' : 'bg-[#0f1424]'
           }`}>
           {/* Header */}
-          <div className={`p-4 border-b flex items-center justify-between sticky top-0 z-10 ${theme === 'minimalist' ? 'bg-white border-gray-150 text-[#001B3D]' : theme === 'light' ? 'bg-white/95 border-gray-150 text-[#001B3D]' : 'bg-[#161d33]/95 border-white/5 text-white'
+          <div className={`p-4 border-b flex items-center justify-between sticky top-0 z-10 ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-[#001B3D]' : theme === 'light' ? 'bg-white/95 border-gray-150 text-[#001B3D]' : 'bg-[#161d33]/95 border-white/5 text-white'
             }`}>
             <button
               onClick={() => setShowFiltersModal(false)}
@@ -1744,12 +1718,12 @@ export function WorkerView({
           <div className="flex-1 overflow-y-auto p-5 space-y-6 text-left no-scrollbar">
             {/* Section 0: Custom Category/Specialty Search Input */}
             <div className="space-y-3">
-              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'
+              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                 }`}>Пошук спеціальності або ролі</label>
 
-              <div className={`rounded-xl border flex items-center px-3 py-2.5 gap-2.5 transition-all ${theme === 'minimalist' || theme === 'light'
-                  ? 'bg-white border-gray-200 focus-within:border-[#FF5722]'
-                  : 'bg-[#121829]/60 border-[#1c2541] focus-within:border-[#FF5722]'
+              <div className={`rounded-xl border flex items-center px-3 py-2.5 gap-2.5 transition-all ${theme === 'minimalist' || theme !== 'dark'
+                ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] focus-within:border-[#FF5722]'
+                : 'bg-[#121829]/60 border-[#1c2541] focus-within:border-[#FF5722]'
                 }`}>
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
@@ -1757,7 +1731,7 @@ export function WorkerView({
                   placeholder="Введіть роль (наприклад: Бариста, Касир...)"
                   value={filterCustomSearch}
                   onChange={(e) => setFilterCustomSearch(e.target.value)}
-                  className={`bg-transparent text-xs w-full outline-none font-bold transition-all ${theme === 'minimalist' || theme === 'light' ? 'text-[#001B3D] placeholder-gray-400' : 'text-white placeholder-gray-500'
+                  className={`bg-transparent text-xs w-full outline-none font-bold transition-all ${theme === 'minimalist' || theme !== 'dark' ? 'text-[#001B3D] placeholder-gray-400' : 'text-white placeholder-gray-500'
                     }`}
                 />
                 {filterCustomSearch && (
@@ -1772,7 +1746,7 @@ export function WorkerView({
             </div>
             {/* Section 1: Time */}
             <div className="space-y-3">
-              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'
+              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                 }`}>Час початку роботи</label>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1782,9 +1756,9 @@ export function WorkerView({
                     type="time"
                     value={filterStartTime}
                     onChange={(e) => setFilterStartTime(e.target.value)}
-                    className={`w-full rounded-xl border px-3 py-2 text-xs font-bold outline-none transition-all ${theme === 'minimalist' || theme === 'light'
-                        ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                        : 'bg-[#121829]/60 border-white/10 text-white focus:border-[#FF5722]'
+                    className={`w-full rounded-xl border px-3 py-2 text-xs font-bold outline-none transition-all ${theme === 'minimalist' || theme !== 'dark'
+                      ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-[#001B3D] focus:border-[#FF5722]'
+                      : 'bg-[#121829]/60 border-white/10 text-white focus:border-[#FF5722]'
                       }`}
                   />
                 </div>
@@ -1794,9 +1768,9 @@ export function WorkerView({
                     type="time"
                     value={filterEndTime}
                     onChange={(e) => setFilterEndTime(e.target.value)}
-                    className={`w-full rounded-xl border px-3 py-2 text-xs font-bold outline-none transition-all ${theme === 'minimalist' || theme === 'light'
-                        ? 'bg-white border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                        : 'bg-[#121829]/60 border-white/10 text-white focus:border-[#FF5722]'
+                    className={`w-full rounded-xl border px-3 py-2 text-xs font-bold outline-none transition-all ${theme === 'minimalist' || theme !== 'dark'
+                      ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-[#001B3D] focus:border-[#FF5722]'
+                      : 'bg-[#121829]/60 border-white/10 text-white focus:border-[#FF5722]'
                       }`}
                   />
                 </div>
@@ -1805,7 +1779,7 @@ export function WorkerView({
 
             {/* Section 2: Duration */}
             <div className="space-y-3">
-              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'
+              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                 }`}>Тривалість завдання</label>
 
               <div className="flex flex-wrap gap-2">
@@ -1819,10 +1793,10 @@ export function WorkerView({
                     key={opt.value}
                     onClick={() => setFilterDuration(opt.value as any)}
                     className={`px-4.5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${filterDuration === opt.value
-                        ? 'bg-[#FF5722] text-white border-transparent shadow-sm'
-                        : theme === 'minimalist' || theme === 'light'
-                          ? 'bg-white border-gray-200 text-slate-805 hover:bg-gray-50'
-                          : 'bg-[#1c2541]/60 border-white/10 text-gray-300 hover:bg-[#252f55]/80'
+                      ? 'bg-[#FF5722] text-white border-transparent shadow-sm'
+                      : theme === 'minimalist' || theme !== 'dark'
+                        ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-805 hover:bg-gray-50'
+                        : 'bg-[#1c2541]/60 border-white/10 text-gray-300 hover:bg-[#252f55]/80'
                       }`}
                   >
                     {opt.label}
@@ -1833,7 +1807,7 @@ export function WorkerView({
 
             {/* Section 3: Services/Categories */}
             <div className="space-y-3">
-              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'
+              <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
                 }`}>Послуга / Категорія</label>
 
               <div className="flex flex-wrap gap-2">
@@ -1860,10 +1834,10 @@ export function WorkerView({
                         }
                       }}
                       className={`px-4.5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${isSel
-                          ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
-                          : theme === 'minimalist' || theme === 'light'
-                            ? 'bg-white border-gray-200 text-slate-805 hover:bg-gray-50'
-                            : 'bg-[#1c2541]/60 border-white/10 text-gray-300 hover:bg-[#252f55]/80'
+                        ? 'bg-[#001B3D] text-white border-transparent shadow-sm'
+                        : theme === 'minimalist' || theme !== 'dark'
+                          ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-805 hover:bg-gray-50'
+                          : 'bg-[#1c2541]/60 border-white/10 text-gray-300 hover:bg-[#252f55]/80'
                         }`}
                     >
                       {srv}
@@ -1875,7 +1849,7 @@ export function WorkerView({
           </div>
 
           {/* Floating Show Results button */}
-          <div className={`p-4 border-t sticky bottom-0 z-10 ${theme === 'minimalist' ? 'bg-white border-gray-150' : theme === 'light' ? 'bg-white/95 border-gray-150' : 'bg-[#161d33]/95 border-white/5'
+          <div className={`p-4 border-t sticky bottom-0 z-10 ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/95 border-gray-150' : 'bg-[#161d33]/95 border-white/5'
             }`}>
             <button
               onClick={() => setShowFiltersModal(false)}

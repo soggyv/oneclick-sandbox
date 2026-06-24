@@ -1,17 +1,7 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
 import { useState, useMemo, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Shift, DisputeMessage, Transaction, UkCalendarDay, Branch } from '../types/sandbox';
 import { getInitialShifts, getHoursRemaining } from '../utils/sandbox';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export const isSupabaseConfigured =
-  supabaseUrl !== 'https://placeholder.supabase.co' &&
-  supabaseAnonKey !== 'placeholder-key' &&
-  !supabaseUrl.includes('your-supabase-project-id');
 
 
 export function useSandbox() {
@@ -49,22 +39,23 @@ export function useSandbox() {
   const [smsCode, setSmsCode] = useState<string>('');
   const [expectedSmsCode, setExpectedSmsCode] = useState<string>('');
 
-  const [theme, setTheme] = useState<'light' | 'dark' | 'minimalist'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('oneclick_theme');
-      if (saved === 'light' || saved === 'dark' || saved === 'minimalist') {
-        return saved;
-      }
-    }
-    return 'light';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark' | 'minimalist'>('light');
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('oneclick_theme', theme);
-  }, [theme]);
-  const [shifts, setShifts] = useState<Shift[]>(() => {
-    return isSupabaseConfigured ? [] : getInitialShifts();
-  });
+    setHasMounted(true);
+    const saved = localStorage.getItem('oneclick_theme');
+    if (saved === 'light' || saved === 'dark' || saved === 'minimalist') {
+      setTheme(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted) {
+      localStorage.setItem('oneclick_theme', theme);
+    }
+  }, [theme, hasMounted]);
+  const [shifts, setShifts] = useState<Shift[]>(() => getInitialShifts());
   const [userRole, setUserRole] = useState<'worker' | 'employer'>('worker');
   const [activeTab, setActiveTab] = useState<'feed' | 'my-shifts' | 'wallet' | 'profile'>('feed');
   const [b2bTab, setB2bTab] = useState<'dashboard' | 'shifts' | 'create' | 'wallet' | 'profile'>('dashboard');
@@ -157,13 +148,6 @@ export function useSandbox() {
   }, []);
 
   const handleSignOut = async () => {
-    try {
-      if (isSupabaseConfigured) {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.error('Error signing out from Supabase:', e);
-    }
 
     setIsLoggedIn(false);
     setUserName('');

@@ -13,6 +13,7 @@ import {
   Smartphone
 } from 'lucide-react';
 import Link from 'next/link';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function B2CAuthPage() {
   const [step, setStep] = useState<'auth' | 'verify' | 'success'>('auth');
@@ -93,6 +94,38 @@ export default function B2CAuthPage() {
         setAuthMethod(null);
       }
     }, 1800);
+  };
+  // Google authentication
+  const handleGoogleAuthSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+    setAuthMethod('google' as any);
+    try {
+      const response = await fetch('http://localhost:8000/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_token: credentialResponse.credential,
+        }),
+      });
+
+      setIsLoading(false);
+      setAuthMethod(null);
+
+      if (response.ok) {
+        const userData = await response.json();
+        saveProfileAndRedirect(userData);
+      } else {
+        const errorData = await response.json();
+        triggerToast(`Помилка Google: ${errorData.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast('Помилка з’єднання з сервером API');
+      setIsLoading(false);
+      setAuthMethod(null);
+    }
   };
 
   // request sms otp code
@@ -259,6 +292,20 @@ export default function B2CAuthPage() {
               )}
               {isRegistering ? 'Швидка реєстрація через Дію' : 'Вхід через Дію'}
             </button>
+
+            {/* Google Integration Button */}
+            <div className="flex justify-center w-full [&>div]:w-full [&_iframe]:w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleAuthSuccess}
+                onError={() => triggerToast('Не вдалося увійти через Google')}
+                useOneTap
+                use_fedcm_for_prompt={false}
+                theme={theme === 'light' ? 'outline' : 'filled_black'}
+                shape="pill"
+                width="100%"
+                text="continue_with"
+              />
+            </div>
 
             {/* Divider */}
             <div className="flex items-center gap-3">

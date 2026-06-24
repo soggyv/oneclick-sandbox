@@ -3,14 +3,12 @@
 
 import React from 'react';
 import { Camera, CheckCircle, Info, QrCode, AlertTriangle } from 'lucide-react';
-import { useSandbox, isSupabaseConfigured, supabase } from './src/hooks/useSandbox';
+import { useSandbox } from './src/hooks/useSandbox';
 import { Header } from './src/components/sandbox/Header';
 import { WelcomeScreen } from './src/components/sandbox/WelcomeScreen';
 import { WorkerView } from './src/components/sandbox/WorkerView';
 import { EmployerView } from './src/components/sandbox/EmployerView';
 import { ArbitratorModal } from './src/components/sandbox/ArbitratorModal';
-
-export { supabase, isSupabaseConfigured };
 
 export default function OneClickApp() {
   const sandbox = useSandbox();
