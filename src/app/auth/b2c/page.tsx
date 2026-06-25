@@ -161,10 +161,14 @@ export default function B2CAuthPage() {
 
       if (response.ok) {
         const data = await response.json();
-        // Backend returns {"message": ..., "code": "4815"}
-        setExpectedSmsCode(data.code || '4815');
+        if (data.code) {
+          setExpectedSmsCode(data.code);
+          triggerToast(`💬 Тестовий SMS-код відправлено! Ваш код: ${data.code}`);
+        } else {
+          setExpectedSmsCode('');
+          triggerToast('💬 Код підтвердження відправлено у SMS на ваш номер!');
+        }
         setStep('verify');
-        triggerToast(`💬 Тестовий SMS-код відправлено! Ваш код: ${data.code || '4815'}`);
       } else {
         triggerToast('Не вдалося надіслати SMS');
       }
@@ -179,7 +183,7 @@ export default function B2CAuthPage() {
   // verify sms code
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (smsCode !== expectedSmsCode && smsCode !== '4815') {
+    if (expectedSmsCode && smsCode !== expectedSmsCode && smsCode !== '4815') {
       triggerToast('Неправильний код з SMS!');
       return;
     }

@@ -109,3 +109,13 @@ class B2BLoginRequest(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     id_token: str
+
+class B2BRequestEmailCode(BaseModel):
+    email: str
+    password: str
+    is_registering: bool
+
+class B2BVerifyEmailCode(BaseModel):
+    email: str
+    code: str
+    is_registering: bool

@@ -17,10 +17,12 @@ import Link from 'next/link';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function B2BAuthPage() {
-  const [step, setStep] = useState<'auth' | 'company' | 'success'>('auth');
+  const [step, setStep] = useState<'auth' | 'verify' | 'company' | 'success'>('auth');
   const [isRegistering, setIsRegistering] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [expectedCode, setExpectedCode] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [eventType, setEventType] = useState('University Event');
@@ -97,44 +99,83 @@ export default function B2BAuthPage() {
     setIsLoading(true);
     setAuthMethod('email');
 
-    if (isRegistering) {
-      // In registration, email/password gets validated/registered
-      setTimeout(() => {
-        setIsLoading(false);
-        setStep('company');
-        setAuthMethod(null);
-      }, 1500);
-    } else {
-      // Direct Login
-      try {
-        const response = await fetch('http://localhost:8000/auth/b2b-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            password,
-            auth_method: 'email',
-          }),
-        });
+    try {
+      const response = await fetch('http://localhost:8000/auth/b2b-request-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          is_registering: isRegistering
+        }),
+      });
 
-        setIsLoading(false);
-        setAuthMethod(null);
+      setIsLoading(false);
+      setAuthMethod(null);
 
-        if (response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        if (data.code) {
+          setExpectedCode(data.code);
+          alert(`💬 Тестовий код відправлено на пошту! Ваш код: ${data.code}`);
+        } else {
+          setExpectedCode('');
+          alert('💬 Код підтвердження відправлено на вашу електронну пошту!');
+        }
+        setStep('verify');
+      } else {
+        const errorData = await response.json();
+        alert(`Помилка: ${errorData.detail || 'Не вдалося надіслати код'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Помилка з’єднання з сервером API');
+      setIsLoading(false);
+      setAuthMethod(null);
+    }
+  };
+
+  // verify email code
+  const handleVerifyEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (expectedCode && verificationCode !== expectedCode && verificationCode !== '4815') {
+      alert('Неправильний код з електронної пошти!');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/auth/b2b-verify-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          code: verificationCode,
+          is_registering: isRegistering
+        }),
+      });
+
+      setIsLoading(false);
+
+      if (response.ok) {
+        if (isRegistering) {
+          setStep('company');
+        } else {
           const userData = await response.json();
           saveProfileAndRedirect(userData);
-        } else {
-          const errorData = await response.json();
-          alert(`Помилка входу: ${errorData.detail || 'Невідома помилка'}`);
         }
-      } catch (err) {
-        console.error(err);
-        alert('Помилка з’єднання з сервером API');
-        setIsLoading(false);
-        setAuthMethod(null);
+      } else {
+        const errorData = await response.json();
+        alert(`Помилка перевірки: ${errorData.detail || 'Невідома помилка'}`);
       }
+    } catch (err) {
+      console.error(err);
+      alert('Помилка з’єднання з сервером API');
+      setIsLoading(false);
     }
   };
 
@@ -294,6 +335,55 @@ export default function B2BAuthPage() {
               </button>
             </form>
           </div>
+        )}
+
+        {/* STEP 1.5: EMAIL OTP VERIFICATION */}
+        {step === 'verify' && (
+          <form onSubmit={handleVerifyEmailOtp} className="space-y-6">
+            <div className="text-center space-y-1">
+              <h2 className="text-lg font-bold text-white">Введіть код підтвердження</h2>
+              <p className="text-xs text-slate-400">
+                Ми відправили 4-значний код підтвердження на пошту <span className="text-[#FF5722] font-semibold">{email}</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="0000"
+                maxLength={4}
+                required
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full bg-white/[0.02] border border-white/10 rounded-2xl py-4 text-center text-xl font-black tracking-[8px] text-white outline-none focus:border-[#FF5722] focus:bg-white/[0.04]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 bg-[#FF5722] hover:bg-[#e64a19] text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_12px_rgba(255,87,34,0.25)] cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  Підтвердити
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => setStep('auth')}
+                className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ← Повернутися назад
+              </button>
+            </div>
+          </form>
         )}
 
         {/* STEP 2: COMPANY REGISTRATION */}
