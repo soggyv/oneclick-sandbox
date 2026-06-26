@@ -184,13 +184,13 @@ export function WorkerView({
       }
 
       // 2. Duration Filter
-      const durHours = parseInt(s.duration) || 8;
+      const durHours = parseInt(s.duration) || 3;
       if (filterDuration === 'short') {
-        if (durHours > 6) return false;
+        if (durHours > 2) return false;
       } else if (filterDuration === 'normal') {
-        if (durHours < 7 || durHours > 9) return false;
+        if (durHours < 3 || durHours > 4) return false;
       } else if (filterDuration === 'long') {
-        if (durHours < 10) return false;
+        if (durHours < 5) return false;
       }
 
       // 3. Service Filter
@@ -200,32 +200,26 @@ export function WorkerView({
           const lowerCat = s.category.toLowerCase();
           const lowerDetails = (s.details || '').toLowerCase();
 
-          if (cat === 'Прибирання') {
-            return lowerRole.includes('уборка') || lowerRole.includes('прибирання') || lowerRole.includes('миття') || lowerDetails.includes('уборка') || lowerDetails.includes('прибирання');
+          if (cat === 'Координація') {
+            return lowerRole.includes('куратор') || lowerRole.includes('координатор') || lowerRole.includes('координація') || lowerRole.includes('управління');
           }
-          if (cat === 'Обслуговування на касі') {
-            return lowerRole.includes('касир') || lowerRole.includes('каса') || lowerRole.includes('обслуговування') || lowerDetails.includes('каса');
+          if (cat === 'Реєстрація') {
+            return lowerRole.includes('реєстратор') || lowerRole.includes('реєстрація') || lowerRole.includes('зустріч') || lowerRole.includes('акредитація');
           }
-          if (cat === 'Збірка замовлень') {
-            return lowerRole.includes('збір') || lowerRole.includes('комплектувальник') || lowerRole.includes('склад') || lowerCat.includes('склади') || lowerDetails.includes('склад');
+          if (cat === 'Фото / Відео') {
+            return lowerRole.includes('фотограф') || lowerRole.includes('відео') || lowerRole.includes('зйомка') || lowerRole.includes('камера') || lowerRole.includes('медіа');
           }
-          if (cat === 'Приготування їжі') {
-            return lowerRole.includes('кухар') || lowerRole.includes('приготування') || lowerRole.includes('бариста') || lowerCat.includes('кава') || lowerDetails.includes('приготування');
+          if (cat === 'Допомога на локації') {
+            return lowerRole.includes('помічник') || lowerRole.includes('допомога') || lowerRole.includes('чергування') || lowerRole.includes('підготовка');
           }
-          if (cat === 'Розвантаження товарів') {
-            return lowerRole.includes('вантажник') || lowerRole.includes('розвантаження') || lowerCat.includes('склади') || lowerDetails.includes('розвантаження');
+          if (cat === 'Супровід гостей') {
+            return lowerRole.includes('супровід') || lowerRole.includes('екскурсія') || lowerRole.includes('адаптація') || lowerRole.includes('зустріч');
           }
-          if (cat === 'Викладка товарів') {
-            return lowerRole.includes('викладка') || lowerRole.includes('мерчендайзер') || lowerDetails.includes('викладка');
+          if (cat === 'Асистування') {
+            return lowerRole.includes('асистент') || lowerRole.includes('презентація') || lowerRole.includes('доповідач');
           }
-          if (cat === 'Випічка хліба') {
-            return lowerRole.includes('випічка') || lowerRole.includes('пекар') || lowerDetails.includes('випічка');
-          }
-          if (cat === 'Миття посуду') {
-            return lowerRole.includes('посуд') || lowerRole.includes('миття') || lowerDetails.includes('посуд');
-          }
-          if (cat === 'Обслуговування за прилавком') {
-            return lowerRole.includes('прилавок') || lowerRole.includes('продавець') || lowerDetails.includes('прилавок');
+          if (cat === 'Технічна підтримка') {
+            return lowerRole.includes('технічна') || lowerRole.includes('підтримка') || lowerRole.includes('налаштування') || lowerRole.includes('звук') || lowerRole.includes('світло');
           }
           return lowerRole.includes(cat.toLowerCase()) || lowerCat.includes(cat.toLowerCase());
         });
@@ -268,7 +262,7 @@ export function WorkerView({
           <div class="text-left font-sans text-[11px] leading-tight p-0.5">
             <h4 class="font-bold text-[#001B3D]">${s.role}</h4>
             <p class="text-[#FF5722] font-black">${s.company}</p>
-            <p class="font-bold mt-1 text-slate-800">${s.price} ₴</p>
+            <p class="font-bold mt-1 text-slate-800">+${Math.round(s.price / 10)} балів</p>
           </div>
         `);
       }
@@ -373,7 +367,7 @@ export function WorkerView({
             ) : (
               /* Category Filter Chips */
               <div className="p-4 overflow-x-auto no-scrollbar flex gap-2">
-                {['Всі', 'Кава', 'Рітейл', 'Склади'].map((cat) => (
+                {['Всі', 'Допомога', 'Кураторство', 'Наука'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
@@ -480,11 +474,11 @@ export function WorkerView({
                       </div>
                       <div className="text-right">
                         <span className="text-xl font-extrabold text-[#FF5722]">
-                          {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
+                          +{Math.round(s.price / 10)} балів
                         </span>
                         <p className={`text-[9px] font-bold uppercase tracking-wider ${theme !== 'dark' ? 'text-gray-400' : 'text-gray-450'
                           }`}>
-                          {s.category === 'University Event / Volunteer' ? 'Нагорода' : 'за зміну'}
+                          Нагорода
                         </p>
                       </div>
                     </div>
@@ -519,7 +513,7 @@ export function WorkerView({
                     : 'bg-[#1c2541]/44 border-white/10 text-gray-400 backdrop-blur-[12px]'
                   }`}>
                   <BriefcaseIcon className="w-10 h-10 mx-auto mb-2 opacity-50 text-[#FF5722]" />
-                  <p className="text-xs font-bold">Не знайдено змін з такими фільтрами.</p>
+                  <p className="text-xs font-bold">Не знайдено івентів з такими фільтрами.</p>
                 </div>
               )}
             </div>
@@ -568,7 +562,7 @@ export function WorkerView({
               <div className="bg-[#10B981]/8 border border-[#10B981]/25 rounded-2xl p-3.5 flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0" />
                 <p className={`text-[11px] font-medium leading-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
-                  Оплата за зміну зарезервована та гарантується сервісом OneClick.
+                  Нарахування балів гарантується та координується сервісом OneClick.
                 </p>
               </div>
             </div>
@@ -584,7 +578,7 @@ export function WorkerView({
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата зміни</p>
+                    <p className={`text-[10px] uppercase tracking-wider font-bold ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Дата проведення</p>
                     <p className={`text-sm font-bold mt-0.5 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>{selectedShift.date} {getUkMonthGenitive(selectedShift.date)}</p>
                   </div>
                 </div>
@@ -606,10 +600,10 @@ export function WorkerView({
                   </div>
                   <div>
                     <p className="text-[10px] text-[#FF5722] uppercase tracking-wider font-bold">
-                      {selectedShift.category === 'University Event / Volunteer' ? 'Винагорода' : 'Виплата'}
+                      Винагорода
                     </p>
                     <p className="text-lg font-black text-[#FF5722] mt-0.5">
-                      {selectedShift.category === 'University Event / Volunteer' ? (selectedShift.volunteerReward || 'Волонтерські бали') : `${selectedShift.price} ₴`}
+                      {selectedShift.volunteerReward || `+${Math.round(selectedShift.price / 10)} балів`}
                     </p>
                   </div>
                 </div>
@@ -639,14 +633,14 @@ export function WorkerView({
 
               <div className={`border-t pt-4 ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
                 <h4 className={`text-xs font-black uppercase tracking-wider mb-2 ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Опис завдань:</h4>
-                <p className={`text-xs leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Звичайна тимчасова зміна в роздрібній торгівлі/кафе.'}</p>
+                <p className={`text-xs leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>{selectedShift.details || 'Допомога в організації університетських івентів.'}</p>
               </div>
 
               {/* Worker Reviews Section */}
               <div className={`border-t pt-4 space-y-4 ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
                 <div className="flex justify-between items-center">
                   <h4 className={`text-xs font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
-                    Відгуки працівників ({selectedShift.reviews?.length || 0})
+                    Відгуки волонтерів ({selectedShift.reviews?.length || 0})
                   </h4>
                   {selectedShift.reviews && selectedShift.reviews.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -687,7 +681,7 @@ export function WorkerView({
                     ))
                   ) : (
                     <p className={`text-xs text-center italic ${theme !== 'dark' ? 'text-[#5b4039]/60' : 'text-gray-400'}`}>
-                      Ще немає відгуків для цієї зміни.
+                      Ще немає відгуків для цього івенту.
                     </p>
                   )}
                 </div>
@@ -698,10 +692,10 @@ export function WorkerView({
                 }`}>
                 <div className="flex items-center gap-2">
                   <div className="bg-[#001B3D] text-[#FF5722] px-2 py-0.5 rounded text-[10px] font-black italic">Дія</div>
-                  <span className={`text-[11px] font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Швидкий договір ЦПХ</span>
+                  <span className={`text-[11px] font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Підтвердження участі</span>
                 </div>
                 <p className={`text-[10px] leading-snug ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                  Підпишіть цифровий договір на надання послуг за допомогою сервісу **Дія.Підпис** перед бронюванням.
+                  Підтвердіть свою особу за допомогою сервісу **Дія** перед бронюванням місця.
                 </p>
                 <label className="flex items-start gap-2.5 pt-1.5 cursor-pointer">
                   <input
@@ -711,7 +705,7 @@ export function WorkerView({
                     className="w-4.5 h-4.5 border-[#E5E7EB] rounded accent-[#FF5722] mt-0.5 shrink-0"
                   />
                   <span className={`text-[10px] font-bold select-none leading-normal ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-gray-200'}`}>
-                    Я підписую договір та погоджуюсь вийти на зміну.
+                    Я підтверджую свою участь та погоджуюсь з умовами проведення івенту.
                   </span>
                 </label>
               </div>
@@ -725,7 +719,7 @@ export function WorkerView({
                     : 'bg-[#1c2541]/45 text-gray-500 border border-white/5 cursor-not-allowed shadow-none'
                   }`}
               >
-                Відгукнутися на зміну
+                Зареєструватися на івент
               </button>
             </div>
           </div>
@@ -734,7 +728,7 @@ export function WorkerView({
         {/* 2. MY BOOKED SHIFTS TAB */}
         {activeTab === 'my-shifts' && (
           <div className="p-4 space-y-4 text-left animate-fade-in">
-            <h3 className={`text-lg font-black tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Мої зміни</h3>
+            <h3 className={`text-lg font-black tracking-tight ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Мої івенти</h3>
 
             {/* Active / History toggles */}
             <div className={`flex p-1 rounded-xl mb-4 border ${theme === 'minimalist' ? 'bg-[#f5f5f7] border-transparent shadow-inner' : theme === 'light' ? 'bg-[#f0edec] border-gray-200' : 'bg-[#121829]/40 border-white/5'}`}>
@@ -804,7 +798,7 @@ export function WorkerView({
                         </div>
                         <div className="text-right">
                           <span className={`text-base font-extrabold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
-                            {s.category === 'University Event / Volunteer' ? (s.volunteerReward || 'Волонтер') : `${s.price} ₴`}
+                            +{Math.round(s.price / 10)} балів
                           </span>
                         </div>
                       </div>
@@ -825,7 +819,7 @@ export function WorkerView({
                         <div className={`mt-3 pt-3 border-t ${theme !== 'dark' ? 'border-gray-100' : 'border-white/5'}`}>
                           {s.allowFeedback === false ? (
                             <div className="text-[10px] font-semibold text-gray-400 italic">
-                              Для цієї компанії відгуки вимкнено роботодавцем
+                              Для цієї організації відгуки вимкнено організатором
                             </div>
                           ) : s.hasFeedback ? (
                             <div className="flex items-center gap-1.5 text-[#10B981] text-[11px] font-black uppercase tracking-wider bg-[#10B981]/8 px-2.5 py-1.5 rounded-xl border border-[#10B981]/20 w-fit">
@@ -834,7 +828,7 @@ export function WorkerView({
                             </div>
                           ) : activeFeedbackShiftId === s.id ? (
                             <div className="space-y-3 mt-1">
-                              <p className={`text-[10px] font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка зміни:</p>
+                              <p className={`text-[10px] font-black uppercase tracking-wider ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Ваша оцінка івенту:</p>
                               <div className="flex gap-1.5">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <button
@@ -857,7 +851,7 @@ export function WorkerView({
                                   rows={2}
                                   value={feedbackComment}
                                   onChange={(e) => setFeedbackComment(e.target.value)}
-                                  placeholder="Поділіться враженнями від зміни (умови, команда, оплата)..."
+                                  placeholder="Поділіться враженнями від івенту (організація, команда, завдання)..."
                                   className={`w-full border rounded-2xl px-3 py-2.5 text-xs font-bold outline-none resize-none transition-all ${theme !== 'dark'
                                     ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
                                     : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
@@ -910,14 +904,14 @@ export function WorkerView({
                                 : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
                                 }`}>
                                 <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                <span>Зміна заблокована. Ви не можете розпочати її завчасно (початок {s.date} {getUkMonthGenitive(s.date)}).</span>
+                                <span>Івент заблокований. Ви не можете розпочати його завчасно (початок {s.date} {getUkMonthGenitive(s.date)}).</span>
                               </div>
                               <button
-                                onClick={() => triggerToast(`Не можна почати зміну завчасно. Вона запланована на ${s.date} ${getUkMonthGenitive(s.date)}.`)}
+                                onClick={() => triggerToast(`Не можна почати івент завчасно. Він запланований на ${s.date} ${getUkMonthGenitive(s.date)}.`)}
                                 className="w-full bg-gray-300 dark:bg-gray-800 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
                               >
                                 <Camera className="w-4 h-4" />
-                                Відсканувати QR закладу
+                                Відсканувати QR-код координатора
                               </button>
                             </>
                           ) : (
@@ -926,14 +920,14 @@ export function WorkerView({
                               className="w-full bg-gradient-to-br from-[#FF5722] to-[#e64a19] text-white py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all hover:scale-[1.01]"
                             >
                               <Camera className="w-4 h-4" />
-                              Відсканувати QR закладу
+                              Відсканувати QR-код координатора
                             </button>
                           )}
                           <button
                             onClick={() => setShowCancelModal(s.id)}
                             className="w-full border border-red-500/35 hover:border-red-500/50 bg-red-50/5 dark:bg-red-500/5 text-red-550 dark:text-red-400 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 transition-all"
                           >
-                            Відмовитись від зміни
+                            Скасувати участь
                           </button>
                         </div>
                       )}
@@ -945,14 +939,14 @@ export function WorkerView({
                             : 'bg-green-500/10 border-green-500/20 text-green-300'
                             }`}>
                             <Clock className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                            <span>Зміна триває. Не забудьте зробити Чек-аут після завершення роботи!</span>
+                            <span>Івент триває. Не забудьте зробити Чек-аут після завершення завдань!</span>
                           </div>
                           <button
                             onClick={() => setShowReportModalId(s.id)}
                             className="w-full bg-gradient-to-br from-[#10B981] to-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-98 shadow-sm transition-all"
                           >
                             <CheckCircle className="w-4 h-4" />
-                            Завершити зміну (Чек-аут)
+                            Завершити участь (Чек-аут)
                           </button>
                         </div>
                       )}
@@ -980,7 +974,7 @@ export function WorkerView({
                               >
                                 <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs uppercase tracking-wider">
                                   <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
-                                  <span>Роботодавець оскаржує виконання</span>
+                                  <span>Організатор оскаржує виконання</span>
                                 </div>
                                 <ChevronDown className={`w-4 h-4 text-red-500 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
                               </button>
@@ -1016,7 +1010,7 @@ export function WorkerView({
                       'bg-[#1c2541]/40 border-white/10 text-gray-400'
                   }`}>
                   <Calendar className="w-8 h-8 mx-auto mb-1 opacity-55 text-[#FF5722]" />
-                  <p className="text-xs font-bold">Немає змін у цьому розділі</p>
+                  <p className="text-xs font-bold">Немає івентів у цьому розділі</p>
                 </div>
               )}
             </div>
@@ -1032,10 +1026,10 @@ export function WorkerView({
               <div className="absolute -left-8 -bottom-8 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-2xl"></div>
 
               <div className="relative z-10">
-                <span className="text-[11px] font-bold text-white/70 uppercase tracking-widest">Доступний баланс</span>
+                <span className="text-[11px] font-bold text-white/70 uppercase tracking-widest">Накопичені бали (рейтинг)</span>
                 <div className="mt-2 flex items-baseline gap-1.5">
-                  <span className="text-white font-black text-4xl leading-none">{balance.toLocaleString('en-US')}.00</span>
-                  <span className="text-lg font-bold text-white/80">₴</span>
+                  <span className="text-white font-black text-4xl leading-none">{Math.round(balance / 10).toLocaleString('en-US')}</span>
+                  <span className="text-lg font-bold text-white/80">балів</span>
                 </div>
 
                 <div className="mt-7 grid grid-cols-2 gap-3">
@@ -1044,7 +1038,7 @@ export function WorkerView({
                     className="bg-[#FF5722] hover:bg-[#e64a19] text-white py-3.5 px-4 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,87,34,0.3)]"
                   >
                     <Wallet className="w-4 h-4" />
-                    Вивести
+                    Обміняти
                   </button>
                   <button
                     onClick={() => triggerToast('Історія вивантажується автоматично.')}
@@ -1066,7 +1060,7 @@ export function WorkerView({
                   <span className="text-[11px] font-bold uppercase">Нараховано</span>
                 </div>
                 <p className={`text-xl font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
-                  {transactions.filter(t => t.type === 'work').reduce((acc, curr) => acc + curr.amount, 0)} ₴
+                  {Math.round(transactions.filter(t => t.type === 'work').reduce((acc, curr) => acc + curr.amount, 0) / 10)} балів
                 </p>
                 <p className={`text-[10px] font-semibold mt-1 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Цього тижня</p>
               </div>
@@ -1078,16 +1072,16 @@ export function WorkerView({
                   <span className="text-[11px] font-bold uppercase">В обробці</span>
                 </div>
                 <p className={`text-xl font-bold ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>
-                  {shifts.filter(s => s.status === 'booked').reduce((acc, curr) => acc + curr.price, 0)} ₴
+                  {Math.round(shifts.filter(s => s.status === 'booked').reduce((acc, curr) => acc + curr.price, 0) / 10)} балів
                 </p>
-                <p className={`text-[10px] font-semibold mt-1 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Майбутні зміни</p>
+                <p className={`text-[10px] font-semibold mt-1 ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-400'}`}>Заплановані івенти</p>
               </div>
             </div>
 
             {/* Promos */}
             <div className="grid grid-cols-2 gap-3">
               <div
-                onClick={() => triggerToast("Акції дня: Отримуйте додаткові бонуси за нічні та святкові зміни! 🚀")}
+                onClick={() => triggerToast("Акції дня: Отримуйте додаткові бонуси за нічні та святкові івенти! 🚀")}
                 className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
                     : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
                   }`}
@@ -1095,20 +1089,20 @@ export function WorkerView({
                 <div className="text-left">
                   <span className="text-[10px] font-black text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">Гаряча</span>
                   <p className="text-xs font-black mt-1">Акції дня</p>
-                  <p className="text-[9px] text-gray-500 font-medium">Бонуси та доплати</p>
+                  <p className="text-[9px] text-gray-500 font-medium">Бонуси та надбавки</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center text-lg shrink-0 select-none">
                   🚀
                 </div>
               </div>
               <div
-                onClick={() => triggerToast("Приведи друга та отримай 500 ₴ після його першої зміни! 🎁")}
+                onClick={() => triggerToast("Приведи друга та отримай 50 балів після його першого івенту! 🎁")}
                 className={`border rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all cursor-pointer ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-slate-800' : theme === 'light' ? 'bg-white/85 border-[#E5E7EB] text-[#001B3D] backdrop-blur-[16px]'
                     : 'bg-[#1c2541]/45 border-white/10 text-white backdrop-blur-[16px]'
                   }`}
               >
                 <div className="text-left">
-                  <span className="text-[10px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">+500 ₴</span>
+                  <span className="text-[10px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">+50 балів</span>
                   <p className="text-xs font-black mt-1">За друга</p>
                   <p className="text-[9px] text-gray-500 font-medium">Запросити друзів</p>
                 </div>
@@ -1147,7 +1141,7 @@ export function WorkerView({
                       </div>
                       <div className="text-right">
                         <p className={`text-xs font-extrabold ${tx.amount > 0 ? 'text-[#10B981]' : (theme !== 'dark' ? 'text-[#001B3D]' : 'text-white')}`}>
-                          {tx.amount > 0 ? `+${tx.amount}` : `${tx.amount}`} ₴
+                          {tx.amount > 0 ? `+${Math.round(tx.amount / 10)}` : `${Math.round(tx.amount / 10)}`} балів
                         </p>
                         <p className={`text-[9px] uppercase font-black ${tx.status === 'completed' ? 'text-[#10B981]' : 'text-[#FF5722]'
                           }`}>
@@ -1160,7 +1154,7 @@ export function WorkerView({
                   <div className={`rounded-3xl border border-dashed p-8 text-center transition-all backdrop-blur-[12px] ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]' : theme === 'light' ? 'bg-white/80 border-[#E5E7EB] text-[#001B3D]' : 'bg-[#1c2541]/40 border-white/10 text-gray-400'
                     }`}>
                     <TrendingUp className="w-7 h-7 mx-auto mb-1 opacity-55 text-[#FF5722]" />
-                    <p className="text-xs font-bold">Історія виплат порожня</p>
+                    <p className="text-xs font-bold">Історія нарахувань балів порожня</p>
                   </div>
                 )}
               </div>
@@ -1449,16 +1443,16 @@ export function WorkerView({
                   : 'bg-[#1c2541]/45 border-white/10 shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)]'
                   } space-y-4`}>
                   <div className="text-left space-y-1">
-                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Як працює виплата грошей?</p>
+                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Як нараховуються бали?</p>
                     <p className={`text-[10px] leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                      Гроші за зміну резервуються роботодавцем заздалегідь. Оплата зараховується на ваш цифровий баланс одразу після того, як роботодавець підтвердить виконання (Чек-аут). Вивести накопичені кошти на картку будь-якого банку України можна в розділі «Гаманець».
+                      Бали за участь в івенті гарантуються організатором заздалегідь. Рейтингові бали зараховуються на ваш баланс одразу після того, як організатор підтвердить вашу участь (Чек-аут). Обміняти накопичені бали на фірмовий мерч університету або інші призи можна в розділі «Гаманець».
                     </p>
                   </div>
 
                   <div className="text-left space-y-1 pt-2 border-t border-dashed border-black/10 dark:border-white/10">
-                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Що станеться при скасуванні зміни?</p>
+                    <p className={`text-xs font-black ${theme !== 'dark' ? 'text-[#001B3D]' : 'text-white'}`}>Що станеться при скасуванні участі?</p>
                     <p className={`text-[10px] leading-relaxed ${theme !== 'dark' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
-                      Безкоштовно відмовитись від зміни можна більше ніж за 2 години до початку. Якщо до зміни залишилося менше 2 годин, то скасування вважається терміновим. У цьому випадку нараховується штраф у розмірі 250 ₴.
+                      Безкоштовно відмовитись від участі в івенті можна більше ніж за 2 години до початку. Якщо до початку залишилося менше 2 годин, то скасування вважається терміновим. У цьому випадку нараховується штраф у розмірі 25 балів рейтингу.
                     </p>
                   </div>
                 </div>
@@ -1650,7 +1644,7 @@ export function WorkerView({
         >
           {activeTab === 'my-shifts' && <div className="absolute inset-0 bg-[#FF5722]/8 rounded-[18px]"></div>}
           <Calendar className="w-5 h-5 relative z-10" />
-          <span className="text-[10px] font-bold mt-0.5 relative z-10">Зміни</span>
+          <span className="text-[10px] font-bold mt-0.5 relative z-10">Івенти</span>
         </button>
 
         <button
@@ -1720,7 +1714,7 @@ export function WorkerView({
             {/* Section 0: Custom Category/Specialty Search Input */}
             <div className="space-y-3">
               <label className={`block text-[11px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme !== 'dark' ? 'text-slate-500' : 'text-gray-400'
-                }`}>Пошук спеціальності або ролі</label>
+                }`}>Пошук напряму або ролі</label>
 
               <div className={`rounded-xl border flex items-center px-3 py-2.5 gap-2.5 transition-all ${theme === 'minimalist' || theme !== 'dark'
                 ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] focus-within:border-[#FF5722]'
@@ -1729,7 +1723,7 @@ export function WorkerView({
                 <Search className="w-4 h-4 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Введіть роль (наприклад: Бариста, Касир...)"
+                  placeholder="Введіть роль (наприклад: Волонтер, Фотограф...)"
                   value={filterCustomSearch}
                   onChange={(e) => setFilterCustomSearch(e.target.value)}
                   className={`bg-transparent text-xs w-full outline-none font-bold transition-all ${theme === 'minimalist' || theme !== 'dark' ? 'text-[#001B3D] placeholder-gray-400' : 'text-white placeholder-gray-500'
@@ -1786,9 +1780,9 @@ export function WorkerView({
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: 'all', label: 'Будь-яка' },
-                  { value: 'short', label: 'Короткі (4 - 6 год)' },
-                  { value: 'normal', label: 'Звичайні (8 - 9 год)' },
-                  { value: 'long', label: 'Довгі (10+ год)' }
+                  { value: 'short', label: 'Короткі (до 2 год)' },
+                  { value: 'normal', label: 'Середні (3 - 4 год)' },
+                  { value: 'long', label: 'Довгі (5+ год)' }
                 ].map((opt) => (
                   <button
                     key={opt.value}
@@ -1813,15 +1807,13 @@ export function WorkerView({
 
               <div className="flex flex-wrap gap-2">
                 {[
-                  'Обслуговування на касі',
-                  'Прибирання',
-                  'Збірка замовлень',
-                  'Обслуговування за прилавком',
-                  'Приготування їжі',
-                  'Розвантаження товарів',
-                  'Випічка хліба',
-                  'Викладка товарів',
-                  'Миття посуду'
+                  'Координація',
+                  'Реєстрація',
+                  'Фото / Відео',
+                  'Допомога на локації',
+                  'Супровід гостей',
+                  'Асистування',
+                  'Технічна підтримка'
                 ].map((srv) => {
                   const isSel = filterCategories.includes(srv);
                   return (

@@ -63,7 +63,7 @@ export function ArbitratorModal({
             </div>
           )}
           <p className="text-[10px] font-bold opacity-60 truncate">
-            Зміна #{shift.id.slice(0, 8).toUpperCase()} • {shift.role}
+            Івент #{shift.id.slice(0, 8).toUpperCase()} • {shift.role}
           </p>
         </div>
         <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 font-extrabold text-xs">
@@ -85,7 +85,7 @@ export function ArbitratorModal({
               <p className="text-[11px] font-bold opacity-65">{shift.company}</p>
             </div>
             <span className="text-sm font-black text-[#FF5722]">
-              {shift.price} ₴
+              {shift.volunteerReward || `+${Math.round(shift.price / 10)} балів`}
             </span>
           </div>
 
@@ -111,10 +111,10 @@ export function ArbitratorModal({
             <Info className="w-4 h-4 shrink-0 mt-0.5" />
             <span>
               {!isDisputeActive
-                ? 'Справу закрито. Кошти успішно розподілено відповідно до рішення.'
+                ? 'Справу закрито. Бали успішно нараховано/кориговано відповідно до рішення.'
                 : isUnderReview
                   ? 'Справу розглядає незалежний арбітр. Менеджер вивчає фотозвіти та аргументи сторін.'
-                  : 'Кошти за зміну заморожені на транзитному рахунку OneClick до винесення рішення.'
+                  : 'Нарахування балів за івент призупинено в системі OneClick до винесення рішення.'
               }
             </span>
           </div>
@@ -160,7 +160,7 @@ export function ArbitratorModal({
                 return (
                   <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
                     <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
-                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Виконавець' : 'Роботодавець')}
+                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Волонтер' : 'Організатор')}
                     </span>
                     <div className={bubbleStyle}>
                       {msg.text}
@@ -212,7 +212,7 @@ export function ArbitratorModal({
                 return (
                   <div key={msg.id} className={`flex flex-col ${alignStyle}`}>
                     <span className="text-[9px] text-gray-400 font-bold mb-0.5 px-1">
-                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Виконавець' : 'Роботодавець')}
+                      {isMgr ? 'Арбітр OneClick' : isMe ? 'Ви' : (isEmployer ? 'Волонтер' : 'Організатор')}
                     </span>
                     <div className={bubbleStyle}>
                       {msg.text}
@@ -241,7 +241,7 @@ export function ArbitratorModal({
                     }}
                     className="w-full bg-[#10B981] hover:bg-[#0ea975] text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Сплатити повністю ({shift.price} ₴)
+                    Нарахувати повністю ({shift.volunteerReward || `+${Math.round(shift.price / 10)} балів`})
                   </button>
                   <button
                     onClick={() => {
@@ -250,7 +250,7 @@ export function ArbitratorModal({
                     }}
                     className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    🤝 Компроміс (по 50%)
+                    🤝 Компроміс (50% балів)
                   </button>
                   <button
                     onClick={() => {
@@ -259,7 +259,7 @@ export function ArbitratorModal({
                     }}
                     className="w-full bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Скасувати зміну та повернути кошти
+                    Скасувати участь та анулювати бали
                   </button>
                   <button
                     onClick={() => handleSummonArbitrator(shift.id)}
@@ -278,8 +278,8 @@ export function ArbitratorModal({
                   <h3 className={`font-black text-sm ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
                     Передати справу на розгляд арбітру?
                   </h3>
-                  <p className={`text-[11px] leading-relaxed font-semibold ${theme === 'light' ? 'text-gray-550' : 'text-gray-405'}`}>
-                    Арбітр OneClick детально вивчить фотозвіт, коментарі та чат з роботодавцем, щоб прийняти рішення про виплату протягом 10 секунд.
+                  <p className={`text-[11px] leading-relaxed font-semibold ${theme === 'light' ? 'text-gray-550' : 'text-gray-400'}`}>
+                    Арбітр OneClick детально вивчить фотозвіт, коментарі та чат з організатором, щоб прийняти рішення про зарахування протягом 10 секунд.
                   </p>
                 </div>
 

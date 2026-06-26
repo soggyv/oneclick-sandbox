@@ -33,8 +33,8 @@ interface EmployerViewProps {
   setNewRole: React.Dispatch<React.SetStateAction<string>>;
   isRoleComboOpen: boolean;
   setIsRoleComboOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  newCategory: 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer';
-  setNewCategory: React.Dispatch<React.SetStateAction<'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer'>>;
+  newCategory: 'Допомога' | 'Кураторство' | 'Наука' | 'University Event / Volunteer';
+  setNewCategory: React.Dispatch<React.SetStateAction<'Допомога' | 'Кураторство' | 'Наука' | 'University Event / Volunteer'>>;
   newPrice: string;
   setNewPrice: React.Dispatch<React.SetStateAction<string>>;
   newDate: string;
@@ -173,13 +173,13 @@ export function EmployerView({
                   : 'bg-[#1c2541]/45 border-white/10 shadow-md backdrop-blur-[16px]'
               } flex items-center justify-between`}>
               <div>
-                <p className={`text-[10px] uppercase font-bold ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Депозит підприємства</p>
-                <h4 className={`text-xl font-black mt-0.5 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{employerBalance.toLocaleString()} ₴</h4>
+                <p className={`text-[10px] uppercase font-bold ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Депозит організації (бали)</p>
+                <h4 className={`text-xl font-black mt-0.5 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>{Math.round(employerBalance / 10).toLocaleString()} балів</h4>
               </div>
               {employerFrozenBalance > 0 ? (
                 <div className="text-right">
-                  <p className="text-[10px] uppercase font-black text-[#FF9500]">Заморожено (Сейф)</p>
-                  <h4 className="text-sm font-black mt-0.5 text-[#FF9500]">{employerFrozenBalance.toLocaleString()} ₴</h4>
+                  <p className="text-[10px] uppercase font-black text-[#FF9500]">Зарезервовано (Сейф)</p>
+                  <h4 className="text-sm font-black mt-0.5 text-[#FF9500]">{Math.round(employerFrozenBalance / 10).toLocaleString()} балів</h4>
                 </div>
               ) : (
                 <span className="text-[9px] font-black uppercase bg-[#10B981]/8 text-[#10B981] px-2 py-1 rounded border border-[#10B981]/25">
@@ -202,7 +202,7 @@ export function EmployerView({
                   <h4 className={`text-xl font-black leading-none ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
                     {totalPublished}
                   </h4>
-                  <span className="text-[10px] text-green-500 font-bold">Зміни 📋</span>
+                  <span className="text-[10px] text-green-500 font-bold">Івенти 📋</span>
                 </div>
               </div>
 
@@ -213,12 +213,12 @@ export function EmployerView({
                     ? 'bg-white border-slate-200 shadow-sm'
                     : 'bg-[#1c2541]/45 border-white/10 shadow-md backdrop-blur-[16px]'
               }`}>
-                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-450'}`}>Всього витрачено</p>
+                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-450'}`}>Рейтингових балів видано</p>
                 <div className="flex justify-between items-end mt-1.5">
                   <h4 className={`text-xl font-black leading-none ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-                    {totalSpent.toLocaleString()} ₴
+                    {Math.round(totalSpent / 10).toLocaleString()} балів
                   </h4>
-                  <span className="text-[10px] text-[#FF5722] font-black">Виплати 💰</span>
+                  <span className="text-[10px] text-[#FF5722] font-black">Рейтинг 🎓</span>
                 </div>
               </div>
 
@@ -229,7 +229,7 @@ export function EmployerView({
                     ? 'bg-white border-slate-200 shadow-sm'
                     : 'bg-[#1c2541]/45 border-white/10 shadow-md backdrop-blur-[16px]'
               }`}>
-                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-460'}`}>Заброньовано зміни</p>
+                <p className={`text-[10px] uppercase font-black tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-460'}`}>Заброньовано івентів</p>
                 <div className="flex justify-between items-end mt-1.5">
                   <h4 className={`text-xl font-black leading-none ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
                     {activeShifts}
@@ -265,8 +265,8 @@ export function EmployerView({
               }`}>
               <div className="flex justify-between items-center mb-3">
                 <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Покриття змін</h4>
-                  <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Співвідношення опублікованих та зайнятих змін</p>
+                  <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Заповненість івентів</h4>
+                  <p className="text-[9px] text-gray-400 font-semibold mt-0.5">Співвідношення опублікованих та зайнятих івентів</p>
                 </div>
                 <span className="text-sm font-black text-[#FF5722]">{coveragePct}%</span>
               </div>
@@ -308,7 +308,7 @@ export function EmployerView({
                   <div className="flex-1">
                     <div className="flex justify-between text-[11px] font-bold">
                       <span className={theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}>Перегляд контактів та резюме</span>
-                      <span className="text-gray-450">48 виконавців</span>
+                      <span className="text-gray-450">48 волонтерів</span>
                     </div>
                     <div className="w-full bg-gray-250/10 h-1.5 rounded-full mt-1">
                       <div className="bg-[#FF9500] h-full rounded-full" style={{ width: '48%' }} />
@@ -342,8 +342,8 @@ export function EmployerView({
               <div className="flex items-start gap-2.5">
                 <Info className="w-4.5 h-4.5 text-[#FF5722] shrink-0 mt-0.5" />
                 <div className="text-[10px] leading-relaxed">
-                  <strong>Швидкий звіт:</strong> Середній рейтинг залучених виконавців становить <span className="text-[#FF5722] font-black">4.92 ★</span>. 
-                  Усі виплати проходять через Сейф-Escrow. Для старту роботи надайте виконавцю унікальний QR-код.
+                  <strong>Швидкий звіт:</strong> Середній рейтинг залучених волонтерів становить <span className="text-[#FF5722] font-black">4.92 ★</span>. 
+                  Усі бали нараховуються автоматично після підтвердження. Для старту роботи надайте волонтеру унікальний QR-код.
                 </div>
               </div>
             </div>
@@ -356,7 +356,7 @@ export function EmployerView({
         {b2bTab === 'shifts' && (
           <div className="p-4 space-y-4 text-left animate-fade-in">
             <h2 className={`text-base font-black uppercase tracking-tight ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-              Управління змінами
+              Управління івентами
             </h2>
 
             {/* Sub-tabs for shifts status filtering */}
@@ -406,7 +406,7 @@ export function EmployerView({
                     }`}
                   >
                     {opt === 'completed' && 'Успішно виконано'}
-                    {opt === 'expired' && 'Не знайдено виконавця'}
+                    {opt === 'expired' && 'Не знайдено волонтера'}
                   </button>
                 ))}
               </div>
@@ -416,7 +416,7 @@ export function EmployerView({
             <div className="space-y-3">
               {filteredShiftsList.length === 0 ? (
                 <div className={`p-8 rounded-2xl border text-center ${theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-250' : 'bg-[#1c2541]/30 border-white/5'}`}>
-                  <p className="text-xs font-bold text-gray-400">Змін у цій категорії не знайдено.</p>
+                  <p className="text-xs font-bold text-gray-400">Івентів у цій категорії не знайдено.</p>
                 </div>
               ) : (
                 filteredShiftsList.map((shift) => (
@@ -442,13 +442,13 @@ export function EmployerView({
                               ? 'bg-amber-500/10 text-amber-500'
                               : 'bg-blue-500/10 text-blue-500'
                           }`}>
-                          {shift.status === 'open' && 'Відкрита зміна'}
+                          {shift.status === 'open' && 'Відкритий івент'}
                           {shift.status === 'booked' && 'Заброньовано'}
-                          {shift.status === 'in_progress' && 'В процесі виконання'}
-                          {shift.status === 'pending_approval' && 'Очікує виплати'}
+                          {shift.status === 'in_progress' && 'В процесі проведення'}
+                          {shift.status === 'pending_approval' && 'Очікує зарахування'}
                           {shift.status === 'disputed' && 'Відкрито Спір'}
-                          {shift.status === 'completed' && 'Успішно виконано'}
-                          {shift.status === 'expired' && 'Не знайдено виконавця'}
+                          {shift.status === 'completed' && 'Успішно проведено'}
+                          {shift.status === 'expired' && 'Не знайдено волонтера'}
                         </span>
                         <h4 className={`text-sm font-black mt-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
                           {shift.role}
@@ -456,7 +456,7 @@ export function EmployerView({
                         <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{shift.company} · {shift.category}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-black text-[#FF5722]">{shift.price} ₴</span>
+                        <span className="text-sm font-black text-[#FF5722]">{shift.volunteerReward || `${Math.round(shift.price / 10)} балів`}</span>
                         <p className="text-[9px] text-gray-400 mt-0.5">{shift.duration}</p>
                       </div>
                     </div>
@@ -497,7 +497,7 @@ export function EmployerView({
                           <div className="flex items-start gap-2">
                             <Info className="w-4 h-4 text-[#FF5722] shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-[10px] font-bold text-[#FF5722]">Виконавець завершив зміну</p>
+                              <p className="text-[10px] font-bold text-[#FF5722]">Волонтер завершив участь</p>
                               {shift.workComment && <p className="text-[9px] text-gray-400 mt-0.5">Коментар: &quot;{shift.workComment}&quot;</p>}
                             </div>
                           </div>
@@ -507,7 +507,7 @@ export function EmployerView({
                               className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all active:scale-95"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              Підтвердити оплату
+                              Підтвердити бали
                             </button>
                             <button
                               onClick={() => setShowDisputeModalId(shift.id)}
@@ -541,14 +541,14 @@ export function EmployerView({
           <div className="p-4 space-y-4 text-left animate-fade-in">
             <div className="flex justify-between items-center mb-1">
               <h2 className={`text-base font-black uppercase tracking-tight ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-                Нова зміна вручну
+                Новий івент вручну
               </h2>
             </div>
 
             <form onSubmit={handleCreateShift} className="space-y-4">
               {/* Select branch drop down */}
               <div>
-                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>Оберіть філію компанії</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>Оберіть кафедру / підрозділ</label>
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
@@ -567,12 +567,12 @@ export function EmployerView({
               </div>
 
               <div className="relative role-combobox-container">
-                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-355'}`}>Посада / Роль виконавця *</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-355'}`}>Посада / Роль волонтера *</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     required
-                    placeholder="Напр: Бариста, Касир"
+                    placeholder="Напр: Координатор, Помічник"
                     value={newRole}
                     onChange={(e) => {
                       setNewRole(e.target.value);
@@ -586,7 +586,7 @@ export function EmployerView({
                       }`}
                   />
                 </div>
-                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Введіть назву вакансії, наприклад: Бариста, Касир, Вантажник.</p>
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Введіть назву волонтерської ролі, наприклад: Координатор, Асистент, Фотограф.</p>
 
                 {isRoleComboOpen && (
                   <div className={`absolute left-0 right-0 z-30 mt-1 border rounded-xl shadow-lg max-h-40 overflow-y-auto no-scrollbar ${
@@ -613,40 +613,40 @@ export function EmployerView({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-350'}`}>Категорія роботи</label>
+                  <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-350'}`}>Категорія заходу</label>
                   <select
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer')}
+                    onChange={(e) => setNewCategory(e.target.value as 'Допомога' | 'Кураторство' | 'Наука' | 'University Event / Volunteer')}
                     className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${
                       theme === 'minimalist' || theme === 'light'
                         ? 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
                         : 'bg-[#121829]/50 border-[#2a3454] text-white'
                       }`}
                   >
-                    <option value="Кава">Кава</option>
-                    <option value="Рітейл">Рітейл</option>
-                    <option value="Склади">Склади</option>
-                    <option value="University Event / Volunteer">University Event / Volunteer</option>
+                    <option value="Допомога">Організація / Допомога</option>
+                    <option value="Кураторство">Кураторство / Менторство</option>
+                    <option value="Наука">Наука / Конференції</option>
+                    <option value="University Event / Volunteer">Університетський захід</option>
                   </select>
-                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Сфера діяльності.</p>
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Напрям активності волонтерів.</p>
                 </div>
                 <div>
                   <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-355'}`}>
-                    {newCategory === 'University Event / Volunteer' ? 'Волонтерська винагорода *' : 'Оплата (₴) *'}
+                    Волонтерська винагорода *
                   </label>
                   <input
-                    type={newCategory === 'University Event / Volunteer' ? 'text' : 'number'}
+                    type="text"
                     required
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    placeholder={newCategory === 'University Event / Volunteer' ? 'Напр: 50 балів, Футболка' : '1200'}
+                    placeholder="Напр: +50 балів рейтингу"
                     className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${
                       theme === 'minimalist' || theme === 'light'
                         ? 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
                         : 'bg-[#121829]/50 border-[#2a3454] text-white'
                       }`}
                   />
-                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Оплата за зміну.</p>
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Волонтерська винагорода у балах або мерчі.</p>
                 </div>
               </div>
 
@@ -668,7 +668,7 @@ export function EmployerView({
                       </option>
                     ))}
                   </select>
-                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>День виходу на зміну.</p>
+                  <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>День проведення івенту.</p>
                 </div>
                 <div>
                   <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>Години</label>
@@ -702,7 +702,7 @@ export function EmployerView({
                       : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
                     }`}
                 />
-                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Куди саме потрібно підійти виконавцю.</p>
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Куди саме потрібно підійти волонтеру.</p>
               </div>
 
               <div>
@@ -712,18 +712,18 @@ export function EmployerView({
                   rows={3}
                   value={newDetails}
                   onChange={(e) => setNewDetails(e.target.value)}
-                  placeholder="Опишіть завдання зміни (напр., викладка товару, приготування напоїв)"
+                  placeholder="Опишіть завдання івенту (напр., допомога на ресепшені, координація гостей)"
                   className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none resize-none transition-all ${
                     theme === 'minimalist' || theme === 'light'
                       ? 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
                       : 'bg-[#121829]/50 border-[#2a3454] text-white focus:bg-[#121829] focus:border-[#FF5722]'
                     }`}
                 />
-                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Детально опишіть завдання зміни, дрес-код чи особливі вимоги.</p>
+                <p className={`text-[9px] mt-1.5 italic ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>Детально опишіть завдання івенту, форму одягу чи особливі вимоги.</p>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>Тип підтвердження виконавця</label>
+                <label className={`block text-[10px] font-black uppercase mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>Спосіб підтвердження волонтера</label>
                 <select
                   value={requiresScreening ? 'screening' : 'instant'}
                   onChange={(e) => setRequiresScreening(e.target.value === 'screening')}
@@ -738,8 +738,8 @@ export function EmployerView({
                 </select>
                 <p className={`text-[9px] mt-1.5 italic leading-normal ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400' : 'text-gray-400'}`}>
                   {requiresScreening
-                    ? 'Ви зможете перевірити профіль, рейтинг кандидатів та їх відгуки перед затвердженням на зміну.'
-                    : 'Виконавець зможе зайняти зміну в один клік без попереднього відбору.'}
+                    ? 'Ви зможете перевірити профіль, рейтинг кандидатів та їх відгуки перед затвердженням на івент.'
+                    : 'Волонтер зможе зайняти місце на івенті в один клік без попереднього відбору.'}
                 </p>
               </div>
 
@@ -752,7 +752,7 @@ export function EmployerView({
                 }`}
               >
                 <PlusCircle className="w-4 h-4" />
-                Опублікувати зміну
+                Опублікувати івент
               </button>
             </form>
           </div>
@@ -764,7 +764,7 @@ export function EmployerView({
         {b2bTab === 'wallet' && (
           <div className="p-4 space-y-4 text-left animate-fade-in">
             <h2 className={`text-base font-black uppercase tracking-tight ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-              Корпоративний гаманець
+              Резервний фонд балів
             </h2>
 
             {/* Escrow overview cards */}
@@ -778,7 +778,7 @@ export function EmployerView({
               }`}>
                 <p className="text-[10px] uppercase font-bold text-gray-400">Доступно</p>
                 <h3 className={`text-lg font-black mt-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-                  {employerBalance.toLocaleString()} ₴
+                  {Math.round(employerBalance / 10).toLocaleString()} балів
                 </h3>
                 <span className="text-[8px] bg-green-500/10 text-green-500 px-1.5 py-0.5 rounded mt-2 inline-block font-bold">Сейф активований</span>
               </div>
@@ -792,9 +792,9 @@ export function EmployerView({
               }`}>
                 <p className="text-[10px] uppercase font-bold text-gray-400">Утримано (Escrow)</p>
                 <h3 className="text-lg font-black mt-1 text-[#FF9500]">
-                  {employerFrozenBalance.toLocaleString()} ₴
+                  {Math.round(employerFrozenBalance / 10).toLocaleString()} балів
                 </h3>
-                <span className="text-[8px] bg-[#FF9500]/10 text-[#FF9500] px-1.5 py-0.5 rounded mt-2 inline-block font-bold">Гарантія оплати</span>
+                <span className="text-[8px] bg-[#FF9500]/10 text-[#FF9500] px-1.5 py-0.5 rounded mt-2 inline-block font-bold">Гарантія нарахування</span>
               </div>
             </div>
 
@@ -807,13 +807,13 @@ export function EmployerView({
                   : 'bg-[#1c2541]/40 border-white/5'
             }`}>
               <h3 className={`text-xs font-black uppercase tracking-wider mb-3 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-                Миттєве поповнення рахунку
+                Виділення балів з бюджету університету
               </h3>
               <div className="space-y-3.5">
                 <div>
-                  <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>Оберіть або введіть суму (₴)</label>
+                  <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>Оберіть або введіть кількість балів</label>
                   <div className="flex gap-2 mb-2">
-                    {['10000', '25000', '50000'].map(val => (
+                    {['1000', '2500', '5000'].map(val => (
                       <button
                         key={val}
                         type="button"
@@ -828,7 +828,7 @@ export function EmployerView({
                               : 'bg-[#1c2541]/50 border-white/5 text-white'
                         }`}
                       >
-                        {parseInt(val).toLocaleString()} ₴
+                        {parseInt(val).toLocaleString()} балів
                       </button>
                     ))}
                   </div>
@@ -836,7 +836,7 @@ export function EmployerView({
                     type="number"
                     value={depositAmountInput}
                     onChange={(e) => setDepositAmountInput(e.target.value)}
-                    placeholder="Інша сума"
+                    placeholder="Інша кількість"
                     className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-bold outline-none ${
                       theme === 'minimalist' || theme === 'light'
                         ? 'bg-white border-slate-200 text-slate-850 focus:border-slate-400'
@@ -846,7 +846,7 @@ export function EmployerView({
                 </div>
 
                 <button
-                  onClick={() => handleDeposit(Number(depositAmountInput || 0))}
+                  onClick={() => handleDeposit(Number(depositAmountInput || 0) * 10)}
                   className={`w-full text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
                     theme === 'minimalist'
                       ? 'bg-slate-900 hover:bg-slate-800'
@@ -854,7 +854,7 @@ export function EmployerView({
                   }`}
                 >
                   <Wallet className="w-4 h-4" />
-                  Поповнити корпоративний сейф
+                  Поповнити резервний фонд балів
                 </button>
               </div>
             </div>
@@ -917,7 +917,7 @@ export function EmployerView({
                         <p className="text-[9px] text-gray-400 font-semibold">{tx.date}</p>
                       </div>
                       <span className={`font-black ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {tx.amount > 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()} ₴
+                        {tx.amount > 0 ? `+${Math.round(tx.amount / 10).toLocaleString()}` : Math.round(tx.amount / 10).toLocaleString()} балів
                       </span>
                     </div>
                   ))
@@ -952,12 +952,12 @@ export function EmployerView({
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className={`text-sm font-black truncate ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
-                  {companyName || 'ТОВ "Організатор"'}
+                  {companyName || 'Організатор заходів'}
                 </h3>
-                <p className="text-[10px] text-gray-400 font-bold truncate mt-0.5">{companyDetails || 'ЄДРПОУ 12345678'}</p>
+                <p className="text-[10px] text-gray-400 font-bold truncate mt-0.5">{companyDetails || 'Код підрозділу 12345678'}</p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className="text-[9px] font-bold bg-[#FF5722]/10 text-[#FF5722] px-2 py-0.5 rounded border border-[#FF5722]/20">
-                    B2B Портал
+                    Портал Організатора
                   </span>
                   <span className="text-[9px] font-bold bg-green-500/10 text-green-500 px-2 py-0.5 rounded">
                     Верифіковано
@@ -986,8 +986,8 @@ export function EmployerView({
             {/* Dynamic Branch Manager CRUD */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
-                  Філії та Локації ({branches.length})
+                <h4 className={`text-xs font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-855' : 'text-white'}`}>
+                  Кафедри та Локації ({branches.length})
                 </h4>
               </div>
 
@@ -1024,12 +1024,12 @@ export function EmployerView({
               {/* Inline Branch Add Form */}
               <div className={`p-4 rounded-2xl border text-xs space-y-3.5 ${theme === 'minimalist' || theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#121829]/50 border-white/5'}`}>
                 <h5 className={`text-[10px] font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>
-                  Додати нову філію
+                  Додати нову кафедру/локацію
                 </h5>
                 <div className="space-y-2">
                   <input
                     type="text"
-                    placeholder="Назва (напр. Aroma Kava Поділ)"
+                    placeholder="Назва (напр. Кафедра АСОУ, Деканат ФІОТ)"
                     value={newBranchName}
                     onChange={(e) => setNewBranchName(e.target.value)}
                     className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none ${
@@ -1038,7 +1038,7 @@ export function EmployerView({
                   />
                   <input
                     type="text"
-                    placeholder="Адреса (напр. Київ, вул. Спаська, 5)"
+                    placeholder="Напр: Корпус 18, ауд. 405"
                     value={newBranchAddress}
                     onChange={(e) => setNewBranchAddress(e.target.value)}
                     className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none ${
@@ -1068,7 +1068,7 @@ export function EmployerView({
                     theme === 'minimalist' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-[#001B3D]'
                   }`}
                 >
-                  Зберегти філію в хмарі
+                  Зберегти кафедру/локацію
                 </button>
               </div>
             </div>
@@ -1130,7 +1130,7 @@ export function EmployerView({
             }`}></div>
           )}
           <Calendar className="w-5 h-5 relative z-10" />
-          <span className="text-[8px] font-black uppercase tracking-wider mt-1 relative z-10">Зміни</span>
+          <span className="text-[8px] font-black uppercase tracking-wider mt-1 relative z-10">Івенти</span>
         </div>
 
         {/* Tab 3: Create Shift */}

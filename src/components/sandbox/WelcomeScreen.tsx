@@ -17,8 +17,8 @@ interface WelcomeScreenProps {
   setRegCompanyEdrpou: React.Dispatch<React.SetStateAction<string>>;
   regCompanyAddress: string;
   setRegCompanyAddress: React.Dispatch<React.SetStateAction<string>>;
-  regCompanyCategory: 'Кава' | 'Рітейл' | 'Склади';
-  setRegCompanyCategory: React.Dispatch<React.SetStateAction<'Кава' | 'Рітейл' | 'Склади'>>;
+  regCompanyCategory: 'Допомога' | 'Кураторство' | 'Наука';
+  setRegCompanyCategory: React.Dispatch<React.SetStateAction<'Допомога' | 'Кураторство' | 'Наука'>>;
   tempPhone: string;
   setTempPhone: React.Dispatch<React.SetStateAction<string>>;
   tempName: string;
@@ -137,19 +137,19 @@ export function WelcomeScreen({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                        Виконавець
+                        Студент / Волонтер
                       </span>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
                         regRole === 'worker' ? 'bg-[#FF5722]/15 text-[#FF5722]' : 'bg-gray-200 dark:bg-slate-800 text-gray-500'
                       }`}>
-                        Шукач (B2C)
+                        Студент
                       </span>
                     </div>
                     <h3 className={`text-sm font-bold mt-1 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                      Шукаю підробіток та зміни
+                      Шукаю волонтерства та заходи
                     </h3>
                     <p className={`text-[11px] font-semibold mt-1 leading-normal ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'}`}>
-                      Вільний графік, швидка оплата та зміни поруч із вашим домом.
+                      Накопичуй години практики, отримуй додаткові бали до рейтингу та корисний студентський мерч.
                     </p>
                   </div>
                 </button>
@@ -176,19 +176,19 @@ export function WelcomeScreen({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className={`text-xs font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                        Роботодавець
+                        Організатор / Деканат
                       </span>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
                         regRole === 'employer' ? 'bg-[#001B3D]/15 text-[#001B3D] dark:text-[#38bdf8]' : 'bg-gray-200 dark:bg-slate-800 text-gray-500'
                       }`}>
-                        Бізнес (B2B)
+                        Організатор (Деканат / Студрада)
                       </span>
                     </div>
                     <h3 className={`text-sm font-bold mt-1 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                      Шукаю виконавців на зміни
+                      Шукаю помічників на заходи
                     </h3>
                     <p className={`text-[11px] font-semibold mt-1 leading-normal ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-gray-400'}`}>
-                      Створення замовлень за 1 хвилину, доступ до перевірених людей, безпечна оплата.
+                      Швидка організація волонтерів, облік годин через QR-коди та залучення студентської спільноти.
                     </p>
                   </div>
                 </button>
@@ -241,7 +241,7 @@ export function WelcomeScreen({
               {/* B2C Worker Login Options */}
               <div className="text-center space-y-2 mb-4">
                 <div className="inline-block bg-[#FF5722]/10 text-[#FF5722] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                  Вхід для Виконавця
+                  Вхід для Студента / Волонтера
                 </div>
                 <p className={`text-xs font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
                   Оберіть зручний спосіб підтвердження
@@ -263,7 +263,7 @@ export function WelcomeScreen({
                 className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all bg-transparent border-[#FF5722] text-[#FF5722] hover:bg-[#FF5722]/5 shadow-[0_6px_20px_rgba(255,87,34,0.1)] active:scale-[0.98] cursor-pointer"
               >
                 <Phone className="w-4 h-4" />
-                За номером телефону
+                За номером студентського квитка
               </button>
 
               {/* Back Button */}
@@ -287,22 +287,22 @@ export function WelcomeScreen({
         <div className="flex-1 flex flex-col justify-center space-y-4 my-auto animate-fade-in text-left">
           <div className="space-y-1">
             <h2 className={`text-xl font-black tracking-tight leading-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-              Реєстрація компанії 🏢
+              Реєстрація осередку / організації 🏛️
             </h2>
             <p className={`text-[11px] font-semibold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-              Вкажіть юридичні дані вашого бізнесу для публікації змін та блокування виплат.
+              Вкажіть дані вашого студентського осередку, кафедри або факультету для публікації івентів.
             </p>
           </div>
 
           <form onSubmit={handleRegisterCompanySubmit} className="space-y-3 pt-1">
             <div className="space-y-0.5">
               <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
-                Назва компанії або бренду *
+                Назва організації або кафедри *
               </label>
               <input
                 type="text"
                 required
-                placeholder="Наприклад: Кав'ярня «OneClick Coffee»"
+                placeholder="Наприклад: Студрада ФІОТ, Деканат ТЕФ"
                 value={regCompanyName}
                 onChange={(e) => setRegCompanyName(e.target.value)}
                 className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
@@ -311,7 +311,7 @@ export function WelcomeScreen({
 
             <div className="space-y-0.5">
               <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
-                Код ЄДРПОУ (8 цифр) *
+                Код підрозділу або ID (8 цифр) *
               </label>
               <input
                 type="text"
@@ -326,12 +326,12 @@ export function WelcomeScreen({
 
             <div className="space-y-0.5">
               <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
-                Юридична / фактична адреса *
+                Розташування корпусу / кабінету *
               </label>
               <input
                 type="text"
                 required
-                placeholder="Київ, вул. Хрещатик, 15"
+                placeholder="Наприклад: Корпус 18, ауд. 405"
                 value={regCompanyAddress}
                 onChange={(e) => setRegCompanyAddress(e.target.value)}
                 className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
@@ -340,16 +340,16 @@ export function WelcomeScreen({
 
             <div className="space-y-0.5">
               <label className={`text-[9px] uppercase font-black tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-gray-300'}`}>
-                Основна сфера діяльності
+                Тип організації
               </label>
               <select
                 value={regCompanyCategory}
-                onChange={(e) => setRegCompanyCategory(e.target.value as 'Кава' | 'Рітейл' | 'Склади')}
+                onChange={(e) => setRegCompanyCategory(e.target.value as 'Допомога' | 'Кураторство' | 'Наука')}
                 className="w-full border rounded-xl px-4 py-2.5 text-xs font-semibold outline-none bg-white/70 dark:bg-[#121829]/50 border-[#E5E7EB] dark:border-[#2a3454] text-[#001B3D] dark:text-white focus:border-[#FF5722] transition-colors"
               >
-                <option value="Кава">Кава та ресторани</option>
-                <option value="Рітейл">Роздрібна торгівля</option>
-                <option value="Склади">Склади та логістика</option>
+                <option value="Допомога">Студентська рада / Студрада</option>
+                <option value="Кураторство">Деканат / Кафедра</option>
+                <option value="Наука">Волонтерський / Науковий сектор</option>
               </select>
             </div>
 
@@ -357,7 +357,7 @@ export function WelcomeScreen({
               type="submit"
               className="w-full bg-[#001B3D] hover:bg-black text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(0,27,61,0.25)] active:scale-[0.98] transition-all mt-4"
             >
-              Завершити реєстрацію компанії
+              Завершити реєстрацію підрозділу
             </button>
             <button
               type="button"
@@ -390,10 +390,10 @@ export function WelcomeScreen({
               <ArrowLeft className="w-4 h-4" /> Назад
             </button>
             <h2 className={`text-2xl font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-              Введіть дані
+              Вхід для студента
             </h2>
             <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-              Створіть свій особистий кабінет OneClick
+              Створіть або увійдіть у свій профіль волонтера
             </p>
           </div>
 
@@ -416,20 +416,20 @@ export function WelcomeScreen({
 
             <div>
               <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-                Номер телефону
+                Номер студентського квитка
               </label>
               <div className="relative flex">
                 <span className={`flex items-center justify-center border border-r-0 rounded-l-xl px-3 text-xs font-bold ${theme === 'light'
                   ? 'bg-gray-50 border-[#E5E7EB] text-[#001B3D]'
                   : 'bg-[#121829]/80 border-[#2a3454] text-gray-400'
                   }`}>
-                  +380
+                  KB
                 </span>
                 <input
                   type="tel"
-                  placeholder="67 123 45 67"
+                  placeholder="12345678"
                   value={tempPhone}
-                  onChange={(e) => setTempPhone(e.target.value.replace(/\D/g, '').substring(0, 9))}
+                  onChange={(e) => setTempPhone(e.target.value.replace(/\D/g, '').substring(0, 8))}
                   className={`w-full border rounded-r-xl px-4 py-3 text-xs font-bold outline-none ${theme === 'light'
                     ? 'bg-white border-[#E5E7EB] text-[#001B3D]'
                     : 'bg-[#121829]/50 border-[#2a3454] text-white'
@@ -444,20 +444,20 @@ export function WelcomeScreen({
                   triggerToast(`Будь ласка, введіть Ваше ім'я!`);
                   return;
                 }
-                if (tempPhone.length < 9) {
-                  triggerToast("Введіть коректний номер телефону!");
+                if (tempPhone.length < 8) {
+                  triggerToast("Введіть 8-значний номер студентського квитка!");
                   return;
                 }
                 const code = String(Math.floor(1000 + Math.random() * 9000));
                 setExpectedSmsCode(code);
                 setAuthStep('phone-verify');
                 setTimeout(() => {
-                  triggerToast(`💬 Тестовий SMS-код підтвердження: ${code}`);
+                  triggerToast(`💬 Код підтвердження з пошти: ${code}`);
                 }, 1000);
               }}
               className="w-full bg-[#FF5722] hover:bg-[#e64a19] text-white py-4 rounded-2xl text-xs font-black uppercase tracking-wider shadow-[0_6px_20px_rgba(255,87,34,0.25)] active:scale-[0.98] transition-all mt-4"
             >
-              Отримати код у SMS
+              Отримати код на пошту
             </button>
           </div>
         </div>
@@ -477,14 +477,14 @@ export function WelcomeScreen({
               Підтвердження
             </h2>
             <p className={`text-xs font-semibold mt-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-              Ми надіслали SMS із кодом на номер +380 {tempPhone.substring(0, 2)} {tempPhone.substring(2, 5)} {tempPhone.substring(5, 9)}
+              Код надіслано на вашу корпоративну пошту для квитка KB {tempPhone}
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className={`block text-[10px] font-bold uppercase mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
-                4-значний SMS-код
+                4-значний код з пошти
               </label>
               <input
                 type="text"
@@ -499,10 +499,10 @@ export function WelcomeScreen({
             <button
               onClick={() => {
                 if (smsCode !== expectedSmsCode && smsCode !== '4815') {
-                  triggerToast("Неправильний код з SMS!");
+                  triggerToast("Неправильний код підтвердження!");
                   return;
                 }
-                const formattedPhone = `+380 ${tempPhone.substring(0, 2)} ${tempPhone.substring(2, 5)} ${tempPhone.substring(5, 9)}`;
+                const formattedPhone = `KB ${tempPhone}`;
                 handleLoginSuccess(tempName, formattedPhone, false);
                 triggerToast(`Ласкаво просимо, ${tempName}! 🚀`);
               }}
@@ -516,7 +516,7 @@ export function WelcomeScreen({
                 onClick={() => {
                   const code = String(Math.floor(1000 + Math.random() * 9000));
                   setExpectedSmsCode(code);
-                  triggerToast(`💬 Новий тестовий SMS-код підтвердження: ${code}`);
+                  triggerToast(`💬 Новий код підтвердження: ${code}`);
                 }}
                 className="text-[11px] font-bold text-[#FF5722] hover:underline"
               >

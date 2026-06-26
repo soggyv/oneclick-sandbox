@@ -231,9 +231,9 @@ export default function B2BAuthPage() {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
-            OneClick <span className="text-xs font-black uppercase bg-orange-500/10 text-[#FF5722] px-2 py-0.5 rounded border border-orange-500/25">B2B Business</span>
+            OneClick <span className="text-xs font-black uppercase bg-orange-500/10 text-[#FF5722] px-2 py-0.5 rounded border border-orange-500/25">University</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-2 font-medium">Кабінет Організатора Змін & Волонтерства</p>
+          <p className="text-xs text-slate-400 mt-2 font-medium">Кабінет Організатора Івентів & Волонтерства</p>
         </div>
 
         {/* STEP 1: AUTHENTICATION */}
@@ -259,10 +259,10 @@ export default function B2BAuthPage() {
 
             <div className="text-center space-y-1">
               <h2 className="text-lg font-bold text-white">
-                {isRegistering ? 'Реєстрація компанії' : 'Вхід до кабінету'}
+                {isRegistering ? 'Реєстрація організації' : 'Вхід до кабінету'}
               </h2>
               <p className="text-xs text-slate-400">
-                {isRegistering ? 'Створіть кабінет для запуску бета-тесту події' : 'Увійдіть під своїми корпоративними даними'}
+                {isRegistering ? 'Створіть кабінет для запуску бета-тесту івентів' : 'Увійдіть за допомогою своїх облікових даних'}
               </p>
             </div>
 
@@ -391,12 +391,12 @@ export default function B2BAuthPage() {
           <form onSubmit={handleCompanySubmit} className="space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-lg font-bold text-white">Профіль організації</h2>
-              <p className="text-xs text-slate-400">Налаштування кабінету для волонтерських або бізнес заходів</p>
+              <p className="text-xs text-slate-400">Налаштування кабінету для волонтерських та студентських заходів</p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Назва Компанії / Організації *</label>
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Назва Організації / Підрозділу *</label>
                 <div className="relative">
                   <Building className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
@@ -404,7 +404,7 @@ export default function B2BAuthPage() {
                     required
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Напр: Студентська Рада ОНУ"
+                    placeholder="Напр: Студрада ФІОТ, Деканат KPI"
                     className="w-full bg-white/[0.02] border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-white placeholder-slate-500 outline-none transition-all focus:border-[#FF5722] focus:bg-white/[0.04]"
                   />
                 </div>
@@ -481,7 +481,7 @@ export default function B2BAuthPage() {
                 {isRegistering ? 'Вітаємо! Кабінет створено' : 'Успішний вхід'}
               </h2>
               <p className="text-xs text-slate-400">
-                {isRegistering ? 'Ви успішно підключилися до системи OneClick B2B.' : 'Раді знову бачити вас!'}
+                {isRegistering ? 'Ви успішно підключилися до системи OneClick University.' : 'Раді знову бачити вас!'}
               </p>
             </div>
 

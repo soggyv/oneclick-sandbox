@@ -32,7 +32,7 @@ export function useSandbox() {
   const [regCompanyName, setRegCompanyName] = useState<string>('');
   const [regCompanyEdrpou, setRegCompanyEdrpou] = useState<string>('');
   const [regCompanyAddress, setRegCompanyAddress] = useState<string>('');
-  const [regCompanyCategory, setRegCompanyCategory] = useState<'Кава' | 'Рітейл' | 'Склади'>('Кава');
+  const [regCompanyCategory, setRegCompanyCategory] = useState<'Допомога' | 'Кураторство' | 'Наука'>('Допомога');
 
   const [tempPhone, setTempPhone] = useState<string>('');
   const [tempName, setTempName] = useState<string>('');
@@ -115,7 +115,7 @@ export function useSandbox() {
   const [newPrice, setNewPrice] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newDetails, setNewDetails] = useState('');
-  const [newCategory, setNewCategory] = useState<'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer'>('Кава');
+  const [newCategory, setNewCategory] = useState<'Допомога' | 'Кураторство' | 'Наука' | 'University Event / Volunteer'>('Допомога');
 
   // Branch & Template configuration states
   const [requiresScreening, setRequiresScreening] = useState<boolean>(false);
@@ -213,7 +213,7 @@ export function useSandbox() {
 
   const handleWithdraw = async () => {
     if (balance <= 0) {
-      triggerToast('Немає коштів для виведення!');
+      triggerToast('Немає балів для обміну!');
       return;
     }
     const storedUserId = localStorage.getItem('oneclick_user_id') || 'worker-alex';
@@ -224,10 +224,10 @@ export function useSandbox() {
         body: JSON.stringify({ amount: balance })
       });
       if (res.ok) {
-        triggerToast('Виведення коштів успішно ініційовано!');
+        triggerToast('Запит на обмін балів успішно створено! Зверніться до Студради за мерчем 🎁');
         fetchStateFromBackend();
       } else {
-        triggerToast('Помилка при виведенні коштів');
+        triggerToast('Помилка при обміні балів');
       }
     } catch (e) {
       console.error(e);
@@ -243,7 +243,7 @@ export function useSandbox() {
     if (branch) {
       setNewAddress(branch.address);
       setRequiresScreening(branch.requiresScreening);
-      triggerToast(`Філія обрана: ${branch.name}. Налаштування встановлено.`);
+      triggerToast(`Локацію обрано: ${branch.name}. Налаштування встановлено.`);
     }
   };
 
@@ -288,12 +288,12 @@ export function useSandbox() {
         method: 'POST'
       });
       if (res.ok) {
-        triggerToast('Зміну розпочато! 🔐 Кошти для оплати успішно заблоковано на сейфі.');
+        triggerToast('Івент розпочато! 🔐 Бали для нагороди заброньовано.');
         setShowScannerModal(null);
         fetchStateFromBackend();
       } else {
         const err = await res.json();
-        triggerToast(err.detail || 'Помилка початку зміни');
+        triggerToast(err.detail || 'Помилка початку івенту');
       }
     } catch (e) {
       console.error(e);
@@ -307,7 +307,7 @@ export function useSandbox() {
         method: 'POST'
       });
       if (res.ok) {
-        triggerToast('Чек-аут виконано! Роботодавець отримав запит на виплату. 💰');
+        triggerToast('Чек-аут виконано! Організатор отримав запит на підтвердження. 🎓');
         fetchStateFromBackend();
       }
     } catch (e) {
@@ -318,7 +318,7 @@ export function useSandbox() {
   // B2C: Book Shift
   const handleBookShift = async (shiftId: string) => {
     if (!signedContract) {
-      triggerToast('Будь ласка, підпишіть договір через Дію!');
+      triggerToast('Будь ласка, підтвердіть участь через Дію!');
       return;
     }
     const workerId = localStorage.getItem('oneclick_user_id') || 'worker-alex';
@@ -327,13 +327,13 @@ export function useSandbox() {
         method: 'POST'
       });
       if (res.ok) {
-        triggerToast('Зміну успішно заброньовано!');
+        triggerToast('Участь успішно заброньовано!');
         setSelectedShift(null);
         setSignedContract(false);
         fetchStateFromBackend();
       } else {
         const err = await res.json();
-        triggerToast(err.detail || 'Помилка бронювання зміни');
+        triggerToast(err.detail || 'Помилка бронювання участі');
       }
     } catch (e) {
       console.error(e);
@@ -349,14 +349,14 @@ export function useSandbox() {
       });
       if (res.ok) {
         if (isUrgent) {
-          triggerToast('Термінова відмова: нараховано штраф 250 ₴!');
+          triggerToast('Термінова відмова: знято 20 балів рейтингу!');
         } else {
-          triggerToast('Зміну скасовано заздалегідь без штрафу.');
+          triggerToast('Участь скасовано заздалегідь без штрафу.');
         }
         setShowCancelModal(null);
         fetchStateFromBackend();
       } else {
-        triggerToast('Помилка скасування зміни');
+        triggerToast('Помилка скасування участі');
       }
     } catch (e) {
       console.error(e);
@@ -411,10 +411,10 @@ export function useSandbox() {
         setNewDetails('');
         setRequiresScreening(false);
         setB2bTab('dashboard');
-        triggerToast('Зміну опубліковано!');
+        triggerToast('Івент опубліковано!');
         fetchStateFromBackend();
       } else {
-        triggerToast('Помилка публікації зміни');
+        triggerToast('Помилка публікації івенту');
       }
     } catch (e) {
       console.error(e);
@@ -490,11 +490,11 @@ export function useSandbox() {
   const handleRegisterCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regCompanyName.trim() || !regCompanyEdrpou.trim() || !regCompanyAddress.trim()) {
-      triggerToast('Заповніть всі обов\'язкові поля компанії!');
+      triggerToast('Заповніть всі обов\'язкові поля організації!');
       return;
     }
     if (regCompanyEdrpou.trim().length !== 8 || !/^\d+$/.test(regCompanyEdrpou)) {
-      triggerToast('Код ЄДРПОУ має складатися з 8 цифр!');
+      triggerToast('Код підрозділу має складатися з 8 цифр!');
       return;
     }
 
@@ -514,7 +514,7 @@ export function useSandbox() {
 
       if (res.ok) {
         const companyData = await res.json();
-        const fullDetails = `ТОВ «${companyData.name}», ЄДРПОУ ${companyData.edrpou}`;
+        const fullDetails = `«${companyData.name}», код ${companyData.edrpou}`;
         setCompanyName(companyData.name);
         setCompanyDetails(fullDetails);
         setNewCompany(companyData.name);
@@ -532,9 +532,9 @@ export function useSandbox() {
           companyDetails: fullDetails
         };
         localStorage.setItem('oneclick_auth_profile', JSON.stringify(profileData));
-        triggerToast(`Компанію «${companyData.name}» успішно зареєстровано! 🏢🚀`);
+        triggerToast(`Організацію «${companyData.name}» успішно зареєстровано! 🎓🚀`);
       } else {
-        triggerToast('Помилка реєстрації компанії');
+        triggerToast('Помилка реєстрації організації');
       }
     } catch (e) {
       console.error(e);
@@ -566,7 +566,7 @@ export function useSandbox() {
         setRegRole('employer');
         setAuthStep('company-register');
         setIsLoggedIn(false);
-        triggerToast('Будь ласка, спочатку зареєструйте компанію для входу в B2B кабінет.');
+        triggerToast('Будь ласка, спочатку зареєструйте організацію для входу в кабінет.');
         return;
       }
     }
@@ -608,10 +608,10 @@ export function useSandbox() {
         method: 'POST'
       });
       if (res.ok) {
-        triggerToast(`Зміну підтверджено. Заморожені кошти (${price} ₴) успішно виплачено виконавцю! 🔐💸`);
+        triggerToast(`Івент підтверджено. Бали рейтингу успішно нараховано волонтеру! 🔐🎓`);
         fetchStateFromBackend();
       } else {
-        triggerToast('Помилка підтвердження виплати');
+        triggerToast('Помилка підтвердження нарахування балів');
       }
     } catch (e) {
       console.error(e);
@@ -636,11 +636,11 @@ export function useSandbox() {
       });
       if (res.ok) {
         if (resolution === 'pay_full') {
-          triggerToast(`Спір врегульовано. Виконавцю сплачено повну суму! 💸`);
+          triggerToast(`Спір врегульовано. Волонтеру нараховано всі бали! 🎓`);
         } else if (resolution === 'compromise') {
-          triggerToast(`Угода досягнута! 50% повернуто вам, 50% сплачено виконавцю. 🤝`);
+          triggerToast(`Угода досягнута! Компромісне рішення: нараховано 50% балів. 🤝`);
         } else if (resolution === 'refund_full') {
-          triggerToast(`Спір вирішено скасуванням. Повну суму повернуто вам! ↩️`);
+          triggerToast(`Спір вирішено скасуванням. Бали повернуто в бюджет! ↩️`);
         }
         fetchDisputeChat(shiftId);
         fetchStateFromBackend();
@@ -690,14 +690,14 @@ export function useSandbox() {
   const handleSendReport = async () => {
     if (!showReportModalId) return;
     const photoUrl = capturedPhoto || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500';
-    const comment = reportComment.trim() || 'Роботу виконано в повному обсязі.';
+    const comment = reportComment.trim() || 'Волонтерство виконано в повному обсязі.';
 
     try {
       const res = await fetch(`http://localhost:8000/shifts/${showReportModalId}/checkout?photo_url=${encodeURIComponent(photoUrl)}&comment=${encodeURIComponent(comment)}`, {
         method: 'POST'
       });
       if (res.ok) {
-        triggerToast('Чек-аут виконано! Роботодавець отримав фотозвіт та запит на виплату. 💰');
+        triggerToast('Чек-аут виконано! Організатор отримав фотозвіт та запит на підтвердження. 🎓');
         setShowReportModalId(null);
         setCapturedPhoto(null);
         setReportComment('');
@@ -719,20 +719,20 @@ export function useSandbox() {
       requiresScreening: reqScreening
     };
     setBranches(prev => [...prev, newBranch]);
-    triggerToast(`Філію "${name}" успішно додано!`);
+    triggerToast(`Локацію "${name}" успішно додано!`);
   };
 
   const handleDeleteBranch = (branchId: string) => {
     setBranches(prev => {
       const filtered = prev.filter(b => b.id !== branchId);
-      triggerToast('Філію видалено.');
+      triggerToast('Локацію видалено.');
       return filtered;
     });
   };
 
   const handleDeposit = async (amount: number) => {
     if (amount <= 0) {
-      triggerToast('Будь ласка, введіть коректну суму!');
+      triggerToast('Будь ласка, введіть коректну кількість балів!');
       return;
     }
     const storedUserId = localStorage.getItem('oneclick_user_id') || 'employer-default';
@@ -743,10 +743,10 @@ export function useSandbox() {
         body: JSON.stringify({ amount })
       });
       if (res.ok) {
-        triggerToast('Баланс компанії успішно поповнено! 💰');
+        triggerToast('Бюджет балів успішно поповнено! 🎓');
         fetchStateFromBackend();
       } else {
-        triggerToast('Помилка при поповненні балансу');
+        triggerToast('Помилка при поповненні бюджету');
       }
     } catch (e) {
       console.error(e);

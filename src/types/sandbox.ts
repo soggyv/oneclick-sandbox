@@ -24,7 +24,7 @@ export interface Shift {
   price: number;
   address: string;
   status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'disputed' | 'completed' | 'expired';
-  category: 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer';
+  category: 'Допомога' | 'Кураторство' | 'Наука' | 'University Event / Volunteer';
   logo?: string;
   isHot?: boolean;
   details?: string;

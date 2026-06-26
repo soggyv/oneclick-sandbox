@@ -242,10 +242,10 @@ export default function B2CAuthPage() {
             <User className="w-8 h-8 text-white" />
           </div>
           <h1 className={`text-2xl font-black tracking-tight flex items-center gap-1.5 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-            OneClick <span className="text-xs font-black uppercase bg-[#FF5722]/15 text-[#FF5722] px-2 py-0.5 rounded border border-[#FF5722]/25">B2C Worker</span>
+            OneClick <span className="text-xs font-black uppercase bg-[#FF5722]/15 text-[#FF5722] px-2 py-0.5 rounded border border-[#FF5722]/25">Student</span>
           </h1>
           <p className={`text-xs mt-2 font-semibold ${theme === 'light' ? 'text-[#5b4039]/80' : 'text-slate-400'}`}>
-            Кабінет Виконавця Змін & Підробітку
+            Кабінет Студента & Волонтера
           </p>
         </div>
 
@@ -275,7 +275,7 @@ export default function B2CAuthPage() {
                 {isRegistering ? 'Створити акаунт' : 'Вхід у кабінет'}
               </h2>
               <p className={`text-xs ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-slate-400'}`}>
-                {isRegistering ? 'Станьте виконавцем та отримуйте оплату за зміни' : 'Увійдіть під своїми даними виконавця'}
+                {isRegistering ? 'Реєструйтеся як волонтер та отримуйте бали за заходи' : 'Увійдіть під своїми даними волонтера'}
               </p>
             </div>
 
@@ -476,12 +476,12 @@ export default function B2CAuthPage() {
             </div>
             <div className="space-y-2">
               <h2 className={`text-2xl font-black ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
-                {isRegistering ? 'Вітаємо у Зміні! 🎉' : 'З поверненням! 🚀'}
+                {isRegistering ? 'Вітаємо в OneClick University! 🎉' : 'З поверненням! 🚀'}
               </h2>
               <p className={`text-xs px-4 ${theme === 'light' ? 'text-[#5b4039]/70' : 'text-slate-400'}`}>
                 {isRegistering 
-                  ? 'Ваш акаунт виконавця успішно зареєстровано. Завантажуємо ваш особистий кабінет...' 
-                  : 'Авторизація пройшла успішно. Перенаправляємо вас до кабінету змін...'}
+                  ? 'Ваш акаунт волонтера успішно зареєстровано. Завантажуємо ваш особистий кабінет...' 
+                  : 'Авторизація пройшла успішно. Перенаправляємо вас до особистого кабінету...'}
               </p>
             </div>
             <div className="pt-4">
