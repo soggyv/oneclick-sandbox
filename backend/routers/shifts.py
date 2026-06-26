@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from backend.database import get_db
-from backend.models import Shift, User, Transaction, Booking
+from backend.models import Shift, User, Transaction, Booking, Review, DisputeMessage
 from backend.schemas import ShiftCreateRequest, ShiftResponse
 import uuid
 import math
+import datetime
+import logging
 from typing import List, Optional
 
 router = APIRouter(prefix="/shifts", tags=["shifts"])
+logger = logging.getLogger("uvicorn.error")
 
 # Haversine distance calculator
 def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -18,6 +22,48 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
+def is_shift_expired(s: Shift) -> bool:
+    # 1. Completed or expired shifts are already considered inactive
+    if s.status in ("completed", "expired"):
+        return True
+
+    # 2. Date and time check
+    try:
+        today = datetime.date.today()
+        # Shifts in the sandbox are scheduled within a 7-day window.
+        next_7_days = [today + datetime.timedelta(days=i) for i in range(7)]
+        next_7_day_strs = {str(d.day): d for d in next_7_days}
+        
+        # If the day number is not one of today or the next 6 days, it is in the past/expired
+        if s.date not in next_7_day_strs:
+            return True
+            
+        # If it is today, check if the end time has passed
+        shift_date = next_7_day_strs[s.date]
+        if shift_date == today and s.time:
+            time_str = s.time.replace("—", "-").replace("–", "-")
+            parts = time_str.split("-")
+            if len(parts) >= 2:
+                start_time_str = parts[0].strip()
+                end_time_str = parts[1].strip()
+                if ":" in start_time_str and ":" in end_time_str:
+                    start_hour = int(start_time_str.split(":")[0])
+                    end_hour = int(end_time_str.split(":")[0])
+                    end_min = int(end_time_str.split(":")[1])
+                    
+                    if end_hour >= start_hour:
+                        # Ends today, check if current time has passed it
+                        now = datetime.datetime.now()
+                        if now.hour > end_hour or (now.hour == end_hour and now.minute >= end_min):
+                            return True
+                    else:
+                        # Night shift ending tomorrow, so it cannot be expired today
+                        return False
+    except Exception as e:
+        logger.warning(f"Error checking shift expiration for {s.id}: {e}")
+
+    return False
 
 @router.get("", response_model=List[ShiftResponse])
 async def get_shifts(
@@ -30,6 +76,16 @@ async def get_shifts(
     stmt = select(Shift)
     res = await db.execute(stmt)
     all_shifts = res.scalars().all()
+
+    # Mark expired open shifts as "expired"
+    updated_any = False
+    for s in all_shifts:
+        if s.status == "open" and is_shift_expired(s):
+            s.status = "expired"
+            updated_any = True
+            
+    if updated_any:
+        await db.commit()
 
     filtered_shifts = []
     for s in all_shifts:
@@ -195,8 +251,6 @@ async def approve_shift(shift_id: str, employer_id: str, db: AsyncSession = Depe
     if employer.employer_balance < shift.price:
         raise HTTPException(status_code=400, detail="Недостатньо коштів на балансі підприємства")
 
-    shift.status = "completed"
-
     # Execute payout
     if shift.worker_id:
         worker_stmt = select(User).where(User.id == shift.worker_id)
@@ -229,5 +283,6 @@ async def approve_shift(shift_id: str, employer_id: str, db: AsyncSession = Depe
             )
             db.add(tx)
 
+    shift.status = "completed"
     await db.commit()
     return {"message": "Payout approved successfully"}

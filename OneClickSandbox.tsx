@@ -377,23 +377,30 @@ export default function OneClickApp() {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
         return (
           <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/90 border-[#E5E7EB]' : 'bg-[#1c2541]/80 border-white/10'
-              }`}>
+            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${
+              theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/80 border-white/10'
+            }`}>
               <div className="w-20 h-20 bg-[#FF5722]/10 rounded-full flex items-center justify-center mb-6">
                 <QrCode className="w-10 h-10 text-[#FF5722]" />
               </div>
-              <h3 className={`text-2xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Чек-ін на зміну</h3>
-              <p className={`text-xs font-bold leading-normal mb-8 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+              <h3 className={`text-2xl font-bold mb-2 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-800' : 'text-white'}`}>Чек-ін на зміну</h3>
+              <p className={`text-xs font-bold leading-normal mb-8 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>
                 Покажіть цей код менеджеру закладу для фіксації прибуття на роботу.
               </p>
-              <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed flex items-center justify-center ${theme === 'light' ? 'bg-[#fcf9f8]/90 border-[#E5E7EB]' : 'bg-[#121829]/60 border-white/10'
-                }`}>
+              <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed flex items-center justify-center ${
+                theme === 'minimalist' || theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#121829]/60 border-white/10'
+              }`}>
                 <img src={qrUrl} className="w-48 h-48 rounded-xl bg-white p-2 border shadow-inner" alt="QR Code" />
               </div>
               <button
                 onClick={() => setShowQRModal(null)}
-                className={`w-full py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all shadow-md ${theme === 'light' ? 'bg-[#001B3D] text-white hover:bg-[#001430]' : 'bg-[#FF5722] text-white hover:bg-[#e64a19]'
-                  }`}
+                className={`w-full py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all shadow-md ${
+                  theme === 'minimalist'
+                    ? 'bg-slate-900 text-white hover:bg-slate-850'
+                    : theme === 'light'
+                      ? 'bg-[#001B3D] text-white hover:bg-[#001430]'
+                      : 'bg-[#FF5722] text-white hover:bg-[#e64a19]'
+                }`}
               >
                 Закрити
               </button>
@@ -407,13 +414,14 @@ export default function OneClickApp() {
         const targetShift = shifts.find(s => s.id === showScannerModal);
         return (
           <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/90 border-[#E5E7EB]' : 'bg-[#1c2541]/80 border-white/10'
-              }`}>
+            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${
+              theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/80 border-white/10'
+            }`}>
               <div className="w-16 h-16 bg-[#FF5722]/10 rounded-full flex items-center justify-center mb-5">
                 <Camera className="w-8 h-8 text-[#FF5722]" />
               </div>
-              <h3 className={`text-xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Сканування QR закладу</h3>
-              <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+              <h3 className={`text-xl font-bold mb-2 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>Сканування QR закладу</h3>
+              <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>
                 Наведіть камеру на QR-код, який надасть менеджер у закладі <span className="text-[#FF5722] font-black">{targetShift?.company}</span>.
               </p>
               {/* Simulated Viewfinder */}
@@ -435,8 +443,9 @@ export default function OneClickApp() {
                 </button>
                 <button
                   onClick={() => setShowScannerModal(null)}
-                  className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
-                    }`}
+                  className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${
+                    theme === 'minimalist' || theme === 'light' ? 'border-slate-200 text-slate-800 hover:bg-slate-50' : 'border-white/10 text-white'
+                  }`}
                 >
                   Скасувати
                 </button>
@@ -449,22 +458,24 @@ export default function OneClickApp() {
       {/* --- CANCELLATION MODAL POPUP --- */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/90 border-[#E5E7EB]' : 'bg-[#1c2541]/80 border-white/10'
-            }`}>
+          <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${
+            theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/80 border-white/10'
+          }`}>
             <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
               <Info className="w-8 h-8 text-red-500" />
             </div>
-            <h3 className={`text-xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Скасувати зміну?</h3>
-            <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'}`}>
+            <h3 className={`text-xl font-bold mb-2 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>Скасувати зміну?</h3>
+            <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-300'}`}>
               Виберіть варіант скасування. Зверніть увагу, що пізня відмова порушує правила платформи та призведе до штрафу.
             </p>
             <div className="space-y-3 w-full mb-6">
               <button
                 onClick={() => handleCancelShift(showCancelModal, false)}
-                className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold transition-all text-left flex justify-between items-center ${theme === 'light'
-                  ? 'bg-white border-[#E5E7EB] text-[#001B3D] hover:bg-gray-50'
-                  : 'bg-[#121829]/50 border-white/10 text-white hover:bg-[#121829]'
-                  }`}
+                className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold transition-all text-left flex justify-between items-center ${
+                  theme === 'minimalist' || theme === 'light'
+                    ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50'
+                    : 'bg-[#121829]/50 border-white/10 text-white hover:bg-[#121829]'
+                }`}
               >
                 <div>
                   <p className="font-bold">Скасувати заздалегідь</p>
@@ -474,10 +485,11 @@ export default function OneClickApp() {
               </button>
               <button
                 onClick={() => handleCancelShift(showCancelModal, true)}
-                className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold transition-all text-left flex justify-between items-center ${theme === 'light'
-                  ? 'bg-white border-[#E5E7EB] text-[#001B3D] hover:bg-gray-50'
-                  : 'bg-[#121829]/50 border-white/10 text-white hover:bg-[#121829]'
-                  }`}
+                className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold transition-all text-left flex justify-between items-center ${
+                  theme === 'minimalist' || theme === 'light'
+                    ? 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50'
+                    : 'bg-[#121829]/50 border-white/10 text-white hover:bg-[#121829]'
+                }`}
               >
                 <div>
                   <p className="font-bold text-red-500">Термінове скасування</p>
@@ -488,8 +500,9 @@ export default function OneClickApp() {
             </div>
             <button
               onClick={() => setShowCancelModal(null)}
-              className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all ${theme === 'light' ? 'bg-[#f0edec] text-[#001B3D]' : 'bg-[#1c2541] text-white'
-                }`}
+              className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all ${
+                theme === 'minimalist' || theme === 'light' ? 'bg-slate-100 text-slate-800 hover:bg-slate-200' : 'bg-[#1c2541] text-white'
+              }`}
             >
               Назад
             </button>
@@ -504,23 +517,30 @@ export default function OneClickApp() {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
         return (
           <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${theme === 'light' ? 'bg-white/95 border-[#E5E7EB]' : 'bg-[#1c2541]/90 border-white/10'
-              }`}>
+            <div className={`rounded-[32px] p-8 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col items-center animate-modal-in ${
+              theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/90 border-white/10'
+            }`}>
               <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-5">
                 <QrCode className="w-8 h-8 text-blue-500" />
               </div>
-              <h3 className={`text-xl font-bold mb-2 ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>QR закладу</h3>
-              <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-350'}`}>
+              <h3 className={`text-xl font-bold mb-2 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>QR закладу</h3>
+              <p className={`text-xs font-semibold leading-normal mb-6 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-550' : 'text-gray-350'}`}>
                 Надайте цей QR-код виконавцю для старту зміни <span className="text-[#FF5722] font-black">{targetShift?.role}</span>.
               </p>
-              <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed flex items-center justify-center ${theme === 'light' ? 'bg-[#fcf9f8] border-gray-200' : 'bg-[#121829]/60 border-white/10'
-                }`}>
+              <div className={`p-6 rounded-3xl mb-8 border-2 border-dashed flex items-center justify-center ${
+                theme === 'minimalist' || theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-[#121829]/60 border-white/10'
+              }`}>
                 <img src={qrUrl} className="w-40 h-40 rounded-xl bg-white p-2 border shadow-inner" alt="Venue QR Code" />
               </div>
               <button
                 onClick={() => setShowB2BQRModalId(null)}
-                className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all ${theme === 'light' ? 'bg-[#001B3D] text-white' : 'bg-[#FF5722] text-white'
-                  }`}
+                className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all ${
+                  theme === 'minimalist'
+                    ? 'bg-slate-900 text-white hover:bg-slate-850'
+                    : theme === 'light'
+                      ? 'bg-[#001B3D] text-white'
+                      : 'bg-[#FF5722] text-white'
+                }`}
               >
                 Закрити
               </button>
@@ -532,10 +552,11 @@ export default function OneClickApp() {
       {/* --- B2B OPEN DISPUTE MODAL --- */}
       {showDisputeModalId && (
         <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white/95 border-[#E5E7EB]' : 'bg-[#1c2541]/90 border-white/10'
-            }`}>
+          <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${
+            theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/90 border-white/10'
+          }`}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className={`text-sm font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+              <h3 className={`text-sm font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
                 Відкрити спір
               </h3>
               <button
@@ -543,23 +564,24 @@ export default function OneClickApp() {
                   setShowDisputeModalId(null);
                   setDisputeCommentInput('');
                 }}
-                className={`text-xs font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}
+                className={`text-xs font-bold ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400 hover:text-slate-600' : 'text-gray-400'}`}
               >
                 Закрити
               </button>
             </div>
             <div className="text-left space-y-3 mb-6">
               <div>
-                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>
                   Причина спору:
                 </label>
                 <select
                   value={disputeReasonInput}
                   onChange={(e) => setDisputeReasonInput(e.target.value)}
-                  className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all ${theme === 'light'
-                    ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                    : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
-                    }`}
+                  className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all ${
+                    theme === 'minimalist' || theme === 'light'
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#FF5722]'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                  }`}
                 >
                   <option value="Некачественно выполненная работа">Неякісно виконана робота</option>
                   <option value="Неполный рабочий день">Неповний робочий час</option>
@@ -569,7 +591,7 @@ export default function OneClickApp() {
                 </select>
               </div>
               <div>
-                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>
                   Опис претензії:
                 </label>
                 <textarea
@@ -577,10 +599,11 @@ export default function OneClickApp() {
                   value={disputeCommentInput}
                   onChange={(e) => setDisputeCommentInput(e.target.value)}
                   placeholder="Детально опишіть, що саме виконано не так..."
-                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                    ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722]'
-                    : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
-                    }`}
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${
+                    theme === 'minimalist' || theme === 'light'
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#FF5722]'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722]'
+                  }`}
                 />
               </div>
             </div>
@@ -598,13 +621,15 @@ export default function OneClickApp() {
       {/* --- MOCK USER AGREEMENT MODAL --- */}
       {showAgreementModal && (
         <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-6 w-full max-w-md shadow-2xl relative z-10 border flex flex-col max-h-[85vh] animate-modal-in ${theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
-            }`}>
-            <h3 className={`text-xl font-black mb-4 uppercase tracking-tight ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+          <div className={`rounded-[32px] p-6 w-full max-w-md shadow-2xl relative z-10 border flex flex-col max-h-[85vh] animate-modal-in ${
+            theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541] border-white/10'
+          }`}>
+            <h3 className={`text-xl font-black mb-4 uppercase tracking-tight ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
               Угода користувача OneClick
             </h3>
-            <div className={`flex-1 overflow-y-auto pr-2 text-xs leading-relaxed space-y-3 mb-6 no-scrollbar ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-300'
-              }`}>
+            <div className={`flex-1 overflow-y-auto pr-2 text-xs leading-relaxed space-y-3 mb-6 no-scrollbar ${
+              theme === 'minimalist' || theme === 'light' ? 'text-slate-600' : 'text-gray-300'
+            }`}>
               <p className="font-bold text-[#FF5722]">Тестова версія угоди для платформи OneClick</p>
               <p>
                 <strong>1. Загальні положення</strong><br />
@@ -636,8 +661,9 @@ export default function OneClickApp() {
               </button>
               <button
                 onClick={() => setShowAgreementModal(false)}
-                className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
-                  }`}
+                className={`px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95 border ${
+                  theme === 'minimalist' || theme === 'light' ? 'border-slate-200 text-slate-800 hover:bg-slate-50' : 'border-white/10 text-white'
+                }`}
               >
                 Закрити
               </button>
@@ -649,9 +675,10 @@ export default function OneClickApp() {
       {/* --- PHOTO EDIT MODAL --- */}
       {showAvatarEditModal && (
         <div className="fixed inset-0 z-[9999] bg-[#001B3D]/80 flex items-center justify-center p-4 backdrop-blur-2xl">
-          <div className={`rounded-[32px] p-6 w-full max-w-sm shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white border-[#E5E7EB]' : 'bg-[#1c2541] border-white/10'
-            }`}>
-            <h3 className={`text-lg font-black mb-4 uppercase tracking-tight text-center ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+          <div className={`rounded-[32px] p-6 w-full max-w-sm shadow-2xl relative z-10 border flex flex-col animate-modal-in ${
+            theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541] border-white/10'
+          }`}>
+            <h3 className={`text-lg font-black mb-4 uppercase tracking-tight text-center ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
               Зміна фото профілю
             </h3>
             <div className="mb-6">
@@ -670,8 +697,8 @@ export default function OneClickApp() {
                 Завантажити з пристрою
               </button>
             </div>
-            <div className={`border-t my-4 pt-4 text-center ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-              <p className={`text-[10px] font-black uppercase tracking-wider mb-3 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+            <div className={`border-t my-4 pt-4 text-center ${theme === 'minimalist' || theme === 'light' ? 'border-slate-100' : 'border-white/5'}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider mb-3 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>
                 Або оберіть готовий аватар:
               </p>
               <div className="grid grid-cols-3 gap-3">
@@ -699,8 +726,9 @@ export default function OneClickApp() {
             </div>
             <button
               onClick={() => setShowAvatarEditModal(false)}
-              className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all ${theme === 'light' ? 'border-gray-200 text-[#001B3D]' : 'border-white/10 text-white'
-                }`}
+              className={`w-full py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider mt-4 border transition-all ${
+                theme === 'minimalist' || theme === 'light' ? 'border-slate-200 text-slate-800 hover:bg-slate-50' : 'border-white/10 text-white'
+              }`}
             >
               Скасувати
             </button>
@@ -712,10 +740,11 @@ export default function OneClickApp() {
       {showReportModalId && (() => {
         return (
           <div className="fixed inset-0 z-50 bg-[#001B3D]/80 flex items-center justify-center p-6 backdrop-blur-2xl">
-            <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${theme === 'light' ? 'bg-white/95 border-[#E5E7EB]' : 'bg-[#1c2541]/90 border-white/10'
-              }`}>
+            <div className={`rounded-[32px] p-6 w-full max-w-sm text-center shadow-2xl relative z-10 border flex flex-col animate-modal-in ${
+              theme === 'minimalist' || theme === 'light' ? 'bg-white border-slate-200' : 'bg-[#1c2541]/90 border-white/10'
+            }`}>
               <div className="flex justify-between items-center mb-4">
-                <h3 className={`text-sm font-black uppercase tracking-wider ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>
+                <h3 className={`text-sm font-black uppercase tracking-wider ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>
                   Звіт про виконання
                 </h3>
                 <button
@@ -724,7 +753,7 @@ export default function OneClickApp() {
                     setCapturedPhoto(null);
                     setReportComment('');
                   }}
-                  className={`text-xs font-bold ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}
+                  className={`text-xs font-bold ${theme === 'minimalist' || theme === 'light' ? 'text-slate-400 hover:text-slate-650' : 'text-gray-400'}`}
                 >
                   Закрити
                 </button>
@@ -761,13 +790,14 @@ export default function OneClickApp() {
                 ) : (
                   <button
                     onClick={() => setIsTakingPhoto(true)}
-                    className={`w-full h-44 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${theme === 'light'
-                      ? 'bg-slate-50 border-gray-200 hover:bg-slate-100/60'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
-                      }`}
+                    className={`w-full h-44 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                      theme === 'minimalist' || theme === 'light'
+                        ? 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
                   >
                     <Camera className="w-8 h-8 text-[#FF5722] mb-2" />
-                    <span className={`text-[11px] font-bold ${theme === 'light' ? 'text-[#001B3D]' : 'text-white'}`}>Сфотографувати робоче місце *</span>
+                    <span className={`text-[11px] font-bold ${theme === 'minimalist' || theme === 'light' ? 'text-slate-850' : 'text-white'}`}>Сфотографувати робоче місце *</span>
                     <span className="text-[9px] text-gray-400 mt-1 uppercase font-semibold">Обов’язково для оплати</span>
                   </button>
                 )}
@@ -775,7 +805,7 @@ export default function OneClickApp() {
 
               {/* Comment Input */}
               <div className="text-left mb-6">
-                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1.5 ${theme === 'light' ? 'text-[#5b4039]' : 'text-gray-400'}`}>
+                <label className={`text-[10px] font-black uppercase tracking-wider block mb-1.5 ${theme === 'minimalist' || theme === 'light' ? 'text-slate-500' : 'text-gray-400'}`}>
                   Коментар до звіту (необов’язково):
                 </label>
                 <textarea
@@ -783,10 +813,11 @@ export default function OneClickApp() {
                   value={reportComment}
                   onChange={(e) => setReportComment(e.target.value)}
                   placeholder="Наприклад: роботу завершено, все прибрано, полиці заповнені..."
-                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${theme === 'light'
-                    ? 'bg-[#fcf9f8] border-gray-200 text-[#001B3D] focus:border-[#FF5722] focus:bg-white'
-                    : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
-                    }`}
+                  className={`w-full border rounded-xl px-3 py-2 text-xs font-bold outline-none resize-none transition-all ${
+                    theme === 'minimalist' || theme === 'light'
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 focus:border-[#FF5722] focus:bg-white'
+                      : 'bg-[#121829]/50 border-[#2a3454] text-white focus:border-[#FF5722] focus:bg-[#121829]'
+                  }`}
                 />
               </div>
 

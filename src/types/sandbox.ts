@@ -23,7 +23,7 @@ export interface Shift {
   duration: string;
   price: number;
   address: string;
-  status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'disputed' | 'completed';
+  status: 'open' | 'booked' | 'in_progress' | 'pending_approval' | 'disputed' | 'completed' | 'expired';
   category: 'Кава' | 'Рітейл' | 'Склади' | 'University Event / Volunteer';
   logo?: string;
   isHot?: boolean;

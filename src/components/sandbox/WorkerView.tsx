@@ -436,29 +436,30 @@ export function WorkerView({
                   <div
                     key={s.id}
                     onClick={() => setSelectedShift(s)}
-                    className={`rounded-3xl p-5 border transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${theme === 'minimalist' ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:border-[#FF5722]/50 shadow-sm' : theme === 'light' ? 'bg-white/70 border-[#E5E7EB] hover:bg-white hover:-translate-y-0.5 backdrop-blur-[24px]'
-                        : 'bg-[#1c2541]/60 border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5 backdrop-blur-[24px]'
+                    className={`rounded-3xl p-5 transition-all duration-300 cursor-pointer text-left relative overflow-hidden group ${
+                      theme === 'minimalist'
+                        ? 'bg-white border border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.06)] hover:scale-[1.01]'
+                        : theme === 'light'
+                          ? 'bg-white/90 border border-transparent shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:bg-white hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.07)] backdrop-blur-[24px]'
+                          : 'bg-[#1c2541]/60 border border-white/10 hover:bg-[#252f55]/60 hover:-translate-y-0.5 backdrop-blur-[24px]'
                       } ${s.isHot
                         ? theme === 'minimalist'
-                          ? 'border-[#FF9500]/60'
+                          ? 'shadow-[0_8px_24px_rgba(255,149,0,0.1)]'
                           : theme !== 'dark'
-                            ? 'shadow-[0_8px_30px_rgba(255,149,0,0.22)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.35)]'
-                            : 'shadow-[0_8px_30px_rgba(255,149,0,0.35)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.55)]'
-                        : theme === 'minimalist'
-                          ? ''
-                          : theme !== 'dark'
-                            ? 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.06)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.18)]'
-                            : 'shadow-[0_8px_30px_-6px_rgba(255,87,34,0.2)] hover:shadow-[0_12px_32px_rgba(255,87,34,0.35)]'
+                            ? 'shadow-[0_8px_30px_rgba(255,149,0,0.15)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.28)]'
+                            : 'shadow-[0_8px_30px_rgba(255,149,0,0.25)] hover:shadow-[0_12px_32px_rgba(255,149,0,0.45)]'
+                        : ''
                       }`}
                   >
                     <div className="flex justify-between items-start gap-2 relative z-10">
                       <div className="flex gap-3">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden border ${theme === 'minimalist'
-                          ? 'bg-gray-50 border-gray-250'
-                          : theme !== 'dark'
-                            ? 'bg-white border-transparent shadow-[0_4px_24px_rgba(0,0,0,0.04)]'
-                            : 'bg-[#121829]/60 border-white/5'
-                          }`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-300 shadow-[0_8px_20px_rgba(0,0,0,0.055)] group-hover:scale-110 group-hover:shadow-[0_12px_24px_rgba(0,0,0,0.09)] ${
+                          theme === 'minimalist'
+                            ? 'bg-white'
+                            : theme !== 'dark'
+                              ? 'bg-white'
+                              : 'bg-[#121829]/90 border border-white/10 shadow-none group-hover:shadow-none'
+                        }`}>
                           {s.logo ? (
                             <img src={s.logo} alt={s.company} className="w-full h-full object-cover" />
                           ) : (
