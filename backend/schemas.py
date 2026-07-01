@@ -7,13 +7,26 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     role: str  # 'B2C' or 'B2B'
+    avatar_url: Optional[str] = None
 
 class UserCreate(UserBase):
-    pass
+    org_name: Optional[str] = None
+    org_address: Optional[str] = None
+    org_description: Optional[str] = None
+    password: Optional[str] = None
+
+class GoogleLoginRequest(BaseModel):
+    access_token: str
+    role: Optional[str] = "B2C"
+    org_name: Optional[str] = None
+    org_address: Optional[str] = None
+    org_description: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int
     rating: Optional[float] = None  # average rating calculated dynamically
+    token: Optional[str] = None  # JWT token if newly logged in
+    completed_shifts_count: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,6 +54,7 @@ class ShiftBase(BaseModel):
     location: str
     address: str
     description: Optional[str] = None
+    max_volunteers: Optional[int] = 5
 
 class ShiftCreate(ShiftBase):
     pass
@@ -50,6 +64,7 @@ class ShiftResponse(ShiftBase):
     organization_id: int
     status: str
     organization_name: Optional[str] = None
+    approved_count: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,6 +80,7 @@ class ApplicationResponse(BaseModel):
     check_in_code: str
     shift: ShiftResponse
     volunteer_name: Optional[str] = None
+    volunteer_avatar_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,9 +97,16 @@ class ReviewResponse(BaseModel):
     id: int
     application_id: int
     author_id: int
-    author_name: str
+    author_name: Optional[str] = ""
     target_id: int
     rating: int
     comment: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class ProfileUpdate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    org_name: Optional[str] = None
+    org_address: Optional[str] = None
+    org_description: Optional[str] = None

@@ -10,6 +10,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=True)
     phone = Column(String, nullable=True)
     role = Column(String, nullable=False)  # 'B2C' (volunteer) or 'B2B' (coordinator)
+    password = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
 
     # Relationships
     organizations = relationship("Organization", back_populates="coordinator", foreign_keys="Organization.coordinator_id")
@@ -45,6 +47,7 @@ class Shift(Base):
     description = Column(String, nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     status = Column(String, default="open")  # 'open' or 'closed'
+    max_volunteers = Column(Integer, default=1, nullable=False)
 
     # Relationships
     organization = relationship("Organization", back_populates="shifts")
