@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Search,
   Calendar,
@@ -16,21 +16,34 @@ import {
   LogOut,
   Camera,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  MessageSquare,
+  Trash2
 } from 'lucide-react'
 
 const API_URL = "http://localhost:8000/api";
+
+import Toast from './components/Toast';
+import TimePickerModal from './components/TimePickerModal';
+import ReviewsModal from './components/ReviewsModal';
+import OrgRegisterModal from './components/OrgRegisterModal';
+import ShiftDetailsModal from './components/ShiftDetailsModal';
 
 export default function App() {
   // --- Centralized Core State Object ---
   const [user, setUser] = useState(null); // Current logged in user object
   const [organization, setOrganization] = useState(null); // User's organization if B2B
   const [currentRole, setCurrentRole] = useState('B2C'); // 'B2C' (volunteer) or 'B2B' (organizer)
-  
+
   // Navigation Tabs
   const [activeB2CTab, setActiveB2CTab] = useState('search'); // 'search' | 'myshifts' | 'profile'
   const [activeB2BTab, setActiveB2BTab] = useState('manage'); // 'manage' | 'create' | 'profile'
   const [activeB2BFilter, setActiveB2BFilter] = useState("ВІДКРИТІ"); // B2B managed filter: 'ВІДКРИТІ' | 'АКТИВНІ'
+  const [activeB2CShiftsFilter, setActiveB2CShiftsFilter] = useState("АКТИВНІ"); // 'АКТИВНІ' | 'ЗАВЕРШЕНІ'
+
+  // Map Picker Refs
+  const pickerMapRef = useRef(null);
+  const pickerMarkerRef = useRef(null);
 
   // Form Inputs
   const [regName, setRegName] = useState('Дмитро');
@@ -42,7 +55,7 @@ export default function App() {
   const [enteredOtp, setEnteredOtp] = useState('');
   const [regRole, setRegRole] = useState('B2C');
   const [googlePhone, setGooglePhone] = useState('');
-  
+
   // Password Reset States
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [resetOtpMode, setResetOtpMode] = useState(false);
@@ -50,7 +63,7 @@ export default function App() {
   const [resetOtpCode, setResetOtpCode] = useState('');
   const [resetEnteredOtp, setResetEnteredOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  
+
   // Organization Register Form
   const [regOrgName, setRegOrgName] = useState('Foundation Coffee');
   const [regOrgDesc, setRegOrgDesc] = useState('Кав\'ярня третьої хвилі, хаб студентських ініціатив');
@@ -76,6 +89,7 @@ export default function App() {
   const [bookedShifts, setBookedShifts] = useState([]); // Applied B2C shifts (applications)
   const [b2bApplications, setB2bApplications] = useState([]); // B2B applications for approval/check-in
   const [b2bShifts, setB2bShifts] = useState([]); // Organizer created shifts
+  const [orgMembers, setOrgMembers] = useState([]); // Members of organization
   const [activeB2BSubView, setActiveB2BSubView] = useState('applications'); // 'applications' | 'shifts'
 
   // Attendance Code input state per application
@@ -94,12 +108,15 @@ export default function App() {
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [reviewsModalUserName, setReviewsModalUserName] = useState('');
   const [isOrgRegisterModalOpen, setIsOrgRegisterModalOpen] = useState(false);
+  const [inviteOrgName, setInviteOrgName] = useState(null);
+  const [isMembersListExpanded, setIsMembersListExpanded] = useState(true);
+  const [showCreateMapPicker, setShowCreateMapPicker] = useState(false);
 
   // 14-day rolling calendar YYYY-MM-DD
   const calendarDays = useMemo(() => {
     const days = [];
     const weekdaysShort = ['НД', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
-    
+
     for (let i = 0; i < 14; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
@@ -116,7 +133,7 @@ export default function App() {
 
   const [selectedDateStr, setSelectedDateStr] = useState(calendarDays[0].dateStr);
   const [selectedFilter, setSelectedFilter] = useState("Всі сфери");
-  
+
   // Search and Profile Editing States
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -203,13 +220,15 @@ export default function App() {
         const booked = await apiCall('/applications/my');
         setBookedShifts(booked);
       } else {
-        // B2B role: Fetch applications and created shifts
-        const [apps, b2bShiftsData] = await Promise.all([
+        // B2B role: Fetch applications, created shifts, and members
+        const [apps, b2bShiftsData, membersData] = await Promise.all([
           apiCall('/applications/b2b'),
-          apiCall('/shifts/b2b')
+          apiCall('/shifts/b2b'),
+          apiCall('/organizations/members').catch(() => [])
         ]);
         setB2bApplications(apps);
         setB2bShifts(b2bShiftsData);
+        setOrgMembers(membersData);
       }
     } catch (err) {
       console.error("Помилка завантаження даних:", err);
@@ -237,15 +256,15 @@ export default function App() {
             if (!r.ok) throw new Error("Session invalid");
             return r.json();
           });
-          
+
           setUser(userData);
           setCurrentRole(storedUserRole || userData.role);
-          
+
           // Fetch organization info if any
           const org = await fetch(`${API_URL}/auth/my-org`, {
             headers: reqHeaders
           }).then(r => r.json()).catch(() => null);
-          
+
           if (org) {
             setOrganization(org);
           }
@@ -260,10 +279,230 @@ export default function App() {
     restoreSession();
   }, []);
 
+  // Handle invitation links
+  const handleInviteToken = useCallback(async (token, currentUser) => {
+    if (!currentUser) {
+      sessionStorage.setItem('pending_invite_token', token);
+      return;
+    }
+    
+    try {
+      const valRes = await fetch(`${API_URL}/organizations/invitations/validate/${token}`);
+      if (!valRes.ok) {
+        const errData = await valRes.json().catch(() => ({}));
+        showToastMsg(errData.detail || "Запрошення недійсне або термін його дії закінчився", "error");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        sessionStorage.removeItem('pending_invite_token');
+        return;
+      }
+      
+      const valData = await valRes.json();
+      const orgName = valData.organization_name;
+      
+      const headers = {};
+      const tokenLocal = localStorage.getItem('oneclick_user_token');
+      if (tokenLocal) {
+        headers['Authorization'] = `Bearer ${tokenLocal}`;
+      } else {
+        headers['x-user-id'] = String(currentUser.id);
+      }
+      
+      if (currentUser.company_id) {
+        if (currentUser.company_role === 'owner') {
+          const confirmDeleteAndJoin = window.confirm(`Ви є власником іншої організації. Приєднання до нової автоматично видалить вашу поточну організацію та всі її дані. Ви впевнені, що хочете видалити її та приєднатися до "${orgName}"?`);
+          if (!confirmDeleteAndJoin) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            sessionStorage.removeItem('pending_invite_token');
+            return;
+          }
+          // Delete old organization first
+          const delRes = await fetch(`${API_URL}/organizations`, {
+            method: 'DELETE',
+            headers: headers
+          });
+          if (!delRes.ok) {
+            const errData = await delRes.json().catch(() => ({}));
+            throw new Error(errData.detail || "Не вдалося видалити вашу поточну організацію");
+          }
+        } else {
+          const confirmSwitch = window.confirm(`Ви вже є учасником іншої організації. Бажаєте вийти з неї та приєднатися до "${orgName}"?`);
+          if (!confirmSwitch) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            sessionStorage.removeItem('pending_invite_token');
+            return;
+          }
+          // Leave old organization first
+          const leaveRes = await fetch(`${API_URL}/organizations/leave`, {
+            method: 'POST',
+            headers: headers
+          });
+          if (!leaveRes.ok) {
+            const errData = await leaveRes.json().catch(() => ({}));
+            throw new Error(errData.detail || "Не вдалося вийти з вашої поточної організації");
+          }
+        }
+      } else {
+        const confirmJoin = window.confirm(`Бажаєте приєднатися до організації "${orgName}"?`);
+        if (!confirmJoin) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          sessionStorage.removeItem('pending_invite_token');
+          return;
+        }
+      }
+      
+      const acceptRes = await fetch(`${API_URL}/organizations/accept-invitation/${token}`, {
+        method: 'POST',
+        headers: headers
+      });
+      
+      if (!acceptRes.ok) {
+        const errData = await acceptRes.json().catch(() => ({}));
+        showToastMsg(errData.detail || "Помилка при прийнятті запрошення", "error");
+      } else {
+        const updatedUser = await acceptRes.json();
+        setUser(updatedUser);
+        setCurrentRole('B2B');
+        localStorage.setItem('oneclick_user_role', 'B2B');
+        
+        const orgRes = await fetch(`${API_URL}/auth/my-org`, { headers }).then(r => r.json()).catch(() => null);
+        if (orgRes) {
+          setOrganization(orgRes);
+        }
+        
+        showToastMsg(`Ви успішно приєдналися до "${orgName}"!`, "success");
+      }
+      
+      window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem('pending_invite_token');
+      loadData();
+    } catch (err) {
+      console.error(err);
+      showToastMsg(err.message || "Помилка обробки запрошення", "error");
+      window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem('pending_invite_token');
+    }
+  }, [loadData]);
+
+  useEffect(() => {
+    const inviteToken = new URLSearchParams(window.location.search).get('invite');
+    if (inviteToken) {
+      sessionStorage.setItem('pending_invite_token', inviteToken);
+    }
+    const token = sessionStorage.getItem('pending_invite_token');
+    if (token) {
+      if (user) {
+        handleInviteToken(token, user);
+      } else {
+        fetch(`${API_URL}/organizations/invitations/validate/${token}`)
+          .then(r => {
+            if (!r.ok) throw new Error("Invalid");
+            return r.json();
+          })
+          .then(data => {
+            setInviteOrgName(data.organization_name);
+          })
+          .catch(() => {
+            setInviteOrgName(null);
+          });
+      }
+    } else {
+      setInviteOrgName(null);
+    }
+  }, [user, handleInviteToken]);
+
   // Fetch data on parameters change
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Leaflet Map Picker Initialization (Odessa-bound)
+  useEffect(() => {
+    if (activeB2BTab === 'create' && window.L) {
+      const timer = setTimeout(() => {
+        const mapContainer = document.getElementById('address-picker-map');
+        if (!mapContainer) return;
+
+        // Odessa coordinates: 46.4825, 30.7233
+        const defaultLat = 46.4825;
+        const defaultLng = 30.7233;
+
+        if (!pickerMapRef.current) {
+          const map = window.L.map('address-picker-map').setView([defaultLat, defaultLng], 12);
+          
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+
+          const marker = window.L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+          pickerMarkerRef.current = marker;
+          pickerMapRef.current = map;
+
+          const handleMapInteraction = async (lat, lng) => {
+            marker.setLatLng([lat, lng]);
+            map.panTo([lat, lng]);
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=uk`);
+              const data = await res.json();
+              if (data && data.address) {
+                const road = data.address.road || '';
+                const house = data.address.house_number || '';
+                let addrStr = '';
+                if (road) {
+                  addrStr = road;
+                  if (house) addrStr += `, ${house}`;
+                } else {
+                  addrStr = data.display_name.split(',')[0] || '';
+                }
+                setFormAddress(addrStr);
+              }
+            } catch (err) {
+              console.error("Geocoding error:", err);
+            }
+          };
+
+          map.on('click', (e) => {
+            handleMapInteraction(e.latlng.lat, e.latlng.lng);
+          });
+
+          marker.on('dragend', () => {
+            const position = marker.getLatLng();
+            handleMapInteraction(position.lat, position.lng);
+          });
+        } else {
+          pickerMapRef.current.invalidateSize();
+        }
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+        if (pickerMapRef.current) {
+          pickerMapRef.current.remove();
+          pickerMapRef.current = null;
+          pickerMarkerRef.current = null;
+        }
+      };
+    }
+  }, [activeB2BTab, showCreateMapPicker]);
+
+  const handleAddressBlur = async () => {
+    if (!formAddress.trim()) return;
+    try {
+      const query = formAddress.toLowerCase().includes('одеса') ? formAddress : `${formAddress}, Одеса`;
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+        if (pickerMapRef.current && pickerMarkerRef.current) {
+          pickerMarkerRef.current.setLatLng([newLat, newLng]);
+          pickerMapRef.current.setView([newLat, newLng], 15);
+        }
+      }
+    } catch (err) {
+      console.error("Geocoding address error:", err);
+    }
+  };
 
   // Profile Editing Helpers
   const startEditingProfile = () => {
@@ -295,17 +534,92 @@ export default function App() {
       if (updatedUser.token) {
         localStorage.setItem('oneclick_user_token', updatedUser.token);
       }
-      
+
       if (currentRole === 'B2B') {
         const org = await apiCall('/auth/my-org');
         setOrganization(org);
       }
-      
+
       setIsEditingProfile(false);
       showToastMsg("Профіль успішно оновлено!", "success");
       loadData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleGenerateInvite = async () => {
+    try {
+      const data = await apiCall('/organizations/invitations', 'POST', {
+        role: 'member'
+      });
+      const inviteUrl = `${window.location.origin}/?invite=${data.token}`;
+      await navigator.clipboard.writeText(inviteUrl);
+      showToastMsg("Посилання для запрошення згенеровано та скопійовано в буфер обміну!", "success");
+    } catch (err) {
+      console.error(err);
+      showToastMsg("Помилка генерації запрошення", "error");
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId, newRole) => {
+    try {
+      await apiCall(`/organizations/members/${memberId}/role`, 'PUT', {
+        role: newRole
+      });
+      showToastMsg("Роль успішно оновлено!", "success");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      showToastMsg(err.message || "Помилка оновлення ролі", "error");
+    }
+  };
+
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!window.confirm(`Ви дійсно бажаєте вилучити ${memberName} з організації?`)) {
+      return;
+    }
+    try {
+      await apiCall(`/organizations/members/${memberId}`, 'DELETE');
+      showToastMsg(`${memberName} вилучено з організації`, "success");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      showToastMsg(err.message || "Помилка вилучення учасника", "error");
+    }
+  };
+
+  const handleLeaveOrganization = async () => {
+    if (!window.confirm("Ви дійсно бажаєте вийти з організації? Ви втратите доступ до кабінету організатора.")) {
+      return;
+    }
+    try {
+      const updatedUser = await apiCall('/organizations/leave', 'POST');
+      setUser(updatedUser);
+      setOrganization(null);
+      setCurrentRole('B2C');
+      showToastMsg("Ви успішно вийшли з організації", "success");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      showToastMsg(err.message || "Помилка виходу з організації", "error");
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!window.confirm("УВАГА! Ви дійсно бажаєте видалити організацію? Усі створені заходи будуть видалені, а всі учасники повернуться до статусу індивідуальних волонтерів. Цю дію неможливо скасувати!")) {
+      return;
+    }
+    try {
+      const updatedUser = await apiCall('/organizations', 'DELETE');
+      setUser(updatedUser);
+      setOrganization(null);
+      setCurrentRole('B2C');
+      showToastMsg("Організацію успішно видалено", "success");
+      loadData();
+    } catch (err) {
+      console.error(err);
+      showToastMsg(err.message || "Помилка видалення організації", "error");
     }
   };
 
@@ -360,28 +674,28 @@ export default function App() {
       try {
         // 1. Check if email exists
         const checkRes = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(regEmail)}`).then(r => r.json());
-        
+
         if (checkRes.exists) {
           // If user exists, log them in directly
           const userData = await apiCall('/auth/login-or-register', 'POST', {
-            name: regName,
+            name: regName || "",
             email: regEmail,
             password: regPassword,
             role: 'B2B'
           });
           setUser(userData);
           setCurrentRole(userData.role);
-          
+
           localStorage.setItem('oneclick_user_id', String(userData.id));
           localStorage.setItem('oneclick_user_role', userData.role);
           if (userData.token) {
             localStorage.setItem('oneclick_user_token', userData.token);
           }
-          
+
           const org = await fetch(`${API_URL}/auth/my-org`, {
             headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
           }).then(r => r.json()).catch(() => null);
-          
+
           if (org) {
             setOrganization(org);
             setCurrentRole('B2B');
@@ -389,9 +703,13 @@ export default function App() {
           }
           showToastMsg(`Вітаємо, ${userData.name}! Вхід успішний.`, 'success');
         } else {
-          // If user does not exist (registration), send verification code
+          // If user does not exist (registration), check if name is provided
+          if (!regName || !regName.trim()) {
+            showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
+            return;
+          }
           const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-          
+
           // Send real verification email via backend SMTP
           await apiCall('/auth/send-verification-email', 'POST', {
             email: regEmail,
@@ -412,13 +730,24 @@ export default function App() {
         showToastMsg("Введіть коректний 10-значний номер телефону", "error");
         return;
       }
-      
+
+      // Check if user with this phone exists
+      try {
+        const checkRes = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent('+380' + regPhone)}`).then(r => r.json());
+        if (!checkRes.exists && (!regName || !regName.trim())) {
+          showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
       // Simulate sending OTP code
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
       setOtpCode(generatedCode);
       setOtpMode(true);
       setEnteredOtp('');
-      
+
       // Wait a brief moment then show simulation alert
       setTimeout(() => {
         alert(`[СИМУЛЯЦІЯ SMS] Код підтвердження для входу: ${generatedCode}`);
@@ -432,7 +761,7 @@ export default function App() {
       showToastMsg("Невірний код підтвердження", "error");
       return;
     }
-    
+
     try {
       const payload = regRole === 'B2B' ? {
         name: regName,
@@ -447,25 +776,25 @@ export default function App() {
 
       const userData = await apiCall('/auth/login-or-register', 'POST', payload);
       setUser(userData);
-      setCurrentRole(userData.role);
-      
-      localStorage.setItem('oneclick_user_id', String(userData.id));
-      localStorage.setItem('oneclick_user_role', userData.role);
-      if (userData.token) {
-        localStorage.setItem('oneclick_user_token', userData.token);
-      }
-      
+
       // Check if user already has organization
       const org = await fetch(`${API_URL}/auth/my-org`, {
         headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
       }).then(r => r.json()).catch(() => null);
-      
+
       if (org) {
         setOrganization(org);
-        if (userData.role === 'B2B') {
-          setCurrentRole('B2B');
-          localStorage.setItem('oneclick_user_role', 'B2B');
-        }
+      } else {
+        setOrganization(null);
+      }
+
+      const initialRole = regRole;
+      setCurrentRole(initialRole);
+
+      localStorage.setItem('oneclick_user_id', String(userData.id));
+      localStorage.setItem('oneclick_user_role', initialRole);
+      if (userData.token) {
+        localStorage.setItem('oneclick_user_token', userData.token);
       }
       showToastMsg(`Вітаємо, ${userData.name}! Реєстрація успішна.`, 'success');
       setOtpMode(false);
@@ -486,15 +815,15 @@ export default function App() {
         showToastMsg("Користувача з такою електронною поштою не знайдено", "error");
         return;
       }
-      
+
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
       setResetOtpCode(generatedCode);
-      
+
       await apiCall('/auth/send-verification-email', 'POST', {
         email: resetEmail,
         code: generatedCode
       });
-      
+
       setResetOtpMode(true);
       setResetEnteredOtp('');
       showToastMsg(`Код для зміни паролю надіслано на пошту ${resetEmail}`, 'success');
@@ -511,13 +840,13 @@ export default function App() {
       showToastMsg("Невірний код підтвердження", "error");
       return;
     }
-    
+
     try {
       await apiCall('/auth/reset-password', 'POST', {
         email: resetEmail,
         new_password: newPassword
       });
-      
+
       showToastMsg("Пароль успішно змінено! Тепер ви можете увійти.", "success");
       setForgotPasswordMode(false);
       setResetOtpMode(false);
@@ -552,25 +881,25 @@ export default function App() {
                 org_description: regRole === 'B2B' ? regOrgDesc : null
               });
               setUser(userData);
-              setCurrentRole(userData.role);
-              
-              localStorage.setItem('oneclick_user_id', String(userData.id));
-              localStorage.setItem('oneclick_user_role', userData.role);
-              if (userData.token) {
-                localStorage.setItem('oneclick_user_token', userData.token);
-              }
-              
+
               // Check if user already has organization
               const org = await fetch(`${API_URL}/auth/my-org`, {
                 headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
               }).then(r => r.json()).catch(() => null);
-              
+
               if (org) {
                 setOrganization(org);
-                if (userData.role === 'B2B') {
-                  setCurrentRole('B2B');
-                  localStorage.setItem('oneclick_user_role', 'B2B');
-                }
+              } else {
+                setOrganization(null);
+              }
+
+              const initialRole = regRole || userData.role;
+              setCurrentRole(initialRole);
+
+              localStorage.setItem('oneclick_user_id', String(userData.id));
+              localStorage.setItem('oneclick_user_role', initialRole);
+              if (userData.token) {
+                localStorage.setItem('oneclick_user_token', userData.token);
               }
               showToastMsg(`Вітаємо, ${userData.name}! Вхід через Google успішний.`, 'success');
             } catch (err) {
@@ -609,7 +938,7 @@ export default function App() {
         address: regOrgAddr
       });
       setOrganization(orgData);
-      
+
       // Refetch user to get updated role (B2B)
       const updatedUser = await apiCall('/auth/me');
       setUser(updatedUser);
@@ -624,7 +953,7 @@ export default function App() {
 
   // Switch role between B2C and B2B (only if they have organization)
   const toggleRole = () => {
-    if (!organization) {
+    if (currentRole === 'B2C' && !organization) {
       setIsOrgRegisterModalOpen(true);
       return;
     }
@@ -691,7 +1020,7 @@ export default function App() {
       });
       showToastMsg("Дякуємо! Відгук успішно надіслано.", "success");
       loadData();
-      
+
       // Update local rating state
       const updatedUser = await apiCall('/auth/me');
       setUser(updatedUser);
@@ -738,12 +1067,23 @@ export default function App() {
     });
   }, [b2bApplications, activeB2BFilter]);
 
+  // Filtered booked shifts for B2C lists (Active vs Completed)
+  const filteredB2CBookedShifts = useMemo(() => {
+    return bookedShifts.filter(app => {
+      if (activeB2CShiftsFilter === "АКТИВНІ") {
+        return app.status === "pending" || app.status === "approved";
+      } else {
+        return app.status === "attended" || app.status === "reviewed" || app.status === "rejected";
+      }
+    });
+  }, [bookedShifts, activeB2CShiftsFilter]);
+
   // --- STAGE 1.5: GOOGLE LOGIN MISSING PHONE FLOW ---
   if (user && !user.phone && user.role !== 'B2B') {
     return (
       <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex items-center justify-center p-4">
         <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-white/10 p-6 text-[#111111]">
-          
+
           <div className="flex-1 flex flex-col items-center justify-center my-auto">
             <div className="w-20 h-20 bg-gradient-to-tr from-[#FF5522] to-[#FFCC00] rounded-2xl shadow-lg flex items-center justify-center mb-6">
               <span className="text-white text-3xl font-black tracking-tight">1C</span>
@@ -840,13 +1180,22 @@ export default function App() {
     return (
       <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex items-center justify-center p-4">
         <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-white/10 p-6 text-[#111111]">
-          
+
           <div className="flex-1 flex flex-col items-center justify-center my-auto">
             <div className="w-20 h-20 bg-gradient-to-tr from-[#FF5522] to-[#FFCC00] rounded-2xl shadow-lg flex items-center justify-center mb-6">
               <span className="text-white text-3xl font-black tracking-tight">1C</span>
             </div>
             <h1 className="text-3xl font-black tracking-tight text-gray-900 mb-1">ONECLICK</h1>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+
+            {inviteOrgName && (
+              <div className="w-full max-w-[320px] mb-6 bg-orange-50 border border-orange-200 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
+                <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
+                <div className="text-[10px] text-gray-700 font-semibold leading-relaxed">
+                  <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                </div>
+              </div>
+            )}
 
             {otpMode ? (
               <form onSubmit={handleVerifyOtp} className="space-y-4 w-full max-w-[320px] animate-fadeIn">
@@ -989,22 +1338,20 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setRegRole('B2C')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
-                      regRole === 'B2C'
+                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2C'
                         ? 'bg-[#FF5522] text-white shadow-sm'
                         : 'text-gray-500 hover:text-black'
-                    }`}
+                      }`}
                   >
                     Волонтер (B2C)
                   </button>
                   <button
                     type="button"
                     onClick={() => setRegRole('B2B')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
-                      regRole === 'B2B'
+                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2B'
                         ? 'bg-[#FF5522] text-white shadow-sm'
                         : 'text-gray-500 hover:text-black'
-                    }`}
+                      }`}
                   >
                     Організатор (B2B)
                   </button>
@@ -1019,7 +1366,6 @@ export default function App() {
                     placeholder="напр. Дмитро"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    required
                     className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                   />
                 </div>
@@ -1129,174 +1475,32 @@ export default function App() {
   // --- STAGE 2: DETAILS OVERLAY ---
   if (currentDetailsShift) {
     return (
-      <div className="w-full min-h-screen bg-slate-900/40 py-4 flex items-center justify-center relative">
-        <div className="w-full max-w-[450px] min-h-screen bg-[#f5f5f7] relative pb-8 text-[#111111] overflow-x-hidden border border-gray-200 shadow-2xl flex flex-col justify-between">
-          
-          <div>
-            <div className="w-full bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-50 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentDetailsShift(null)}
-                className="flex items-center gap-1.5 text-xs font-black text-gray-700 hover:text-black transition-all active:scale-95 py-1.5 px-3 rounded-full bg-gray-50 border border-gray-100 shadow-sm"
-              >
-                <ArrowLeft size={14} className="text-[#FF5522]" />
-                <span>Назад</span>
-              </button>
-              <span className="text-xs font-extrabold text-gray-800 uppercase tracking-widest">
-                Деталі заходу
-              </span>
-              <div className="w-16"></div>
-            </div>
-
-            <div className="p-5 space-y-5 text-left">
-              <div className="flex justify-between items-start">
-                <span className="px-3 py-1 bg-yellow-100 text-black text-[10px] font-extrabold rounded-full tracking-wider uppercase">
-                  {currentDetailsShift.category}
-                </span>
-              </div>
-
-              <div>
-                <h1 className="text-xl font-black text-gray-900 leading-snug mb-1">
-                  {currentDetailsShift.title}
-                </h1>
-                <p className="text-xs text-gray-400 font-bold flex items-center gap-1">
-                  <Building2 size={13} className="text-gray-300" />
-                  <span>Організація: {currentDetailsShift.organization_name || currentDetailsShift.business}</span>
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                  Опис завдання
-                </h3>
-                <p className="text-xs text-gray-700 leading-relaxed font-semibold">
-                  {currentDetailsShift.description || "Допомога у координації події."}
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3 text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Clock size={15} className="text-[#FFCC00]" />
-                  <span>Час роботи: <strong className="text-gray-900">{currentDetailsShift.time}</strong> ({currentDetailsShift.date})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={15} className="text-gray-400" />
-                  <span>Локація: <strong className="text-gray-900">{currentDetailsShift.location}</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Info size={15} className="text-blue-400" />
-                  <span>Адреса: <strong className="text-gray-900">{currentDetailsShift.address}</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User size={15} className="text-green-500" />
-                  <span>Статус місць: <strong className="text-gray-900">{(currentDetailsShift.approved_count || 0) >= currentDetailsShift.max_volunteers ? "Зайнято" : "Вільне місце"}</strong></span>
-                </div>
-              </div>
-
-              <div className="bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <iframe
-                  src={`https://maps.google.com/maps?q=${encodeURIComponent(currentDetailsShift.address || 'Одеса')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                  className="w-full h-[180px] border-none rounded-xl"
-                  title="Shift Details Map"
-                ></iframe>
-              </div>
-            </div>
-          </div>
-
-          {currentRole === 'B2C' && (() => {
-            const existingApp = bookedShifts.find(app => app.shift_id === currentDetailsShift.id || app.shift?.id === currentDetailsShift.id);
-            if (existingApp) {
-              let btnText = "Ви вже відгукнулися";
-              let btnClass = "bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed";
-              
-              if (existingApp.status === 'pending') {
-                btnText = "Заявка на розгляді";
-                btnClass = "bg-orange-50 text-orange-600 border border-orange-200 cursor-not-allowed font-extrabold";
-              } else if (existingApp.status === 'approved') {
-                btnText = "Схвалено (Очікує зміну)";
-                btnClass = "bg-blue-50 text-blue-600 border border-blue-200 cursor-not-allowed font-extrabold";
-              } else if (existingApp.status === 'attended' || existingApp.status === 'reviewed') {
-                btnText = "Зміна завершена";
-                btnClass = "bg-green-50 text-green-600 border border-green-200 cursor-not-allowed font-extrabold";
-              } else if (existingApp.status === 'rejected') {
-                btnText = "Відхилено";
-                btnClass = "bg-red-50 text-red-600 border border-red-200 cursor-not-allowed font-extrabold";
-              }
-
-              return (
-                <div className="p-4 bg-white border-t border-gray-100">
-                  <button
-                    disabled
-                    className={`w-full py-4 rounded-full text-sm flex items-center justify-center gap-1.5 ${btnClass}`}
-                  >
-                    <span>{btnText}</span>
-                  </button>
-                </div>
-              );
-            }
-
-            // No existing application: show normal sign up flow
-            if ((currentDetailsShift.approved_count || 0) >= currentDetailsShift.max_volunteers) {
-              return (
-                <div className="p-4 bg-white border-t border-gray-100">
-                  <button
-                    disabled
-                    className="w-full py-4 bg-gray-250 text-gray-400 font-bold rounded-full shadow-inner text-sm cursor-not-allowed flex items-center justify-center gap-1.5 border border-gray-200"
-                  >
-                    <span>Вільних місць немає</span>
-                  </button>
-                </div>
-              );
-            }
-
-            return (
-              <div className="p-4 bg-white border-t border-gray-100">
-                <button
-                  onClick={() => handleApplyShift(currentDetailsShift)}
-                  className="w-full py-4 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold rounded-full shadow-md text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Відгукнутися на захід</span>
-                </button>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
+      <ShiftDetailsModal
+        shift={currentDetailsShift}
+        onClose={() => setCurrentDetailsShift(null)}
+        currentRole={currentRole}
+        bookedShifts={bookedShifts}
+        handleApplyShift={handleApplyShift}
+      />
     );
   }
 
   // --- STAGE 3: MAIN APP VIEW ---
   return (
     <div className="w-full min-h-screen bg-slate-900/40 py-4 flex items-center justify-center relative">
-      
+
       {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[200] w-[calc(100%-48px)] max-w-[380px] bg-white rounded-2xl shadow-xl px-4 py-3.5 border border-gray-100 flex items-center gap-3 animate-bounce">
-          {toast.type === 'success' ? (
-            <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-              <CheckCircle2 size={18} />
-            </div>
-          ) : toast.type === 'error' ? (
-            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
-              <AlertCircle size={18} />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-              <Info size={18} />
-            </div>
-          )}
-          <p className="text-xs font-bold text-gray-800 flex-1 leading-snug">{toast.message}</p>
-        </div>
-      )}
+      <Toast toast={toast} />
 
       {/* Main frame */}
       <div className="w-full max-w-[450px] min-h-screen bg-[#f5f5f7] relative pb-[110px] text-[#111111] overflow-x-hidden border border-gray-200 shadow-2xl">
-        
+
         {/* ------------------------------------------------------------- */}
         {/* --- B2C WORKSPACE (VOLUNTEER) --- */}
         {/* ------------------------------------------------------------- */}
         {currentRole === 'B2C' && (
           <div className="w-full px-4 pt-6">
-            
+
             {/* VIEW 1: SEARCH TAB */}
             {activeB2CTab === 'search' && (
               <div className="animate-fadeIn">
@@ -1305,9 +1509,9 @@ export default function App() {
                     <h1 className="text-xl font-black tracking-tight text-gray-900">Пошук заходів</h1>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Знайдіть волонтерські завдання</p>
                   </div>
-                  
+
                   {/* Switch to B2B or Register */}
-                  <button 
+                  <button
                     onClick={toggleRole}
                     className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
                   >
@@ -1324,11 +1528,10 @@ export default function App() {
                       <button
                         key={day.dateStr}
                         onClick={() => setSelectedDateStr(day.dateStr)}
-                        className={`flex-shrink-0 w-12 h-20 rounded-full flex flex-col justify-between items-center py-3 transition-all duration-200 active:scale-95 ${
-                          isActive 
-                            ? 'bg-black text-white shadow-md scale-105' 
+                        className={`flex-shrink-0 w-12 h-20 rounded-full flex flex-col justify-between items-center py-3 transition-all duration-200 active:scale-95 ${isActive
+                            ? 'bg-black text-white shadow-md scale-105'
                             : 'bg-white text-gray-600 border border-gray-100 hover:border-gray-200'
-                        }`}
+                          }`}
                       >
                         <span className={`text-[9px] font-bold tracking-wider ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
                           {day.weekday}
@@ -1363,11 +1566,10 @@ export default function App() {
                       <button
                         key={filter}
                         onClick={() => setSelectedFilter(filter)}
-                        className={`flex-shrink-0 px-4.5 py-2 rounded-full text-[11px] font-extrabold transition-all duration-200 active:scale-95 ${
-                          isActive
+                        className={`flex-shrink-0 px-4.5 py-2 rounded-full text-[11px] font-extrabold transition-all duration-200 active:scale-95 ${isActive
                             ? 'bg-[#FFCC00] text-black shadow-sm'
                             : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {filter}
                       </button>
@@ -1397,17 +1599,16 @@ export default function App() {
                           <span className="px-2.5 py-1 bg-gray-50 text-[9px] font-extrabold text-gray-500 rounded-full tracking-wider uppercase">
                             {shift.category}
                           </span>
-                          <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${
-                            (shift.approved_count || 0) >= shift.max_volunteers
+                          <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${(shift.approved_count || 0) >= shift.max_volunteers
                               ? 'bg-red-50 text-red-500 border border-red-100'
                               : 'bg-green-50 text-green-600 border border-green-100'
-                          }`}>
+                            }`}>
                             {(shift.approved_count || 0) >= shift.max_volunteers
-                              ? 'Місць немає' 
+                              ? 'Місць немає'
                               : 'Вільне місце'}
                           </span>
                         </div>
-                        
+
                         <h3 className="font-black text-gray-900 text-base leading-snug mb-1.5">
                           {shift.title}
                         </h3>
@@ -1415,7 +1616,7 @@ export default function App() {
                           <Building2 size={13} className="text-gray-300" />
                           <span>Організатор: {shift.organization_name}</span>
                         </p>
-                        
+
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50 text-[10px] text-gray-500 font-bold">
                           <span className="flex items-center gap-1">
                             <Clock size={12} className="text-[#FFCC00]" />
@@ -1451,23 +1652,40 @@ export default function App() {
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Список ваших запланованих робіт</p>
                 </div>
 
+                {/* Tabs Filter (АКТИВНІ / ЗАВЕРШЕНІ) */}
+                <div className="flex border border-gray-100 mb-5 bg-white p-1 rounded-full shadow-sm">
+                  {["АКТИВНІ", "ЗАВЕРШЕНІ"].map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveB2CShiftsFilter(tab)}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-150 cursor-pointer text-center ${
+                        activeB2CShiftsFilter === tab
+                          ? 'bg-[#FF5522] text-white shadow-sm'
+                          : 'text-gray-400 hover:text-gray-700'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-4">
-                  {bookedShifts.length > 0 ? (
-                    bookedShifts.map((app) => (
+                  {filteredB2CBookedShifts.length > 0 ? (
+                    filteredB2CBookedShifts.map((app) => (
                       <div
                         key={app.id}
                         className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden"
                       >
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FFCC00]"></div>
-                        
+
                         <div className="flex justify-between items-start gap-2 mb-2">
-                          <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1 ${
-                            app.status === 'attended' || app.status === 'reviewed' 
+                          <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1 ${app.status === 'attended' || app.status === 'reviewed'
                               ? 'bg-green-50 text-green-600'
                               : app.status === 'rejected'
-                              ? 'bg-red-50 text-red-600'
-                              : 'bg-orange-50 text-orange-600'
-                          }`}>
+                                ? 'bg-red-50 text-red-600'
+                                : 'bg-orange-50 text-orange-600'
+                            }`}>
                             {app.status === 'pending' && 'Очікує підтвердження'}
                             {app.status === 'approved' && 'Схвалено'}
                             {app.status === 'rejected' && 'Відхилено'}
@@ -1476,7 +1694,7 @@ export default function App() {
                           </span>
                         </div>
 
-                        <h3 
+                        <h3
                           onClick={() => setCurrentDetailsShift(app.shift)}
                           className="font-black text-gray-900 text-sm leading-snug mb-2 cursor-pointer hover:underline"
                         >
@@ -1528,9 +1746,13 @@ export default function App() {
                       <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
                         <Calendar size={20} />
                       </div>
-                      <h4 className="font-bold text-gray-800 text-xs mb-1">Немає запланованих заходів</h4>
+                      <h4 className="font-bold text-gray-800 text-xs mb-1">
+                        {activeB2CShiftsFilter === 'АКТИВНІ' ? 'Немає запланованих заходів' : 'Немає завершених заходів'}
+                      </h4>
                       <p className="text-[10px] text-gray-400 max-w-[180px] leading-relaxed">
-                        Ви ще не відгукнулися на жодне волонтерське завдання.
+                        {activeB2CShiftsFilter === 'АКТИВНІ'
+                          ? 'Ви ще не відгукнулися на жодне активне волонтерське завдання.'
+                          : 'У вас поки що немає відвіданих або завершених заходів.'}
                       </p>
                     </div>
                   )}
@@ -1604,15 +1826,15 @@ export default function App() {
                         accept="image/*"
                         onChange={handleAvatarUpload}
                       />
-                      <div 
+                      <div
                         onClick={() => document.getElementById('avatar-upload-input').click()}
                         className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-3 cursor-pointer active:scale-95 transition-all"
                         title="Змінити фото профілю"
                       >
                         {user.avatar_url ? (
-                          <img 
-                            src={`${API_URL.replace('/api', '')}${user.avatar_url}`} 
-                            alt="Avatar" 
+                          <img
+                            src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
+                            alt="Avatar"
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -1631,13 +1853,12 @@ export default function App() {
                       </p>
 
                       {/* Dynamic Rating Stars */}
-                      <div 
+                      <div
                         onClick={() => user.rating && fetchVolunteerReviews(user.id, user.name)}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all ${
-                          user.rating 
-                            ? 'bg-yellow-50/50 border-yellow-200 text-yellow-700 cursor-pointer hover:bg-yellow-50' 
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all ${user.rating
+                            ? 'bg-yellow-50/50 border-yellow-200 text-yellow-700 cursor-pointer hover:bg-yellow-50'
                             : 'bg-gray-50 border-gray-200 text-gray-400'
-                        }`}
+                          }`}
                       >
                         <Star size={14} className={user.rating ? "fill-yellow-400 text-yellow-500" : ""} />
                         <span className="text-xs font-black">
@@ -1667,18 +1888,40 @@ export default function App() {
                       >
                         Редагувати профіль
                       </button>
+
+                      {/* Leave Feedback Button */}
+                      <a
+                        href="https://forms.gle/kcDLFPYfXmGP183h6"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        <MessageSquare size={13} />
+                        <span>Залишити відгук</span>
+                      </a>
                     </>
                   )}
                 </div>
 
                 {organization ? (
-                  <button
-                    onClick={toggleRole}
-                    className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-extrabold rounded-full border border-gray-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-                  >
-                    <Building2 size={15} className="text-[#FFCC00]" />
-                    <span>Перейти в кабінет Організатора (B2B)</span>
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={toggleRole}
+                      className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-extrabold rounded-full border border-gray-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+                    >
+                      <Building2 size={15} className="text-[#FFCC00]" />
+                      <span>Перейти в кабінет Організатора (B2B)</span>
+                    </button>
+                    {user.company_role !== 'owner' && (
+                      <button
+                        onClick={handleLeaveOrganization}
+                        className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <LogOut size={13} />
+                        <span>Вийти з організації</span>
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <button
                     onClick={() => setIsOrgRegisterModalOpen(true)}
@@ -1742,7 +1985,7 @@ export default function App() {
                       Вкажіть дані вашої організації для продовження
                     </p>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={toggleRole}
                     className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
@@ -1813,610 +2056,742 @@ export default function App() {
               </div>
             ) : (
               <>
-                
+
                 {/* VIEW 1: MANAGE TAB */}
-            {activeB2BTab === 'manage' && (
-              <div className="animate-fadeIn">
-                <div className="flex justify-between items-center mb-5">
-                  <div className="text-left">
-                    <h1 className="text-xl font-black tracking-tight text-gray-900">Керування заходами</h1>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                      Організація: {organization ? organization.name : "..."}
-                    </p>
-                  </div>
-                  
-                  {/* Switch to B2C */}
-                  <button 
-                    onClick={toggleRole}
-                    className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#f97316] uppercase tracking-wider cursor-pointer font-sans"
-                  >
-                    <span>Волонтер</span>
-                    <User size={12} />
-                  </button>
-                </div>
-
-                {/* View Selector: Applications vs Created Shifts */}
-                <div className="flex gap-2 mb-4 border-b border-gray-150 pb-2">
-                  <button
-                    onClick={() => setActiveB2BSubView('applications')}
-                    className={`pb-2 px-3 text-xs font-black transition-all ${
-                      activeB2BSubView === 'applications'
-                        ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
-                        : 'text-gray-400 hover:text-gray-650 font-sans'
-                    }`}
-                  >
-                    Заявки волонтерів ({b2bApplications.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveB2BSubView('shifts')}
-                    className={`pb-2 px-3 text-xs font-black transition-all ${
-                      activeB2BSubView === 'shifts'
-                        ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
-                        : 'text-gray-400 hover:text-gray-650 font-sans'
-                    }`}
-                  >
-                    Мої заходи ({b2bShifts.length})
-                  </button>
-                </div>
-
-                {activeB2BSubView === 'applications' ? (
-                  <>
-                    {/* Pill filters */}
-                    <div className="flex gap-2.5 mb-5 bg-gray-100 p-1 rounded-full border border-gray-200">
-                      {["ВІДКРИТІ", "АКТИВНІ / ЗАВЕРШЕНІ"].map((filter) => {
-                        const mappedFilter = filter === "ВІДКРИТІ" ? "ВІДКРИТІ" : "АКТИВНІ";
-                        const isActive = activeB2BFilter === mappedFilter;
-                        return (
-                          <button
-                            key={filter}
-                            onClick={() => setActiveB2BFilter(mappedFilter)}
-                            className={`flex-1 py-2 rounded-full text-xs font-black transition-all duration-200 active:scale-95 ${
-                              isActive
-                                ? 'bg-[#FF5522] text-white shadow-sm'
-                                : 'text-gray-500 hover:text-black'
-                            }`}
-                          >
-                            {filter}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Applications list */}
-                    <div className="space-y-4">
-                      {filteredB2BApplications.length > 0 ? (
-                        filteredB2BApplications.map((app) => (
-                          <div
-                            key={app.id}
-                            className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <span className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded-full tracking-wider ${
-                                app.status === 'pending' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {app.status === 'pending' && 'ОЧІКУЄ УЗГОДЖЕННЯ'}
-                                {app.status === 'rejected' && 'ВІДХИЛЕНО'}
-                                {app.status === 'approved' && 'ВОЛОНТЕР ПІДТВЕРДЖЕНИЙ'}
-                                {app.status === 'attended' && 'ПРИСУТНІЙ'}
-                                {app.status === 'reviewed' && 'ОЦІНЕНО'}
-                              </span>
-                            </div>
-
-                            <h3 
-                              onClick={() => setCurrentDetailsShift(app.shift)}
-                              className="font-black text-gray-950 text-base leading-snug mb-2 cursor-pointer hover:underline"
-                            >
-                              {app.shift.title}
-                            </h3>
-
-                            <div className="space-y-1 mb-3 text-[11px] text-gray-500 font-semibold">
-                              <p className="flex items-center gap-1.5">
-                                <Clock size={12} className="text-gray-300" />
-                                <span>Час: {app.shift.time} ({app.shift.date})</span>
-                              </p>
-                              <p className="flex items-center gap-1.5">
-                                {app.volunteer_avatar_url ? (
-                                  <img 
-                                    src={`${API_URL.replace('/api', '')}${app.volunteer_avatar_url}`} 
-                                    alt="Avatar" 
-                                    className="w-4 h-4 rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User size={12} className="text-gray-300" />
-                                )}
-                                <span 
-                                  onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
-                                  className="text-blue-600 underline cursor-pointer hover:text-blue-800"
-                                >
-                                  Волонтер: {app.volunteer_name}
-                                </span>
-                              </p>
-                            </div>
-
-                            {/* Interactive flow depending on status */}
-                            
-                            {/* Status 1: Pending */}
-                            {app.status === 'pending' && (
-                              <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-2">
-                                <button
-                                  onClick={() => handleReviewCandidate(app.id, 'approved')}
-                                  className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                >
-                                  Схвалити
-                                </button>
-                                <button
-                                  onClick={() => handleReviewCandidate(app.id, 'rejected')}
-                                  className="flex-1 py-2 border border-gray-350 hover:bg-gray-100 text-gray-650 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                >
-                                  Відхилити
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Status 2: Approved (Waiting for attendance code) */}
-                            {app.status === 'approved' && (
-                              <div className="mt-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
-                                <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                                  Введіть код волонтера (check-in)
-                                </label>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="напр. 1C-489A"
-                                    value={attendanceCodes[app.id] || ""}
-                                    onChange={(e) => setAttendanceCodes(prev => ({ ...prev, [app.id]: e.target.value.toUpperCase() }))}
-                                    className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
-                                  />
-                                  <button
-                                    onClick={() => handleConfirmAttendance(app.id)}
-                                    className="px-4 py-2 bg-black hover:bg-black/90 text-white font-bold text-[10px] rounded-xl uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                  >
-                                    Перевірити
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Status 3: Attended (Needs review) */}
-                            {app.status === 'attended' && (
-                              <div className="mt-4 p-3.5 bg-yellow-50/50 border border-yellow-100 rounded-xl space-y-3">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                    Оцініть волонтера
-                                  </span>
-                                  <div className="flex gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => {
-                                      const currentRating = ratings[app.id] || 5;
-                                      return (
-                                        <button 
-                                          key={star}
-                                          onClick={() => setRatings(prev => ({ ...prev, [app.id]: star }))}
-                                          className="text-yellow-500 active:scale-125 transition-transform"
-                                        >
-                                          <Star size={18} className={star <= currentRating ? "fill-yellow-400 text-yellow-500" : "text-gray-300"} />
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                                
-                                <textarea
-                                  rows="2"
-                                  placeholder="Напишіть короткий коментар про роботу волонтера..."
-                                  value={reviews[app.id] || ""}
-                                  onChange={(e) => setReviews(prev => ({ ...prev, [app.id]: e.target.value }))}
-                                  className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none"
-                                ></textarea>
-
-                                <button
-                                  onClick={() => handleRateVolunteer(app.id)}
-                                  className="w-full py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95"
-                                >
-                                  Надіслати відгук та закрити зміну
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Status 4: Reviewed */}
-                            {app.status === 'reviewed' && app.review && (
-                              <div className="mt-3 p-3 bg-green-50/50 border border-green-100 rounded-xl text-xs space-y-1">
-                                <div className="flex items-center gap-1.5 font-bold text-green-800">
-                                  <Star size={13} className="fill-green-600 text-green-700" />
-                                  <span>Оцінено: {app.review.rating} / 5</span>
-                                </div>
-                                {app.review.comment && (
-                                  <p className="text-[11px] text-green-700 italic">
-                                    "{app.review.comment}"
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
-                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                            <Calendar size={20} />
-                          </div>
-                          <h4 className="font-bold text-gray-800 text-xs mb-1">Немає таких запитів</h4>
-                          <p className="text-[10px] text-gray-400 max-w-[180px] leading-relaxed">
-                            Немає активних чи відкритих ініціатив.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    {b2bShifts.length > 0 ? (
-                      b2bShifts.map((shift) => (
-                        <div
-                          key={shift.id}
-                          className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="px-2.5 py-0.5 text-[9px] font-extrabold rounded-full bg-gray-50 text-gray-500 uppercase tracking-wider">
-                              {shift.category}
-                            </span>
-                            <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${
-                              shift.status === 'open' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              {shift.status === 'open' ? 'Активний' : 'Закритий'}
-                            </span>
-                          </div>
-
-                          <h3 
-                            onClick={() => setCurrentDetailsShift(shift)}
-                            className="font-black text-gray-950 text-base leading-snug mb-2 cursor-pointer hover:underline"
-                          >
-                            {shift.title}
-                          </h3>
-
-                          <div className="space-y-1 mb-3 text-[11px] text-gray-500 font-semibold">
-                            <p className="flex items-center gap-1.5">
-                              <Clock size={12} className="text-gray-300" />
-                              <span>Час: {shift.time} ({shift.date})</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <MapPin size={12} className="text-gray-300" />
-                              <span>Локація: {shift.location}</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <User size={12} className="text-gray-300" />
-                              <span>Статус: <strong className="text-gray-800">{shift.approved_count > 0 ? "Волонтер знайдений" : "Очікує волонтера"}</strong></span>
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                          <Calendar size={20} />
-                        </div>
-                        <h4 className="font-bold text-gray-800 text-xs mb-1">Немає створених заходів</h4>
-                        <p className="text-[10px] text-gray-400 max-w-[200px] leading-relaxed">
-                          Ви ще не створили жодного заходу для волонтерів.
+                {activeB2BTab === 'manage' && (
+                  <div className="animate-fadeIn">
+                    <div className="flex justify-between items-center mb-5">
+                      <div className="text-left">
+                        <h1 className="text-xl font-black tracking-tight text-gray-900">Керування заходами</h1>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                          Організація: {organization ? organization.name : "..."}
                         </p>
                       </div>
+
+                      {/* Switch to B2C */}
+                      <button
+                        onClick={toggleRole}
+                        className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#f97316] uppercase tracking-wider cursor-pointer font-sans"
+                      >
+                        <span>Волонтер</span>
+                        <User size={12} />
+                      </button>
+                    </div>
+
+                    {/* View Selector: Applications vs Created Shifts */}
+                    <div className="flex gap-2 mb-4 border-b border-gray-150 pb-2">
+                      <button
+                        onClick={() => setActiveB2BSubView('applications')}
+                        className={`pb-2 px-3 text-xs font-black transition-all ${activeB2BSubView === 'applications'
+                            ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
+                            : 'text-gray-400 hover:text-gray-650 font-sans'
+                          }`}
+                      >
+                        Заявки волонтерів ({b2bApplications.length})
+                      </button>
+                      <button
+                        onClick={() => setActiveB2BSubView('shifts')}
+                        className={`pb-2 px-3 text-xs font-black transition-all ${activeB2BSubView === 'shifts'
+                            ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
+                            : 'text-gray-400 hover:text-gray-650 font-sans'
+                          }`}
+                      >
+                        Мої заходи ({b2bShifts.length})
+                      </button>
+                    </div>
+
+                    {activeB2BSubView === 'applications' ? (
+                      <>
+                        {/* Pill filters */}
+                        <div className="flex gap-2.5 mb-5 bg-gray-100 p-1 rounded-full border border-gray-200">
+                          {["ВІДКРИТІ", "АКТИВНІ / ЗАВЕРШЕНІ"].map((filter) => {
+                            const mappedFilter = filter === "ВІДКРИТІ" ? "ВІДКРИТІ" : "АКТИВНІ";
+                            const isActive = activeB2BFilter === mappedFilter;
+                            return (
+                              <button
+                                key={filter}
+                                onClick={() => setActiveB2BFilter(mappedFilter)}
+                                className={`flex-1 py-2 rounded-full text-xs font-black transition-all duration-200 active:scale-95 ${isActive
+                                    ? 'bg-[#FF5522] text-white shadow-sm'
+                                    : 'text-gray-500 hover:text-black'
+                                  }`}
+                              >
+                                {filter}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Applications list */}
+                        <div className="space-y-4">
+                          {filteredB2BApplications.length > 0 ? (
+                            filteredB2BApplications.map((app) => (
+                              <div
+                                key={app.id}
+                                className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded-full tracking-wider ${app.status === 'pending' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                                    }`}>
+                                    {app.status === 'pending' && 'ОЧІКУЄ УЗГОДЖЕННЯ'}
+                                    {app.status === 'rejected' && 'ВІДХИЛЕНО'}
+                                    {app.status === 'approved' && 'ВОЛОНТЕР ПІДТВЕРДЖЕНИЙ'}
+                                    {app.status === 'attended' && 'ПРИСУТНІЙ'}
+                                    {app.status === 'reviewed' && 'ОЦІНЕНО'}
+                                  </span>
+                                </div>
+
+                                <h3
+                                  onClick={() => setCurrentDetailsShift(app.shift)}
+                                  className="font-black text-gray-950 text-base leading-snug mb-2 cursor-pointer hover:underline"
+                                >
+                                  {app.shift.title}
+                                </h3>
+
+                                <div className="space-y-1 mb-3 text-[11px] text-gray-500 font-semibold">
+                                  <p className="flex items-center gap-1.5">
+                                    <Clock size={12} className="text-gray-300" />
+                                    <span>Час: {app.shift.time} ({app.shift.date})</span>
+                                  </p>
+                                  <p className="flex items-center gap-1.5">
+                                    {app.volunteer_avatar_url ? (
+                                      <img
+                                        src={`${API_URL.replace('/api', '')}${app.volunteer_avatar_url}`}
+                                        alt="Avatar"
+                                        className="w-4 h-4 rounded-full object-cover"
+                                      />
+                                    ) : (
+                                      <User size={12} className="text-gray-300" />
+                                    )}
+                                    <span
+                                      onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
+                                      className="text-blue-600 underline cursor-pointer hover:text-blue-800"
+                                    >
+                                      Волонтер: {app.volunteer_name}
+                                    </span>
+                                  </p>
+                                </div>
+
+                                {/* Interactive flow depending on status */}
+
+                                {/* Status 1: Pending */}
+                                {app.status === 'pending' && (
+                                  <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-2">
+                                    <button
+                                      onClick={() => handleReviewCandidate(app.id, 'approved')}
+                                      className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                    >
+                                      Схвалити
+                                    </button>
+                                    <button
+                                      onClick={() => handleReviewCandidate(app.id, 'rejected')}
+                                      className="flex-1 py-2 border border-gray-350 hover:bg-gray-100 text-gray-650 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                    >
+                                      Відхилити
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Status 2: Approved (Waiting for attendance code) */}
+                                {app.status === 'approved' && (
+                                  <div className="mt-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
+                                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                                      Введіть код волонтера (check-in)
+                                    </label>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        placeholder="напр. 1C-489A"
+                                        value={attendanceCodes[app.id] || ""}
+                                        onChange={(e) => setAttendanceCodes(prev => ({ ...prev, [app.id]: e.target.value.toUpperCase() }))}
+                                        className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
+                                      />
+                                      <button
+                                        onClick={() => handleConfirmAttendance(app.id)}
+                                        className="px-4 py-2 bg-black hover:bg-black/90 text-white font-bold text-[10px] rounded-xl uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                      >
+                                        Перевірити
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Status 3: Attended (Needs review) */}
+                                {app.status === 'attended' && (
+                                  <div className="mt-4 p-3.5 bg-yellow-50/50 border border-yellow-100 rounded-xl space-y-3">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                        Оцініть волонтера
+                                      </span>
+                                      <div className="flex gap-1">
+                                        {[1, 2, 3, 4, 5].map((star) => {
+                                          const currentRating = ratings[app.id] || 5;
+                                          return (
+                                            <button
+                                              key={star}
+                                              onClick={() => setRatings(prev => ({ ...prev, [app.id]: star }))}
+                                              className="text-yellow-500 active:scale-125 transition-transform"
+                                            >
+                                              <Star size={18} className={star <= currentRating ? "fill-yellow-400 text-yellow-500" : "text-gray-300"} />
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    <textarea
+                                      rows="2"
+                                      placeholder="Напишіть короткий коментар про роботу волонтера..."
+                                      value={reviews[app.id] || ""}
+                                      onChange={(e) => setReviews(prev => ({ ...prev, [app.id]: e.target.value }))}
+                                      className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none"
+                                    ></textarea>
+
+                                    <button
+                                      onClick={() => handleRateVolunteer(app.id)}
+                                      className="w-full py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95"
+                                    >
+                                      Надіслати відгук та закрити зміну
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Status 4: Reviewed */}
+                                {app.status === 'reviewed' && app.review && (
+                                  <div className="mt-3 p-3 bg-green-50/50 border border-green-100 rounded-xl text-xs space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-green-800">
+                                      <Star size={13} className="fill-green-600 text-green-700" />
+                                      <span>Оцінено: {app.review.rating} / 5</span>
+                                    </div>
+                                    {app.review.comment && (
+                                      <p className="text-[11px] text-green-700 italic">
+                                        "{app.review.comment}"
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
+                              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                                <Calendar size={20} />
+                              </div>
+                              <h4 className="font-bold text-gray-800 text-xs mb-1">Немає таких запитів</h4>
+                              <p className="text-[10px] text-gray-400 max-w-[180px] leading-relaxed">
+                                Немає активних чи відкритих ініціатив.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        {b2bShifts.length > 0 ? (
+                          b2bShifts.map((shift) => (
+                            <div
+                              key={shift.id}
+                              className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="px-2.5 py-0.5 text-[9px] font-extrabold rounded-full bg-gray-50 text-gray-500 uppercase tracking-wider">
+                                  {shift.category}
+                                </span>
+                                <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${shift.status === 'open' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                  {shift.status === 'open' ? 'Активний' : 'Закритий'}
+                                </span>
+                              </div>
+
+                              <h3
+                                onClick={() => setCurrentDetailsShift(shift)}
+                                className="font-black text-gray-950 text-base leading-snug mb-2 cursor-pointer hover:underline"
+                              >
+                                {shift.title}
+                              </h3>
+
+                              <div className="space-y-1 mb-3 text-[11px] text-gray-500 font-semibold">
+                                <p className="flex items-center gap-1.5">
+                                  <Clock size={12} className="text-gray-300" />
+                                  <span>Час: {shift.time} ({shift.date})</span>
+                                </p>
+                                <p className="flex items-center gap-1.5">
+                                  <MapPin size={12} className="text-gray-300" />
+                                  <span>Локація: {shift.location}</span>
+                                </p>
+                                <p className="flex items-center gap-1.5">
+                                  <User size={12} className="text-gray-300" />
+                                  <span>Статус: <strong className="text-gray-800">{shift.approved_count > 0 ? "Волонтер знайдений" : "Очікує волонтера"}</strong></span>
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                              <Calendar size={20} />
+                            </div>
+                            <h4 className="font-bold text-gray-800 text-xs mb-1">Немає створених заходів</h4>
+                            <p className="text-[10px] text-gray-400 max-w-[200px] leading-relaxed">
+                              Ви ще не створили жодного заходу для волонтерів.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
+
                   </div>
                 )}
 
-              </div>
-            )}
-
-            {/* VIEW 2: CREATE FORM TAB */}
-            {activeB2BTab === 'create' && (
-              <div className="animate-fadeIn text-left">
-                <div className="mb-5">
-                  <h1 className="text-xl font-black tracking-tight text-gray-900">Новий захід</h1>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Опублікувати завдання для волонтерів</p>
-                </div>
-
-                <form onSubmit={handleCreateShift} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                      Назва заходу / Завдання
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="напр. Волонтер на кавовий лекторій"
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      required
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Напрямок
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="напр. IT-відділ"
-                        value={formSphere}
-                        onChange={(e) => setFormSphere(e.target.value)}
-                        required
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                      />
+                {/* VIEW 2: CREATE FORM TAB */}
+                {activeB2BTab === 'create' && (
+                  <div className="animate-fadeIn text-left">
+                    <div className="mb-5">
+                      <h1 className="text-xl font-black tracking-tight text-gray-900">Новий захід</h1>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Опублікувати завдання для волонтерів</p>
                     </div>
 
-                    <div 
-                      onClick={() => {
-                        setTempStartHour(startTime.split(':')[0] || '09');
-                        setTempStartMin(startTime.split(':')[1] || '00');
-                        setTempEndHour(endTime.split(':')[0] || '18');
-                        setTempEndMin(endTime.split(':')[1] || '00');
-                        setIsTimePickerOpen(true);
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1 cursor-pointer">
-                        Години роботи
-                      </label>
-                      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3.5 shadow-sm hover:border-[#FF5522]/50 transition-colors">
-                        <Clock size={14} className="text-gray-400" />
-                        <span className="text-xs font-black text-gray-800">
-                          {startTime} — {endTime}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Локація (приміщення)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="напр. Актова зала"
-                        value={formLocation}
-                        onChange={(e) => setFormLocation(e.target.value)}
-                        required
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Дата заходу
-                      </label>
-                      <select
-                        value={selectedDateStr}
-                        onChange={(e) => setSelectedDateStr(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                      >
-                        {calendarDays.map(day => (
-                          <option key={day.dateStr} value={day.dateStr}>
-                            {day.dayNum} ({day.weekday})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                      Фізична адреса
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="вул. Канатна, 15"
-                      value={formAddress}
-                      onChange={(e) => setFormAddress(e.target.value)}
-                      required
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                    />
-                  </div>
-
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                      Опис / Задачі
-                    </label>
-                    <textarea
-                      rows="3"
-                      placeholder="Ключові обов'язки волонтера..."
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm resize-none"
-                    ></textarea>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-4 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
-                  >
-                    + ОПУБЛІКУВАТИ ЗАХІД
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* VIEW 3: CORPORATE PROFILE TAB */}
-            {activeB2BTab === 'profile' && (
-              <div className="animate-fadeIn text-left">
-                <div className="mb-5">
-                  <h1 className="text-xl font-black tracking-tight text-gray-900">Кабінет організації</h1>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Кабінет керування установою / кафедрою</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-6">
-                  {isEditingProfile ? (
-                    <form onSubmit={handleSaveProfile} className="space-y-4">
+                    <form onSubmit={handleCreateShift} className="space-y-4">
                       <div>
-                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                          Ім'я Координатора
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          Назва заходу / Завдання
                         </label>
                         <input
                           type="text"
+                          placeholder="напр. Волонтер на кавовий лекторій"
+                          value={formTitle}
+                          onChange={(e) => setFormTitle(e.target.value)}
                           required
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                          Назва Організації
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={editOrgName}
-                          onChange={(e) => setEditOrgName(e.target.value)}
-                          className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                          Адреса
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={editOrgAddr}
-                          onChange={(e) => setEditOrgAddr(e.target.value)}
-                          className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                          Опис Організації
-                        </label>
-                        <textarea
-                          rows="2"
-                          required
-                          value={editOrgDesc}
-                          onChange={(e) => setEditOrgDesc(e.target.value)}
-                          className="w-full bg-white border border-gray-250 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none shadow-sm"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          type="submit"
-                          className="flex-1 py-3 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                        >
-                          Зберегти
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingProfile(false)}
-                          className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 text-gray-600 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                        >
-                          Скасувати
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <input
-                        type="file"
-                        id="avatar-upload-input-b2b"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleAvatarUpload}
-                      />
-                      <div 
-                        onClick={() => document.getElementById('avatar-upload-input-b2b').click()}
-                        className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-4 cursor-pointer active:scale-95 transition-all text-center"
-                        title="Змінити фото профілю"
-                      >
-                        {user.avatar_url ? (
-                          <img 
-                            src={`${API_URL.replace('/api', '')}${user.avatar_url}`} 
-                            alt="Avatar" 
-                            className="w-full h-full object-cover"
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Напрямок
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="напр. IT-відділ"
+                            value={formSphere}
+                            onChange={(e) => setFormSphere(e.target.value)}
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
                           />
-                        ) : (
-                          <div className="w-full h-full bg-[#FFCC00] text-black text-2xl font-black flex items-center justify-center">
-                            {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+                        </div>
+
+                        <div
+                          onClick={() => {
+                            setTempStartHour(startTime.split(':')[0] || '09');
+                            setTempStartMin(startTime.split(':')[1] || '00');
+                            setTempEndHour(endTime.split(':')[0] || '18');
+                            setTempEndMin(endTime.split(':')[1] || '00');
+                            setIsTimePickerOpen(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1 cursor-pointer">
+                            Години роботи
+                          </label>
+                          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3.5 shadow-sm hover:border-[#FF5522]/50 transition-colors">
+                            <Clock size={14} className="text-gray-400" />
+                            <span className="text-xs font-black text-gray-800">
+                              {startTime} — {endTime}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Локація (приміщення)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="напр. Актова зала"
+                            value={formLocation}
+                            onChange={(e) => setFormLocation(e.target.value)}
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Дата заходу
+                          </label>
+                          <select
+                            value={selectedDateStr}
+                            onChange={(e) => setSelectedDateStr(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                          >
+                            {calendarDays.map(day => (
+                              <option key={day.dateStr} value={day.dateStr}>
+                                {day.dayNum} ({day.weekday})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          Фізична адреса (Одеса)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="вул. Канатна, 15"
+                            value={formAddress}
+                            onChange={(e) => setFormAddress(e.target.value)}
+                            onBlur={handleAddressBlur}
+                            required
+                            className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateMapPicker(!showCreateMapPicker)}
+                            className={`px-4 py-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                              showCreateMapPicker
+                                ? 'bg-orange-500 border-orange-500 text-white shadow-md'
+                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                            }`}
+                            title="Вибрати на карті"
+                          >
+                            <MapPin size={15} />
+                            <span>{showCreateMapPicker ? "Сховати карту" : "Мапа"}</span>
+                          </button>
+                        </div>
+
+                        {showCreateMapPicker && (
+                          <div className="mt-3 bg-white p-2 rounded-2xl border border-gray-150 shadow-inner overflow-hidden animate-fadeIn">
+                            <div
+                              id="address-picker-map"
+                              className="w-full h-[180px] rounded-xl z-0"
+                              style={{ minHeight: '180px' }}
+                            ></div>
+                            <p className="text-[9px] text-gray-400 mt-2 font-semibold text-center leading-relaxed">
+                              Перетягніть маркер або клікніть на карту в Одесі, щоб автоматично обрати адресу
+                            </p>
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                          <Camera size={14} className="animate-pulse" />
-                        </div>
                       </div>
 
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1 text-center">
-                        Організація
-                      </span>
-                      <h2 className="text-base font-black text-gray-900 mb-4 text-center">
-                        {organization ? organization.name : "..."}
-                      </h2>
 
-                      <div className="text-[11px] text-gray-500 font-semibold space-y-2 border-t border-gray-50 pt-4">
-                        <div className="flex justify-between">
-                          <span>Координатор:</span>
-                          <span className="font-bold text-gray-800">{user.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Адреса:</span>
-                          <span className="font-bold text-gray-800">{organization ? organization.address : "..."}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Опис:</span>
-                          <span className="font-bold text-gray-800">{organization ? organization.description : "..."}</span>
-                        </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          Опис / Задачі
+                        </label>
+                        <textarea
+                          rows="3"
+                          placeholder="Ключові обов'язки волонтера..."
+                          value={formDescription}
+                          onChange={(e) => setFormDescription(e.target.value)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-850 focus:outline-none focus:border-[#FF5522] shadow-sm resize-none"
+                        ></textarea>
                       </div>
 
                       <button
-                        onClick={startEditingProfile}
-                        className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer"
+                        type="submit"
+                        className="w-full py-4 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
                       >
-                        Редагувати профіль
+                        + ОПУБЛІКУВАТИ ЗАХІД
                       </button>
-                    </>
-                  )}
-                </div>
+                    </form>
+                  </div>
+                )}
 
-                <button
-                  onClick={toggleRole}
-                  className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-full border border-gray-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  <User size={15} className="text-[#FF5522]" />
-                  <span>Повернутися до акаунту Волонтера (B2C)</span>
-                </button>
-
-                <button
-                  onClick={handleSignOut}
-                  className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-full border border-red-200 shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  <LogOut size={15} className="text-red-550" />
-                  <span>Вийти з акаунту</span>
-                </button>
-              </div>
-            )}
-
-            {/* B2B Floating Bottom Navigation */}
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white shadow-xl rounded-[32px] px-2 py-3 z-[100] flex justify-around items-center">
-              {[
-                { id: 'manage', label: 'Зміни', icon: Calendar },
-                { id: 'create', label: 'Створити', icon: PlusCircle },
-                { id: 'profile', label: 'Профіль', icon: User }
-              ].map(tab => {
-                const isActive = activeB2BTab === tab.id;
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveB2BTab(tab.id)}
-                    className="flex flex-col items-center justify-center w-24 transition-all duration-150 active:scale-95"
-                  >
-                    <div className={`p-2 rounded-full transition-all duration-200 ${isActive ? 'bg-orange-50 text-[#f97316]' : 'text-gray-400'}`}>
-                      <IconComponent size={18} />
+                {/* VIEW 3: CORPORATE PROFILE TAB */}
+                {activeB2BTab === 'profile' && (
+                  <div className="animate-fadeIn text-left">
+                    <div className="mb-5">
+                      <h1 className="text-xl font-black tracking-tight text-gray-900">Кабінет організації</h1>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Кабінет керування установою / кафедрою</p>
                     </div>
-                    <span className={`text-[9px] font-black mt-1 tracking-tight ${isActive ? 'text-[#f97316]' : 'text-gray-400'}`}>
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            </>
+
+                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-6">
+                      {isEditingProfile ? (
+                        <form onSubmit={handleSaveProfile} className="space-y-4">
+                          <div>
+                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                              Ім'я Координатора
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                              Назва Організації
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={editOrgName}
+                              onChange={(e) => setEditOrgName(e.target.value)}
+                              className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                              Адреса
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={editOrgAddr}
+                              onChange={(e) => setEditOrgAddr(e.target.value)}
+                              className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                              Опис Організації
+                            </label>
+                            <textarea
+                              rows="2"
+                              required
+                              value={editOrgDesc}
+                              onChange={(e) => setEditOrgDesc(e.target.value)}
+                              className="w-full bg-white border border-gray-250 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none shadow-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              type="submit"
+                              className="flex-1 py-3 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                            >
+                              Зберегти
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingProfile(false)}
+                              className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 text-gray-600 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                            >
+                              Скасувати
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <input
+                            type="file"
+                            id="avatar-upload-input-b2b"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                          />
+                          <div
+                            onClick={() => document.getElementById('avatar-upload-input-b2b').click()}
+                            className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-4 cursor-pointer active:scale-95 transition-all text-center"
+                            title="Змінити фото профілю"
+                          >
+                            {user.avatar_url ? (
+                              <img
+                                src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-[#FFCC00] text-black text-2xl font-black flex items-center justify-center">
+                                {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                              <Camera size={14} className="animate-pulse" />
+                            </div>
+                          </div>
+
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1 text-center">
+                            Організація
+                          </span>
+                          <h2 className="text-base font-black text-gray-900 mb-4 text-center">
+                            {organization ? organization.name : "..."}
+                          </h2>
+
+                          <div className="text-[11px] text-gray-500 font-semibold space-y-2 border-t border-gray-50 pt-4">
+                            <div className="flex justify-between">
+                              <span>Координатор:</span>
+                              <span className="font-bold text-gray-800">
+                                {orgMembers.find(m => m.company_role === 'owner')?.name || (user.company_role === 'owner' ? user.name : "...")}
+                              </span>
+                            </div>
+                            {user.company_role !== 'owner' && (
+                              <div className="flex justify-between">
+                                <span>Ваша роль:</span>
+                                <span className="font-black text-blue-600">Член команди</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span>Адреса:</span>
+                              <span className="font-bold text-gray-800">{organization ? organization.address : "..."}</span>
+                            </div>
+                            <div className="flex justify-between flex-col text-left gap-1">
+                              <span>Опис:</span>
+                              <span className="font-semibold text-gray-800 bg-gray-50 p-2 rounded-lg border border-gray-100">{organization ? organization.description : "..."}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={startEditingProfile}
+                            className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer"
+                          >
+                            Редагувати профіль
+                          </button>
+
+                          {/* Generate Invite Link Button (Default to member, no role selector dropdown) */}
+                          <button
+                            onClick={handleGenerateInvite}
+                            className="w-full mt-2.5 py-3 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-xl transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                          >
+                            Згенерувати реферальне посилання
+                          </button>
+
+                          {/* Leave Feedback Button */}
+                          <a
+                            href="https://forms.gle/kcDLFPYfXmGP183h6"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                          >
+                            <MessageSquare size={13} />
+                            <span>Залишити відгук</span>
+                          </a>
+
+                          {/* Organization Members Section */}
+                          <div className="mt-6 border-t border-gray-150 pt-5 text-left font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => setIsMembersListExpanded(!isMembersListExpanded)}
+                              className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-gray-900 mb-3 px-0.5 hover:text-[#FF5522] transition-colors cursor-pointer"
+                            >
+                              <span>Учасники організації ({orgMembers.length})</span>
+                              {isMembersListExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+
+                            {isMembersListExpanded && (
+                              orgMembers.length > 0 ? (
+                                <div className="space-y-2">
+                                  {orgMembers.map(member => {
+                                    const isCurrentUser = member.id === user.id;
+                                    const isOwner = member.company_role === 'owner';
+                                    const canDelete = user.company_role === 'owner' && !isOwner;
+
+                                    return (
+                                      <div key={member.id} className="bg-gray-50 border border-gray-100 rounded-xl p-2.5 flex items-center justify-between shadow-sm">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          {/* Avatar / Icon */}
+                                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-sm border border-gray-200">
+                                            {member.avatar_url ? (
+                                              <img
+                                                src={`${API_URL.replace('/api', '')}${member.avatar_url}`}
+                                                alt={member.name}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full bg-[#FFCC00] text-black text-xs font-black flex items-center justify-center">
+                                                {member.name ? member.name.charAt(0).toUpperCase() : 'У'}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div className="min-w-0">
+                                            <h4 className="text-xs font-black text-gray-800 flex items-center flex-wrap gap-1.5 leading-tight">
+                                              <span className="truncate max-w-[120px]">{member.name}</span>
+                                              {isCurrentUser && (
+                                                <span className="text-[8px] bg-gray-250 text-gray-700 px-1 py-0.5 rounded font-black uppercase tracking-wider">Ви</span>
+                                              )}
+                                              {isOwner ? (
+                                                <span className="text-[8px] bg-orange-50 text-orange-600 px-1 py-0.5 rounded font-black uppercase tracking-wider">Засновник</span>
+                                              ) : (
+                                                <span className="text-[8px] bg-blue-50 text-blue-600 px-1 py-0.5 rounded font-black uppercase tracking-wider">Член команди</span>
+                                              )}
+                                            </h4>
+                                          </div>
+                                        </div>
+
+                                        {canDelete && (
+                                          <button
+                                            onClick={() => handleRemoveMember(member.id, member.name)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+                                            title="Вилучити з організації"
+                                          >
+                                            <X size={14} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-[9px] text-gray-400 font-bold italic px-0.5">Учасників немає</p>
+                              )
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={toggleRole}
+                      className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-full border border-gray-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+                    >
+                      <User size={15} className="text-[#FF5522]" />
+                      <span>Повернутися до акаунту Волонтера (B2C)</span>
+                    </button>
+
+                    {user.company_role !== 'owner' && (
+                      <button
+                        onClick={handleLeaveOrganization}
+                        className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-full border border-red-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+                      >
+                        <LogOut size={15} className="text-red-500" />
+                        <span>Вийти з організації</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-full border border-red-200 shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+                    >
+                      <LogOut size={15} className="text-red-550" />
+                      <span>Вийти з акаунту</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* B2B Floating Bottom Navigation */}
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white shadow-xl rounded-[32px] px-2 py-3 z-[100] flex justify-around items-center">
+                  {[
+                    { id: 'manage', label: 'Зміни', icon: Calendar },
+                    { id: 'create', label: 'Створити', icon: PlusCircle },
+                    { id: 'profile', label: 'Профіль', icon: User }
+                  ].map(tab => {
+                    const isActive = activeB2BTab === tab.id;
+                    const IconComponent = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveB2BTab(tab.id)}
+                        className="flex flex-col items-center justify-center w-24 transition-all duration-150 active:scale-95"
+                      >
+                        <div className={`p-2 rounded-full transition-all duration-200 ${isActive ? 'bg-orange-50 text-[#f97316]' : 'text-gray-400'}`}>
+                          <IconComponent size={18} />
+                        </div>
+                        <span className={`text-[9px] font-black mt-1 tracking-tight ${isActive ? 'text-[#f97316]' : 'text-gray-400'}`}>
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
 
           </div>
@@ -2425,461 +2800,49 @@ export default function App() {
       </div>
 
       {/* --- TIME PICKER MODAL --- */}
-      {isTimePickerOpen && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
-            <div className="flex items-center gap-2 mb-4 text-[#FF5522]">
-              <Clock size={16} />
-              <h3 className="text-xs font-black uppercase tracking-wider">
-                Оберіть години роботи
-              </h3>
-            </div>
-
-            <div className="space-y-6">
-              {/* Start Time block */}
-              <div>
-                <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
-                  Час початку зміни
-                </span>
-                <div className="flex items-center justify-center gap-3">
-                  {/* Start Hour */}
-                  <div className="flex flex-col items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempStartHour, 10) || 0;
-                        num = num >= 23 ? 0 : num + 1;
-                        setTempStartHour(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronUp size={18} />
-                    </button>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={tempStartHour}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        if (clean === '') {
-                          setTempStartHour('');
-                          return;
-                        }
-                        let num = parseInt(clean, 10);
-                        if (num > 23) num = 23;
-                        setTempStartHour(String(num).padStart(2, '0'));
-                      }}
-                      onBlur={() => {
-                        if (tempStartHour === '') {
-                          setTempStartHour('09');
-                        } else {
-                          setTempStartHour(String(parseInt(tempStartHour, 10) || 0).padStart(2, '0'));
-                        }
-                      }}
-                      className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempStartHour, 10) || 0;
-                        num = num <= 0 ? 23 : num - 1;
-                        setTempStartHour(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronDown size={18} />
-                    </button>
-                  </div>
-
-                  <span className="text-[#FF5522] font-black text-2xl pb-6">:</span>
-
-                  {/* Start Minute */}
-                  <div className="flex flex-col items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempStartMin, 10) || 0;
-                        num = num >= 59 ? 0 : num + 1;
-                        setTempStartMin(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronUp size={18} />
-                    </button>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={tempStartMin}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        if (clean === '') {
-                          setTempStartMin('');
-                          return;
-                        }
-                        let num = parseInt(clean, 10);
-                        if (num > 59) num = 59;
-                        setTempStartMin(String(num).padStart(2, '0'));
-                      }}
-                      onBlur={() => {
-                        if (tempStartMin === '') {
-                          setTempStartMin('00');
-                        } else {
-                          setTempStartMin(String(parseInt(tempStartMin, 10) || 0).padStart(2, '0'));
-                        }
-                      }}
-                      className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempStartMin, 10) || 0;
-                        num = num <= 0 ? 59 : num - 1;
-                        setTempStartMin(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronDown size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* End Time block */}
-              <div>
-                <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
-                  Час закінчення зміни
-                </span>
-                <div className="flex items-center justify-center gap-3">
-                  {/* End Hour */}
-                  <div className="flex flex-col items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempEndHour, 10) || 0;
-                        num = num >= 23 ? 0 : num + 1;
-                        setTempEndHour(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronUp size={18} />
-                    </button>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={tempEndHour}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        if (clean === '') {
-                          setTempEndHour('');
-                          return;
-                        }
-                        let num = parseInt(clean, 10);
-                        if (num > 23) num = 23;
-                        setTempEndHour(String(num).padStart(2, '0'));
-                      }}
-                      onBlur={() => {
-                        if (tempEndHour === '') {
-                          setTempEndHour('18');
-                        } else {
-                          setTempEndHour(String(parseInt(tempEndHour, 10) || 0).padStart(2, '0'));
-                        }
-                      }}
-                      className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempEndHour, 10) || 0;
-                        num = num <= 0 ? 23 : num - 1;
-                        setTempEndHour(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronDown size={18} />
-                    </button>
-                  </div>
-
-                  <span className="text-[#FF5522] font-black text-2xl pb-6">:</span>
-
-                  {/* End Minute */}
-                  <div className="flex flex-col items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempEndMin, 10) || 0;
-                        num = num >= 59 ? 0 : num + 1;
-                        setTempEndMin(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronUp size={18} />
-                    </button>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={tempEndMin}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        if (clean === '') {
-                          setTempEndMin('');
-                          return;
-                        }
-                        let num = parseInt(clean, 10);
-                        if (num > 59) num = 59;
-                        setTempEndMin(String(num).padStart(2, '0'));
-                      }}
-                      onBlur={() => {
-                        if (tempEndMin === '') {
-                          setTempEndMin('00');
-                        } else {
-                          setTempEndMin(String(parseInt(tempEndMin, 10) || 0).padStart(2, '0'));
-                        }
-                      }}
-                      className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let num = parseInt(tempEndMin, 10) || 0;
-                        num = num <= 0 ? 59 : num - 1;
-                        setTempEndMin(String(num).padStart(2, '0'));
-                      }}
-                      className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
-                    >
-                      <ChevronDown size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 pt-4">
-              <button
-                type="button"
-                onClick={() => setIsTimePickerOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-all"
-              >
-                Скасувати
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStartTime(`${tempStartHour}:${tempStartMin}`);
-                  setEndTime(`${tempEndHour}:${tempEndMin}`);
-                  setIsTimePickerOpen(false);
-                }}
-                className="px-5 py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95"
-              >
-                Підтвердити
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TimePickerModal
+        isOpen={isTimePickerOpen}
+        tempStartHour={tempStartHour}
+        setTempStartHour={setTempStartHour}
+        tempStartMin={tempStartMin}
+        setTempStartMin={setTempStartMin}
+        tempEndHour={tempEndHour}
+        setTempEndHour={setTempEndHour}
+        tempEndMin={tempEndMin}
+        setTempEndMin={setTempEndMin}
+        onClose={() => setIsTimePickerOpen(false)}
+        onConfirm={() => {
+          setStartTime(`${tempStartHour}:${tempStartMin}`);
+          setEndTime(`${tempEndHour}:${tempEndMin}`);
+          setIsTimePickerOpen(false);
+        }}
+      />
 
       {/* --- VOLUNTEER PROFILE / REVIEWS MODAL --- */}
-      {isReviewsModalOpen && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-[390px] p-6 shadow-2xl animate-scaleUp text-left relative flex flex-col max-h-[90vh]">
-            
-            <button
-              onClick={() => {
-                setIsReviewsModalOpen(false);
-                setSelectedVolunteerProfile(null);
-              }}
-              className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-black hover:bg-gray-50 rounded-full transition-all active:scale-95"
-            >
-              <X size={18} />
-            </button>
-
-            {/* Volunteer Profile Header */}
-            <div className="text-center pb-4 border-b border-gray-100 mb-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-3">
-                {selectedVolunteerProfile?.avatar_url ? (
-                  <img 
-                    src={`${API_URL.replace('/api', '')}${selectedVolunteerProfile.avatar_url}`} 
-                    alt="Avatar" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-[#FFCC00] text-black text-2xl font-black flex items-center justify-center">
-                    {reviewsModalUserName ? reviewsModalUserName.charAt(0).toUpperCase() : 'У'}
-                  </div>
-                )}
-              </div>
-
-              <h3 className="font-black text-gray-950 text-base leading-snug">
-                {reviewsModalUserName}
-              </h3>
-              <p className="text-[9px] text-gray-400 font-extrabold uppercase tracking-widest mt-0.5">
-                Профіль волонтера
-              </p>
-
-              {/* Rating badge */}
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-50/60 border border-yellow-100 text-yellow-700 font-black text-[10px] mt-2">
-                <Star size={11} className="fill-yellow-400 text-yellow-500" />
-                <span>
-                  {selectedVolunteerProfile?.rating ? `${selectedVolunteerProfile.rating} / 5.0` : 'Без оцінок'}
-                </span>
-              </div>
-            </div>
-
-            {/* Detailed Stats & Contacts */}
-            <div className="space-y-2.5 mb-4 text-xs">
-              <div className="bg-gray-50/70 p-3 rounded-2xl border border-gray-100 space-y-2 text-[11px] font-semibold text-gray-600">
-                <div className="flex justify-between items-center">
-                  <span>Виконано змін:</span>
-                  <span className="font-extrabold text-gray-900 bg-gray-250/60 px-2 py-0.5 rounded-full text-[10px]">
-                    {selectedVolunteerProfile?.completed_shifts_count || 0}
-                  </span>
-                </div>
-                
-                {selectedVolunteerProfile?.phone && (
-                  <div className="flex justify-between items-center">
-                    <span>Телефон:</span>
-                    <a 
-                      href={`tel:${selectedVolunteerProfile.phone}`}
-                      className="font-extrabold text-blue-600 hover:underline"
-                    >
-                      {selectedVolunteerProfile.phone}
-                    </a>
-                  </div>
-                )}
-
-                {selectedVolunteerProfile?.email && (
-                  <div className="flex justify-between items-center">
-                    <span>Email:</span>
-                    <a 
-                      href={`mailto:${selectedVolunteerProfile.email}`}
-                      className="font-extrabold text-blue-600 hover:underline"
-                    >
-                      {selectedVolunteerProfile.email}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Coordinator Reviews Header */}
-            <h4 className="font-bold text-[10px] text-gray-400 uppercase tracking-widest mb-2 px-0.5">
-              Відгуки організаторів
-            </h4>
-
-            {/* Reviews List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar max-h-[200px]">
-              {volunteerReviews.length > 0 ? (
-                volunteerReviews.map((review) => (
-                  <div key={review.id} className="bg-gray-50/60 p-3 rounded-2xl border border-gray-100">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[10px] font-black text-gray-800">
-                        {review.author_name}
-                      </span>
-                      <div className="flex items-center gap-0.5 text-yellow-500 font-bold text-[10px]">
-                        <Star size={11} className="fill-yellow-400 text-yellow-500" />
-                        <span>{review.rating}/5</span>
-                      </div>
-                    </div>
-                    {review.comment && (
-                      <p className="text-[11px] text-gray-600 font-medium italic leading-relaxed">
-                        "{review.comment}"
-                      </p>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 bg-gray-50/40 rounded-2xl border border-dashed border-gray-200">
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                    Відгуків ще немає
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => {
-                setIsReviewsModalOpen(false);
-                setSelectedVolunteerProfile(null);
-              }}
-              className="w-full py-3.5 mt-4 bg-black hover:bg-black/95 text-white font-extrabold rounded-full text-xs transition-all active:scale-95 cursor-pointer"
-            >
-              Закрити
-            </button>
-          </div>
-        </div>
-      )}
+      <ReviewsModal
+        isOpen={isReviewsModalOpen}
+        onClose={() => {
+          setIsReviewsModalOpen(false);
+          setSelectedVolunteerProfile(null);
+        }}
+        selectedVolunteerProfile={selectedVolunteerProfile}
+        reviewsModalUserName={reviewsModalUserName}
+        volunteerReviews={volunteerReviews}
+        apiUrl={API_URL}
+      />
 
       {/* --- REGISTER ORGANIZATION MODAL --- */}
-      {isOrgRegisterModalOpen && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-[380px] p-6 shadow-2xl animate-scaleUp text-left relative">
-            
-            <button
-              onClick={() => setIsOrgRegisterModalOpen(false)}
-              className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-black hover:bg-gray-50 rounded-full transition-all active:scale-95"
-            >
-              <X size={18} />
-            </button>
-
-            <h3 className="font-black text-gray-900 text-base mb-1">
-              Реєстрація організації
-            </h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-5">
-              Створіть кабінет організатора для публікації заходів
-            </p>
-
-            <form onSubmit={handleOrgRegisterSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-0.5">
-                  Назва організації
-                </label>
-                <input
-                  type="text"
-                  placeholder="напр. Foundation Coffee чи Кафедра IT"
-                  value={regOrgName}
-                  onChange={(e) => setRegOrgName(e.target.value)}
-                  required
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-0.5">
-                  Адреса офісу / Локація
-                </label>
-                <input
-                  type="text"
-                  placeholder="вул. Канатна, 15"
-                  value={regOrgAddr}
-                  onChange={(e) => setRegOrgAddr(e.target.value)}
-                  required
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-0.5">
-                  Опис
-                </label>
-                <textarea
-                  rows="2"
-                  placeholder="Опишіть діяльність вашої організації..."
-                  value={regOrgDesc}
-                  onChange={(e) => setRegOrgDesc(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none"
-                ></textarea>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full text-xs shadow-md uppercase tracking-wider transition-all active:scale-95"
-              >
-                Створити організацію
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <OrgRegisterModal
+        isOpen={isOrgRegisterModalOpen}
+        onClose={() => setIsOrgRegisterModalOpen(false)}
+        regOrgName={regOrgName}
+        setRegOrgName={setRegOrgName}
+        regOrgAddr={regOrgAddr}
+        setRegOrgAddr={setRegOrgAddr}
+        regOrgDesc={regOrgDesc}
+        setRegOrgDesc={setRegOrgDesc}
+        onSubmit={handleOrgRegisterSubmit}
+      />
 
     </div>
   );

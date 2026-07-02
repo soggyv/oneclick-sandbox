@@ -82,19 +82,50 @@ from backend import models, schemas
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-# Add password column to users table if it doesn't exist (SQLite migration support)
+# Add password, company_id, company_role to users table if they don't exist (SQLite migration support)
 with engine.connect() as conn:
     from sqlalchemy import inspect
     inspector = inspect(conn)
-    columns = [col['name'] for col in inspector.get_columns('users')]
-    if 'password' not in columns:
+    
+    # Migrate users table
+    columns_users = [col['name'] for col in inspector.get_columns('users')]
+    if 'password' not in columns_users:
         try:
             from sqlalchemy import text
             conn.execute(text("ALTER TABLE users ADD COLUMN password TEXT"))
             conn.commit()
             print("Successfully migrated: Added 'password' column to 'users' table.")
         except Exception as e:
-            print(f"Migration error: {e}")
+            print(f"Migration error (users.password): {e}")
+            
+    if 'company_id' not in columns_users:
+        try:
+            from sqlalchemy import text
+            conn.execute(text("ALTER TABLE users ADD COLUMN company_id INTEGER REFERENCES organizations(id)"))
+            conn.commit()
+            print("Successfully migrated: Added 'company_id' column to 'users' table.")
+        except Exception as e:
+            print(f"Migration error (users.company_id): {e}")
+            
+    if 'company_role' not in columns_users:
+        try:
+            from sqlalchemy import text
+            conn.execute(text("ALTER TABLE users ADD COLUMN company_role TEXT DEFAULT 'member'"))
+            conn.commit()
+            print("Successfully migrated: Added 'company_role' column to 'users' table.")
+        except Exception as e:
+            print(f"Migration error (users.company_role): {e}")
+
+    # Migrate shifts table
+    columns_shifts = [col['name'] for col in inspector.get_columns('shifts')]
+    if 'created_by_id' not in columns_shifts:
+        try:
+            from sqlalchemy import text
+            conn.execute(text("ALTER TABLE shifts ADD COLUMN created_by_id INTEGER REFERENCES users(id)"))
+            conn.commit()
+            print("Successfully migrated: Added 'created_by_id' column to 'shifts' table.")
+        except Exception as e:
+            print(f"Migration error (shifts.created_by_id): {e}")
 
 app = FastAPI(title="OneClick Volunteering API")
 
@@ -175,7 +206,8 @@ def seed_data(db: Session):
             name="Ілля",
             email="admin@coffee.ua",
             phone="+380 93 111 2233",
-            role="B2B"
+            role="B2B",
+            company_role="owner"
         )
         db.add(coordinator)
         db.commit()
@@ -203,6 +235,10 @@ def seed_data(db: Session):
         db.commit()
         db.refresh(org)
 
+        # LINK coordinator user to this organization
+        coordinator.company_id = org.id
+        db.commit()
+
         # Create another organization for general events
         org2 = models.Organization(
             name="Департамент IT ОНПУ",
@@ -229,6 +265,7 @@ def seed_data(db: Session):
             address="вул. Канатна, 15",
             description="Допомога у зустрічі та реєстрації учасників лекторію, підтримка бариста.",
             organization_id=org.id,
+            created_by_id=coordinator.id,
             status="open"
         )
         shift2 = models.Shift(
@@ -240,6 +277,7 @@ def seed_data(db: Session):
             address="просп. Глушка, 12",
             description="Допомога у налаштуванні звуку, мікрофонів та презентаційного екрану.",
             organization_id=org2.id,
+            created_by_id=coordinator.id,
             status="open"
         )
         shift3 = models.Shift(
@@ -251,6 +289,7 @@ def seed_data(db: Session):
             address="вул. Генуезька, 24",
             description="Консультації абітурієнтів щодо вступу, видача брошур.",
             organization_id=org2.id,
+            created_by_id=coordinator.id,
             status="open"
         )
         db.add_all([shift1, shift2, shift3])
@@ -341,6 +380,12 @@ def check_email(email: str, db: Session = Depends(get_db)):
     return {"exists": user is not None}
 
 
+@app.get("/api/auth/check-phone")
+def check_phone(phone: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.phone == phone).first()
+    return {"exists": user is not None}
+
+
 @app.post("/api/auth/send-verification-email")
 def send_verification_email(payload: EmailVerificationRequest):
     html_content = f"""
@@ -365,10 +410,8 @@ def send_verification_email(payload: EmailVerificationRequest):
         html_content=html_content
     )
     if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Не вдалося надіслати лист підтвердження. Перевірте налаштування SMTP."
-        )
+        print(f"\n[LOCAL DEV] SMTP failed. Code for {payload.email} is: {payload.code}\n")
+        return {"status": "simulated", "code": payload.code}
     return {"status": "ok"}
 
 
@@ -419,29 +462,22 @@ def google_auth(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_d
     user = db.query(models.User).filter(models.User.email == email).first()
     
     if not user:
+        # Create new user from Google account info
         user = models.User(
             name=name,
             email=email,
-            role=payload.role or "B2C"
+            role="B2C"
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
-
-    else:
-        # If the user already exists, but logs in as B2B, update their role to B2B
-        if payload.role == "B2B" and user.role != "B2B":
-            user.role = "B2B"
-            db.commit()
-            db.refresh(user)
-        
+    
     # Calculate average rating
     ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
     avg_rating = 0.0
     if ratings:
         avg_rating = sum(r[0] for r in ratings) / len(ratings)
-        
+    
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
     response.token = create_access_token(user.id)
@@ -458,7 +494,7 @@ def register_organization(
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
     
-    # Check if org already exists for this coordinator
+    # Check if org already exists for this owner
     existing_org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
     if existing_org:
         # Just update it
@@ -467,6 +503,7 @@ def register_organization(
         existing_org.address = org_data.address
         org = existing_org
     else:
+        # Create a new organization
         org = models.Organization(
             name=org_data.name,
             coordinator_id=x_user_id,
@@ -474,9 +511,13 @@ def register_organization(
             address=org_data.address
         )
         db.add(org)
+        db.commit()
+        db.refresh(org)
     
-    # Change role to B2B
+    # Link this user to the organization as the owner
     user.role = "B2B"
+    user.company_id = org.id
+    user.company_role = "owner"
     db.commit()
     db.refresh(org)
     return org
@@ -488,7 +529,7 @@ def get_me(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
     
-    # Calculate average rating
+    # Calculate average rating for volunteer
     ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
     avg_rating = 0.0
     if ratings:
@@ -520,8 +561,9 @@ def update_profile(
     if profile_data.phone:
         user.phone = profile_data.phone
         
-    if user.role == "B2B" and profile_data.org_name:
-        org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
+    # If B2B user and has a linked company, allow updating company info
+    if user.role == "B2B" and user.company_id and profile_data.org_name:
+        org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
         if org:
             org.name = profile_data.org_name
             org.address = profile_data.org_address
@@ -582,6 +624,12 @@ def upload_avatar(
         models.Application.volunteer_id == user.id,
         models.Application.status.in_(["attended", "reviewed"])
     ).count()
+    
+    # Calculate average rating
+    ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
+    avg_rating = 0.0
+    if ratings:
+        avg_rating = sum(r[0] for r in ratings) / len(ratings)
         
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
@@ -613,12 +661,27 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     return response
 
 
-
-
 @app.get("/api/auth/my-org", response_model=Optional[schemas.OrganizationResponse])
 def get_my_org(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        return None
+    # Filter by user's company_id instead of coordinator_id to support multi-member access
+    org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
     return org
+
+
+def auto_close_past_shifts(db: Session):
+    from datetime import datetime
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    past_shifts = db.query(models.Shift).filter(
+        models.Shift.status == "open",
+        models.Shift.date < today_str
+    ).all()
+    for s in past_shifts:
+        s.status = "closed"
+    if past_shifts:
+        db.commit()
 
 
 @app.get("/api/shifts", response_model=List[schemas.ShiftResponse])
@@ -628,6 +691,7 @@ def get_shifts(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
+    auto_close_past_shifts(db)
     query = db.query(models.Shift).filter(models.Shift.status == "open")
     if date:
         query = query.filter(models.Shift.date == date)
@@ -658,9 +722,13 @@ def create_shift(
     x_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
-    if not org:
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
         raise HTTPException(status_code=400, detail="У вас немає зареєстрованої організації")
+    
+    org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
+    if not org:
+        raise HTTPException(status_code=400, detail="Організація не знайдена")
     
     new_shift = models.Shift(
         title=shift_data.title,
@@ -671,6 +739,7 @@ def create_shift(
         address=shift_data.address,
         description=shift_data.description,
         organization_id=org.id,
+        created_by_id=user.id,  # Audit shift creator
         status="open",
         max_volunteers=shift_data.max_volunteers or 5
     )
@@ -686,10 +755,16 @@ def create_shift(
 
 @app.get("/api/shifts/b2b", response_model=List[schemas.ShiftResponse])
 def get_b2b_shifts(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
+    auto_close_past_shifts(db)
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        return []
+    
+    org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
     if not org:
         return []
     
+    # Filter shifts belonging to the user's company (data isolation)
     shifts = db.query(models.Shift).filter(models.Shift.organization_id == org.id).all()
     response_list = []
     for shift in shifts:
@@ -767,17 +842,18 @@ def get_my_applications(x_user_id: int = Depends(get_current_user_id), db: Sessi
 
 @app.get("/api/applications/b2b", response_model=List[schemas.ApplicationResponse])
 def get_b2b_applications(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
-    if not org:
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
         return []
     
-    apps = db.query(models.Application).join(models.Shift).filter(models.Shift.organization_id == org.id).all()
+    # Filter applications belonging to the user's company shifts (data isolation)
+    apps = db.query(models.Application).join(models.Shift).filter(models.Shift.organization_id == user.company_id).all()
     response_list = []
     for app in apps:
         res = schemas.ApplicationResponse.model_validate(app)
         res.volunteer_name = app.volunteer.name
         res.volunteer_avatar_url = app.volunteer.avatar_url
-        res.shift.organization_name = org.name
+        res.shift.organization_name = app.shift.organization.name
         response_list.append(res)
     return response_list
 
@@ -796,8 +872,12 @@ def review_candidate(
     if not app:
         raise HTTPException(status_code=404, detail="Заявку не знайдено")
         
-    # Verify ownership
-    if app.shift.organization.coordinator_id != x_user_id:
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        raise HTTPException(status_code=403, detail="Немає доступу до керування цією заявкою")
+        
+    # Verify the shift belongs to the coordinator's company (data isolation check)
+    if app.shift.organization_id != user.company_id:
         raise HTTPException(status_code=403, detail="Немає доступу")
         
     if status == "approved":
@@ -826,13 +906,16 @@ def confirm_attendance(
     x_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    # Find application by check_in_code
     app = db.query(models.Application).filter(models.Application.check_in_code == payload.code).first()
     if not app:
         raise HTTPException(status_code=404, detail="Невірний код або користувача не знайдено")
         
-    # Verify this shift belongs to the coordinator's organization
-    if app.shift.organization.coordinator_id != x_user_id:
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        raise HTTPException(status_code=403, detail="Немає доступу")
+        
+    # Verify the shift belongs to the coordinator's company (data isolation check)
+    if app.shift.organization_id != user.company_id:
         raise HTTPException(status_code=403, detail="Ви не є організатором цієї зміни")
         
     if app.status != "approved":
@@ -859,8 +942,12 @@ def rate_volunteer(
     if not app:
         raise HTTPException(status_code=404, detail="Заявку не знайдено")
         
-    # Verify access
-    if app.shift.organization.coordinator_id != x_user_id:
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        raise HTTPException(status_code=403, detail="Немає доступу")
+        
+    # Verify the shift belongs to the coordinator's company (data isolation check)
+    if app.shift.organization_id != user.company_id:
         raise HTTPException(status_code=403, detail="Немає доступу")
         
     if app.status != "attended":
@@ -895,6 +982,314 @@ def get_user_reviews(user_id: int, db: Session = Depends(get_db)):
     response_list = []
     for r in reviews:
         res = schemas.ReviewResponse.model_validate(r)
-        res.author_name = r.author.organizations[0].name if r.author.organizations else r.author.name
+        res.author_name = r.author.organization.name if r.author.company_id else r.author.name
         response_list.append(res)
     return response_list
+
+
+# --- INVITATION SYSTEM ENDPOINTS ---
+
+@app.post("/api/organizations/invitations", response_model=schemas.InvitationResponse)
+def create_invitation(
+    payload: schemas.InvitationCreate,
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        raise HTTPException(status_code=403, detail="Ви не належите до жодної організації")
+    
+    # Check permission (only owners or managers can generate invite links)
+    if user.company_role not in ["owner", "manager"]:
+        raise HTTPException(status_code=403, detail="У вас немає прав для запрошення нових співробітників")
+    
+    # Expiration is set to 48 hours from now
+    import uuid
+    from datetime import datetime, timedelta
+    token = str(uuid.uuid4())
+    expires_at = datetime.utcnow() + timedelta(hours=48)
+    
+    new_invitation = models.CompanyInvitation(
+        organization_id=user.company_id,
+        token=token,
+        role=payload.role or "member",
+        created_by_id=user.id,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.add(new_invitation)
+    db.commit()
+    db.refresh(new_invitation)
+    return new_invitation
+
+
+@app.get("/api/organizations/invitations/validate/{token}")
+def validate_invitation(token: str, db: Session = Depends(get_db)):
+    from datetime import datetime
+    
+    invitation = db.query(models.CompanyInvitation).filter(models.CompanyInvitation.token == token).first()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Запрошення не знайдено або недійсне")
+        
+    if invitation.is_used:
+        raise HTTPException(status_code=400, detail="Це запрошення вже було використано")
+        
+    # Check expiration date
+    if datetime.utcnow() > invitation.expires_at:
+        raise HTTPException(status_code=400, detail="Термін дії цього запрошення закінчився")
+        
+    return {
+        "valid": True,
+        "organization_name": invitation.organization.name,
+        "role": invitation.role
+    }
+
+
+@app.post("/api/organizations/accept-invitation/{token}", response_model=schemas.UserResponse)
+def accept_invitation(
+    token: str,
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    from datetime import datetime
+    
+    # 1. Verify invitation token
+    invitation = db.query(models.CompanyInvitation).filter(models.CompanyInvitation.token == token).first()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Запрошення не знайдено")
+        
+    if invitation.is_used:
+        raise HTTPException(status_code=400, detail="Це запрошення вже використано")
+        
+    # Check expiration
+    if datetime.utcnow() > invitation.expires_at:
+        raise HTTPException(status_code=400, detail="Термін дії запрошення закінчився")
+         
+    # 2. Get user
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+        
+    if user.company_id and user.company_role == "owner":
+        raise HTTPException(
+            status_code=400,
+            detail="Власник не може вийти з організації. Спочатку видаліть організацію або передайте права власника."
+        )
+        
+    # 3. Accept user into organization
+    user.role = "B2B"
+    user.company_id = invitation.organization_id
+    user.company_role = invitation.role or "member"
+    
+    # Mark invitation as used
+    invitation.is_used = True
+    
+    db.commit()
+    db.refresh(user)
+    db.refresh(invitation)
+    
+    # Calculate average rating
+    ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
+    avg_rating = 0.0
+    if ratings:
+        avg_rating = sum(r[0] for r in ratings) / len(ratings)
+        
+    # Calculate completed shifts count
+    completed_count = db.query(models.Application).filter(
+        models.Application.volunteer_id == user.id,
+        models.Application.status.in_(["attended", "reviewed"])
+    ).count()
+    
+    response = schemas.UserResponse.model_validate(user)
+    response.rating = round(avg_rating, 1) if ratings else None
+    response.completed_shifts_count = completed_count
+    response.token = create_access_token(user.id)
+    return response
+
+
+# --- TEAM MEMBERS MANAGEMENT ENDPOINTS ---
+
+@app.get("/api/organizations/members", response_model=List[schemas.UserResponse])
+def get_organization_members(
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user or not user.company_id:
+        raise HTTPException(status_code=403, detail="Ви не належите до жодної організації")
+    
+    # Return all members of this organization
+    members = db.query(models.User).filter(models.User.company_id == user.company_id).all()
+    
+    response_list = []
+    for m in members:
+        # Calculate rating
+        ratings = db.query(models.Review.rating).filter(models.Review.target_id == m.id).all()
+        avg_rating = sum(r[0] for r in ratings) / len(ratings) if ratings else 0.0
+        
+        # Calculate completed shifts
+        completed_count = db.query(models.Application).filter(
+            models.Application.volunteer_id == m.id,
+            models.Application.status.in_(["attended", "reviewed"])
+        ).count()
+        
+        res = schemas.UserResponse.model_validate(m)
+        res.rating = round(avg_rating, 1) if ratings else None
+        res.completed_shifts_count = completed_count
+        response_list.append(res)
+        
+    return response_list
+
+
+@app.post("/api/organizations/leave", response_model=schemas.UserResponse)
+def leave_organization(
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+    if not user.company_id:
+        raise HTTPException(status_code=400, detail="Ви не належите до жодної організації")
+    if user.company_role == "owner":
+        raise HTTPException(
+            status_code=400, 
+            detail="Власник не може вийти з організації. Спочатку видаліть організацію або передайте права власника."
+        )
+        
+    user.company_id = None
+    user.company_role = None
+    user.role = "B2C"
+    db.commit()
+    db.refresh(user)
+    
+    # Calculate average rating
+    ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
+    avg_rating = sum(r[0] for r in ratings) / len(ratings) if ratings else 0.0
+    
+    response = schemas.UserResponse.model_validate(user)
+    response.rating = round(avg_rating, 1) if ratings else None
+    response.token = create_access_token(user.id)
+    return response
+
+
+@app.put("/api/organizations/members/{member_id}/role", response_model=schemas.UserResponse)
+def update_member_role(
+    member_id: int,
+    payload: schemas.MemberRoleUpdate,
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    if payload.role not in ["owner", "manager", "member"]:
+        raise HTTPException(status_code=400, detail="Некоректна роль")
+
+    current_user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not current_user or not current_user.company_id:
+        raise HTTPException(status_code=403, detail="Ви не належите до жодної організації")
+        
+    # Check permissions: only owners can change roles
+    if current_user.company_role != "owner":
+        raise HTTPException(status_code=403, detail="Тільки власник організації може змінювати ролі")
+        
+    target_member = db.query(models.User).filter(
+        models.User.id == member_id, 
+        models.User.company_id == current_user.company_id
+    ).first()
+    
+    if not target_member:
+        raise HTTPException(status_code=404, detail="Співробітника не знайдено в цій організації")
+        
+    if target_member.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Ви не можете змінити власну роль")
+        
+    target_member.company_role = payload.role
+    db.commit()
+    db.refresh(target_member)
+    
+    return schemas.UserResponse.model_validate(target_member)
+
+
+@app.delete("/api/organizations/members/{member_id}")
+def remove_member(
+    member_id: int,
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    current_user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not current_user or not current_user.company_id:
+        raise HTTPException(status_code=403, detail="Ви не належите до жодної організації")
+        
+    # Only owners and managers can remove members
+    if current_user.company_role not in ["owner", "manager"]:
+        raise HTTPException(status_code=403, detail="У вас немає прав для видалення співробітників")
+        
+    target_member = db.query(models.User).filter(
+        models.User.id == member_id,
+        models.User.company_id == current_user.company_id
+    ).first()
+    
+    if not target_member:
+        raise HTTPException(status_code=404, detail="Співробітника не знайдено в цій організації")
+        
+    if target_member.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Ви не можете видалити самого себе")
+        
+    # Prevent managers from deleting owner or other managers
+    if current_user.company_role == "manager" and target_member.company_role in ["owner", "manager"]:
+        raise HTTPException(status_code=403, detail="Менеджери не можуть видаляти власників або інших менеджерів")
+        
+    # Reset target user company membership and role
+    target_member.company_id = None
+    target_member.company_role = "member"
+    target_member.role = "B2C" # Revert back to volunteer / individual role
+    
+    db.commit()
+    return {"success": True, "detail": "Співробітника успішно видалено з організації"}
+
+
+@app.delete("/api/organizations", response_model=schemas.UserResponse)
+def delete_organization(
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == x_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Користувача не знайдено")
+    if not user.company_id:
+        raise HTTPException(status_code=400, detail="Ви не належите до жодної організації")
+    if user.company_role != "owner":
+        raise HTTPException(status_code=403, detail="Тільки власник може видалити організацію")
+        
+    org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Організацію не знайдено")
+        
+    # Delete all invitations for this organization
+    db.query(models.CompanyInvitation).filter(models.CompanyInvitation.organization_id == org.id).delete()
+    
+    # Set all members of this organization back to B2C role
+    members = db.query(models.User).filter(models.User.company_id == org.id).all()
+    for m in members:
+        m.company_id = None
+        m.company_role = None
+        m.role = "B2C"
+        
+    # Set coordinator_id to None to avoid foreign key violations in some DBs during delete
+    org.coordinator_id = None
+    db.flush()
+    
+    db.delete(org)
+    db.commit()
+    
+    # Return updated current user
+    db.refresh(user)
+    
+    # Calculate average rating
+    ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
+    avg_rating = sum(r[0] for r in ratings) / len(ratings) if ratings else 0.0
+    
+    response = schemas.UserResponse.model_validate(user)
+    response.rating = round(avg_rating, 1) if ratings else None
+    response.token = create_access_token(user.id)
+    return response
+

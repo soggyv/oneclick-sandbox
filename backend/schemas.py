@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
+from datetime import datetime
 
 # --- USER SCHEMAS ---
 class UserBase(BaseModel):
@@ -24,6 +25,8 @@ class GoogleLoginRequest(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    company_id: Optional[int] = None
+    company_role: Optional[str] = None
     rating: Optional[float] = None  # average rating calculated dynamically
     token: Optional[str] = None  # JWT token if newly logged in
     completed_shifts_count: Optional[int] = 0
@@ -41,7 +44,7 @@ class OrganizationCreate(OrganizationBase):
 
 class OrganizationResponse(OrganizationBase):
     id: int
-    coordinator_id: int
+    coordinator_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -110,3 +113,22 @@ class ProfileUpdate(BaseModel):
     org_name: Optional[str] = None
     org_address: Optional[str] = None
     org_description: Optional[str] = None
+
+# --- INVITATION SCHEMAS ---
+class InvitationCreate(BaseModel):
+    role: Optional[str] = "member"
+
+class InvitationResponse(BaseModel):
+    id: int
+    organization_id: int
+    token: str
+    role: str
+    expires_at: datetime
+    is_used: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MemberRoleUpdate(BaseModel):
+    role: str  # 'owner' | 'manager' | 'member'
+
