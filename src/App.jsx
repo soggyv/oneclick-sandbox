@@ -18,7 +18,8 @@ import {
   ChevronUp,
   ChevronDown,
   MessageSquare,
-  Trash2
+  Trash2,
+  Settings
 } from 'lucide-react'
 
 const API_URL = "http://localhost:8000/api";
@@ -38,7 +39,7 @@ export default function App() {
   // Navigation Tabs
   const [activeB2CTab, setActiveB2CTab] = useState('search'); // 'search' | 'myshifts' | 'profile'
   const [activeB2BTab, setActiveB2BTab] = useState('manage'); // 'manage' | 'create' | 'profile'
-  const [activeB2BFilter, setActiveB2BFilter] = useState("ВІДКРИТІ"); // B2B managed filter: 'ВІДКРИТІ' | 'АКТИВНІ'
+  const [activeB2BFilter, setActiveB2BFilter] = useState("АКТИВНІ"); // B2B managed filter: 'АКТИВНІ' | 'ЗАКРИТІ'
   const [activeB2CShiftsFilter, setActiveB2CShiftsFilter] = useState("АКТИВНІ"); // 'АКТИВНІ' | 'ЗАВЕРШЕНІ'
 
   // Map Picker Refs
@@ -111,6 +112,7 @@ export default function App() {
   const [inviteOrgName, setInviteOrgName] = useState(null);
   const [isMembersListExpanded, setIsMembersListExpanded] = useState(true);
   const [showCreateMapPicker, setShowCreateMapPicker] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   // 14-day rolling calendar YYYY-MM-DD
   const calendarDays = useMemo(() => {
@@ -1049,12 +1051,23 @@ export default function App() {
       showToastMsg("Захід успішно створено та опубліковано!", "success");
       setFormTitle('');
       setActiveB2BTab('manage');
-      setActiveB2BFilter('ВІДКРИТІ');
+      setActiveB2BFilter('АКТИВНІ');
       loadData();
     } catch (err) {
       console.error(err);
     }
   };
+
+  // Filtered shifts for B2B lists
+  const filteredB2BShifts = useMemo(() => {
+    return b2bShifts.filter(shift => {
+      if (activeB2BFilter === "АКТИВНІ") {
+        return shift.status === "open";
+      } else {
+        return shift.status !== "open";
+      }
+    });
+  }, [b2bShifts, activeB2BFilter]);
 
   // Filtered applications for B2B lists
   const filteredB2BApplications = useMemo(() => {
@@ -2078,217 +2091,35 @@ export default function App() {
                       </button>
                     </div>
 
-                    {/* View Selector: Applications vs Created Shifts */}
-                    <div className="flex gap-2 mb-4 border-b border-gray-150 pb-2">
-                      <button
-                        onClick={() => setActiveB2BSubView('applications')}
-                        className={`pb-2 px-3 text-xs font-black transition-all ${activeB2BSubView === 'applications'
-                            ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
-                            : 'text-gray-400 hover:text-gray-650 font-sans'
-                          }`}
-                      >
-                        Заявки волонтерів ({b2bApplications.length})
-                      </button>
-                      <button
-                        onClick={() => setActiveB2BSubView('shifts')}
-                        className={`pb-2 px-3 text-xs font-black transition-all ${activeB2BSubView === 'shifts'
-                            ? 'border-b-2 border-[#FF5522] text-gray-900 font-sans'
-                            : 'text-gray-400 hover:text-gray-650 font-sans'
-                          }`}
-                      >
-                        Мої заходи ({b2bShifts.length})
-                      </button>
+                    {/* Event filters */}
+                    <div className="flex gap-2.5 mb-5 bg-gray-100 p-1 rounded-full border border-gray-200">
+                      {["АКТИВНІ", "ЗАКРИТІ"].map((filter) => {
+                        const isActive = activeB2BFilter === filter;
+                        return (
+                          <button
+                            key={filter}
+                            type="button"
+                            onClick={() => setActiveB2BFilter(filter)}
+                            className={`flex-1 py-2 rounded-full text-xs font-black transition-all duration-200 active:scale-95 ${isActive
+                                ? 'bg-[#FF5522] text-white shadow-sm'
+                                : 'text-gray-500 hover:text-black'
+                              }`}
+                          >
+                            {filter}
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {activeB2BSubView === 'applications' ? (
-                      <>
-                        {/* Pill filters */}
-                        <div className="flex gap-2.5 mb-5 bg-gray-100 p-1 rounded-full border border-gray-200">
-                          {["ВІДКРИТІ", "АКТИВНІ / ЗАВЕРШЕНІ"].map((filter) => {
-                            const mappedFilter = filter === "ВІДКРИТІ" ? "ВІДКРИТІ" : "АКТИВНІ";
-                            const isActive = activeB2BFilter === mappedFilter;
-                            return (
-                              <button
-                                key={filter}
-                                onClick={() => setActiveB2BFilter(mappedFilter)}
-                                className={`flex-1 py-2 rounded-full text-xs font-black transition-all duration-200 active:scale-95 ${isActive
-                                    ? 'bg-[#FF5522] text-white shadow-sm'
-                                    : 'text-gray-500 hover:text-black'
-                                  }`}
-                              >
-                                {filter}
-                              </button>
-                            );
-                          })}
-                        </div>
+                    {/* Shifts list */}
+                    <div className="space-y-4">
+                      {filteredB2BShifts.length > 0 ? (
+                        filteredB2BShifts.map((shift) => {
+                          const shiftApps = b2bApplications.filter(
+                            (app) => app.shift_id === shift.id || app.shift?.id === shift.id
+                          );
 
-                        {/* Applications list */}
-                        <div className="space-y-4">
-                          {filteredB2BApplications.length > 0 ? (
-                            filteredB2BApplications.map((app) => (
-                              <div
-                                key={app.id}
-                                className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
-                              >
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className={`px-2.5 py-0.5 text-[9px] font-extrabold rounded-full tracking-wider ${app.status === 'pending' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                                    }`}>
-                                    {app.status === 'pending' && 'ОЧІКУЄ УЗГОДЖЕННЯ'}
-                                    {app.status === 'rejected' && 'ВІДХИЛЕНО'}
-                                    {app.status === 'approved' && 'ВОЛОНТЕР ПІДТВЕРДЖЕНИЙ'}
-                                    {app.status === 'attended' && 'ПРИСУТНІЙ'}
-                                    {app.status === 'reviewed' && 'ОЦІНЕНО'}
-                                  </span>
-                                </div>
-
-                                <h3
-                                  onClick={() => setCurrentDetailsShift(app.shift)}
-                                  className="font-black text-gray-950 text-base leading-snug mb-2 cursor-pointer hover:underline"
-                                >
-                                  {app.shift.title}
-                                </h3>
-
-                                <div className="space-y-1 mb-3 text-[11px] text-gray-500 font-semibold">
-                                  <p className="flex items-center gap-1.5">
-                                    <Clock size={12} className="text-gray-300" />
-                                    <span>Час: {app.shift.time} ({app.shift.date})</span>
-                                  </p>
-                                  <p className="flex items-center gap-1.5">
-                                    {app.volunteer_avatar_url ? (
-                                      <img
-                                        src={`${API_URL.replace('/api', '')}${app.volunteer_avatar_url}`}
-                                        alt="Avatar"
-                                        className="w-4 h-4 rounded-full object-cover"
-                                      />
-                                    ) : (
-                                      <User size={12} className="text-gray-300" />
-                                    )}
-                                    <span
-                                      onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
-                                      className="text-blue-600 underline cursor-pointer hover:text-blue-800"
-                                    >
-                                      Волонтер: {app.volunteer_name}
-                                    </span>
-                                  </p>
-                                </div>
-
-                                {/* Interactive flow depending on status */}
-
-                                {/* Status 1: Pending */}
-                                {app.status === 'pending' && (
-                                  <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-2">
-                                    <button
-                                      onClick={() => handleReviewCandidate(app.id, 'approved')}
-                                      className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                    >
-                                      Схвалити
-                                    </button>
-                                    <button
-                                      onClick={() => handleReviewCandidate(app.id, 'rejected')}
-                                      className="flex-1 py-2 border border-gray-350 hover:bg-gray-100 text-gray-650 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                    >
-                                      Відхилити
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* Status 2: Approved (Waiting for attendance code) */}
-                                {app.status === 'approved' && (
-                                  <div className="mt-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
-                                      Введіть код волонтера (check-in)
-                                    </label>
-                                    <div className="flex gap-2">
-                                      <input
-                                        type="text"
-                                        placeholder="напр. 1C-489A"
-                                        value={attendanceCodes[app.id] || ""}
-                                        onChange={(e) => setAttendanceCodes(prev => ({ ...prev, [app.id]: e.target.value.toUpperCase() }))}
-                                        className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
-                                      />
-                                      <button
-                                        onClick={() => handleConfirmAttendance(app.id)}
-                                        className="px-4 py-2 bg-black hover:bg-black/90 text-white font-bold text-[10px] rounded-xl uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
-                                      >
-                                        Перевірити
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Status 3: Attended (Needs review) */}
-                                {app.status === 'attended' && (
-                                  <div className="mt-4 p-3.5 bg-yellow-50/50 border border-yellow-100 rounded-xl space-y-3">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                        Оцініть волонтера
-                                      </span>
-                                      <div className="flex gap-1">
-                                        {[1, 2, 3, 4, 5].map((star) => {
-                                          const currentRating = ratings[app.id] || 5;
-                                          return (
-                                            <button
-                                              key={star}
-                                              onClick={() => setRatings(prev => ({ ...prev, [app.id]: star }))}
-                                              className="text-yellow-500 active:scale-125 transition-transform"
-                                            >
-                                              <Star size={18} className={star <= currentRating ? "fill-yellow-400 text-yellow-500" : "text-gray-300"} />
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-
-                                    <textarea
-                                      rows="2"
-                                      placeholder="Напишіть короткий коментар про роботу волонтера..."
-                                      value={reviews[app.id] || ""}
-                                      onChange={(e) => setReviews(prev => ({ ...prev, [app.id]: e.target.value }))}
-                                      className="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none"
-                                    ></textarea>
-
-                                    <button
-                                      onClick={() => handleRateVolunteer(app.id)}
-                                      className="w-full py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95"
-                                    >
-                                      Надіслати відгук та закрити зміну
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* Status 4: Reviewed */}
-                                {app.status === 'reviewed' && app.review && (
-                                  <div className="mt-3 p-3 bg-green-50/50 border border-green-100 rounded-xl text-xs space-y-1">
-                                    <div className="flex items-center gap-1.5 font-bold text-green-800">
-                                      <Star size={13} className="fill-green-600 text-green-700" />
-                                      <span>Оцінено: {app.review.rating} / 5</span>
-                                    </div>
-                                    {app.review.comment && (
-                                      <p className="text-[11px] text-green-700 italic">
-                                        "{app.review.comment}"
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
-                              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                                <Calendar size={20} />
-                              </div>
-                              <h4 className="font-bold text-gray-800 text-xs mb-1">Немає таких запитів</h4>
-                              <p className="text-[10px] text-gray-400 max-w-[180px] leading-relaxed">
-                                Немає активних чи відкритих ініціатив.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="space-y-4">
-                        {b2bShifts.length > 0 ? (
-                          b2bShifts.map((shift) => (
+                          return (
                             <div
                               key={shift.id}
                               className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden text-left"
@@ -2319,27 +2150,182 @@ export default function App() {
                                   <MapPin size={12} className="text-gray-300" />
                                   <span>Локація: {shift.location}</span>
                                 </p>
-                                <p className="flex items-center gap-1.5">
-                                  <User size={12} className="text-gray-300" />
-                                  <span>Статус: <strong className="text-gray-800">{shift.approved_count > 0 ? "Волонтер знайдений" : "Очікує волонтера"}</strong></span>
-                                </p>
+                              </div>
+
+                              {/* Applications Section within this shift card */}
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                                  Заявки волонтерів ({shiftApps.length})
+                                </h4>
+
+                                {shiftApps.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {shiftApps.map((app) => (
+                                      <div
+                                        key={app.id}
+                                        className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 text-left space-y-3"
+                                      >
+                                        <div className="flex justify-between items-center">
+                                          <div className="flex items-center gap-2">
+                                            {app.volunteer_avatar_url ? (
+                                              <img
+                                                src={`${API_URL.replace('/api', '')}${app.volunteer_avatar_url}`}
+                                                alt="Avatar"
+                                                className="w-6 h-6 rounded-full object-cover"
+                                              />
+                                            ) : (
+                                              <div className="w-6 h-6 bg-[#FFCC00] text-black text-[10px] font-black rounded-full flex items-center justify-center">
+                                                {app.volunteer_name ? app.volunteer_name.charAt(0).toUpperCase() : 'У'}
+                                              </div>
+                                            )}
+                                            <span
+                                              onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
+                                              className="text-xs font-black text-blue-600 underline cursor-pointer hover:text-blue-800"
+                                            >
+                                              {app.volunteer_name}
+                                            </span>
+                                          </div>
+                                          
+                                          <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
+                                            app.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                                            app.status === 'rejected' ? 'bg-red-50 text-red-650' :
+                                            app.status === 'approved' ? 'bg-blue-50 text-blue-600' :
+                                            app.status === 'attended' ? 'bg-yellow-50 text-yellow-600' :
+                                            'bg-green-55 text-green-700'
+                                          }`}>
+                                            {app.status === 'pending' && 'Очікує узгодження'}
+                                            {app.status === 'rejected' && 'Відхилено'}
+                                            {app.status === 'approved' && 'Підтверджений'}
+                                            {app.status === 'attended' && 'Присутній'}
+                                            {app.status === 'reviewed' && 'Оцінено'}
+                                          </span>
+                                        </div>
+
+                                        {/* Status 1: Pending */}
+                                        {app.status === 'pending' && (
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleReviewCandidate(app.id, 'approved')}
+                                              className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                            >
+                                              Схвалити
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleReviewCandidate(app.id, 'rejected')}
+                                              className="flex-1 py-2 border border-gray-300 hover:bg-gray-100 text-gray-650 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                            >
+                                              Відхилити
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {/* Status 2: Approved (Waiting for attendance code) */}
+                                        {app.status === 'approved' && (
+                                          <div className="p-3 bg-white rounded-xl border border-gray-150 space-y-2">
+                                            <label className="block text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+                                              Введіть код волонтера (check-in)
+                                            </label>
+                                            <div className="flex gap-2">
+                                              <input
+                                                type="text"
+                                                placeholder="напр. 1C-489A"
+                                                value={attendanceCodes[app.id] || ""}
+                                                onChange={(e) => setAttendanceCodes(prev => ({ ...prev, [app.id]: e.target.value.toUpperCase() }))}
+                                                className="flex-1 bg-gray-50 border border-gray-250 rounded-lg px-2.5 py-1.5 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => handleConfirmAttendance(app.id)}
+                                                className="px-3.5 py-1.5 bg-black hover:bg-black/90 text-white font-bold text-[9px] rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                              >
+                                                Перевірити
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Status 3: Attended (Needs review) */}
+                                        {app.status === 'attended' && (
+                                          <div className="p-3 bg-white rounded-xl border border-gray-150 space-y-3">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
+                                                Оцініть волонтера
+                                              </span>
+                                              <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => {
+                                                  const currentRating = ratings[app.id] || 5;
+                                                  return (
+                                                    <button
+                                                      key={star}
+                                                      type="button"
+                                                      onClick={() => setRatings(prev => ({ ...prev, [app.id]: star }))}
+                                                      className="text-yellow-500 active:scale-125 transition-transform cursor-pointer"
+                                                    >
+                                                      <Star size={16} className={star <= currentRating ? "fill-yellow-400 text-yellow-500" : "text-gray-300"} />
+                                                    </button>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+
+                                            <textarea
+                                              rows="2"
+                                              placeholder="Короткий коментар..."
+                                              value={reviews[app.id] || ""}
+                                              onChange={(e) => setReviews(prev => ({ ...prev, [app.id]: e.target.value }))}
+                                              className="w-full bg-gray-50 border border-gray-250 rounded-lg p-2 text-xs font-semibold focus:outline-none focus:border-[#FF5522] resize-none"
+                                            ></textarea>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => handleRateVolunteer(app.id)}
+                                              className="w-full py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-[9px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                            >
+                                              Надіслати відгук та закрити зміну
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {/* Status 4: Reviewed */}
+                                        {app.status === 'reviewed' && app.review && (
+                                          <div className="p-2.5 bg-green-50/50 border border-green-100 rounded-lg text-xs space-y-0.5">
+                                            <div className="flex items-center gap-1 font-bold text-green-800">
+                                              <Star size={12} className="fill-green-600 text-green-700" />
+                                              <span>Оцінено: {app.review.rating} / 5</span>
+                                            </div>
+                                            {app.review.comment && (
+                                              <p className="text-[10px] text-green-700 italic">
+                                                "{app.review.comment}"
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 font-bold italic">
+                                    Немає активних запитів від волонтерів.
+                                  </p>
+                                )}
                               </div>
                             </div>
-                          ))
-                        ) : (
-                          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
-                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                              <Calendar size={20} />
-                            </div>
-                            <h4 className="font-bold text-gray-800 text-xs mb-1">Немає створених заходів</h4>
-                            <p className="text-[10px] text-gray-400 max-w-[200px] leading-relaxed">
-                              Ви ще не створили жодного заходу для волонтерів.
-                            </p>
+                          );
+                        })
+                      ) : (
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                            <Calendar size={20} />
                           </div>
-                        )}
-                      </div>
-                    )}
-
+                          <h4 className="font-bold text-gray-800 text-xs mb-1">Немає створених заходів</h4>
+                          <p className="text-[10px] text-gray-400 max-w-[200px] leading-relaxed">
+                            Ви ще не створили жодного заходу для волонтерів.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2580,89 +2566,123 @@ export default function App() {
                         </form>
                       ) : (
                         <>
-                          <input
-                            type="file"
-                            id="avatar-upload-input-b2b"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleAvatarUpload}
-                          />
-                          <div
-                            onClick={() => document.getElementById('avatar-upload-input-b2b').click()}
-                            className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-4 cursor-pointer active:scale-95 transition-all text-center"
-                            title="Змінити фото профілю"
-                          >
-                            {user.avatar_url ? (
-                              <img
-                                src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
-                                alt="Avatar"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-[#FFCC00] text-black text-2xl font-black flex items-center justify-center">
-                                {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+                          <div className="relative">
+                            {/* Settings icon at top right */}
+                            <button
+                              type="button"
+                              onClick={() => setShowSettingsPanel(!showSettingsPanel)}
+                              className={`absolute -top-1.5 -right-1.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                                showSettingsPanel
+                                  ? 'bg-gray-150 border-gray-300 text-gray-800'
+                                  : 'bg-white border-gray-200 text-gray-400 hover:text-gray-700 hover:border-gray-300 shadow-sm'
+                              }`}
+                              title="Налаштування"
+                            >
+                              <Settings size={15} />
+                            </button>
+
+                            <input
+                              type="file"
+                              id="avatar-upload-input-b2b"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                            />
+                            <div
+                              onClick={() => document.getElementById('avatar-upload-input-b2b').click()}
+                              className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-3 cursor-pointer active:scale-95 transition-all text-center"
+                              title="Змінити фото профілю"
+                            >
+                              {user.avatar_url ? (
+                                <img
+                                  src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
+                                  alt="Avatar"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-[#FFCC00] text-black text-2xl font-black flex items-center justify-center">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                <Camera size={14} className="animate-pulse" />
                               </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                              <Camera size={14} className="animate-pulse" />
                             </div>
+
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5 text-center">
+                              Організація
+                            </span>
+                            <h2 className="text-base font-black text-gray-900 mb-4 text-center leading-tight">
+                              {organization ? organization.name : "..."}
+                            </h2>
                           </div>
 
-                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1 text-center">
-                            Організація
-                          </span>
-                          <h2 className="text-base font-black text-gray-900 mb-4 text-center">
-                            {organization ? organization.name : "..."}
-                          </h2>
-
-                          <div className="text-[11px] text-gray-500 font-semibold space-y-2 border-t border-gray-50 pt-4">
-                            <div className="flex justify-between">
-                              <span>Координатор:</span>
-                              <span className="font-bold text-gray-800">
+                          <div className="border-t border-gray-100 mt-4 pt-4 text-xs font-semibold text-gray-600 space-y-2.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">Координатор</span>
+                              <span className="text-gray-900 font-bold">
                                 {orgMembers.find(m => m.company_role === 'owner')?.name || (user.company_role === 'owner' ? user.name : "...")}
                               </span>
                             </div>
+                            
                             {user.company_role !== 'owner' && (
-                              <div className="flex justify-between">
-                                <span>Ваша роль:</span>
-                                <span className="font-black text-blue-600">Член команди</span>
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-400">Ваша роль</span>
+                                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full font-black text-[9px] uppercase tracking-wider">Член команди</span>
                               </div>
                             )}
-                            <div className="flex justify-between">
-                              <span>Адреса:</span>
-                              <span className="font-bold text-gray-800">{organization ? organization.address : "..."}</span>
+                            
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-400">Адреса</span>
+                              <span className="text-gray-900 font-bold truncate max-w-[180px]" title={organization ? organization.address : ""}>
+                                {organization ? organization.address : "..."}
+                              </span>
                             </div>
-                            <div className="flex justify-between flex-col text-left gap-1">
-                              <span>Опис:</span>
-                              <span className="font-semibold text-gray-800 bg-gray-50 p-2 rounded-lg border border-gray-100">{organization ? organization.description : "..."}</span>
-                            </div>
+
+                            {organization?.description && (
+                              <div className="pt-2 border-t border-gray-50">
+                                <span className="text-gray-400 block mb-1">Про організацію</span>
+                                <p className="text-[11px] text-gray-700 font-medium leading-relaxed bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+                                  {organization.description}
+                                </p>
+                              </div>
+                            )}
                           </div>
 
-                          <button
-                            onClick={startEditingProfile}
-                            className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer"
-                          >
-                            Редагувати профіль
-                          </button>
+                          {showSettingsPanel && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 space-y-2 animate-fadeIn">
+                              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1 px-0.5">
+                                Керування та зворотний зв'язок
+                              </span>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={startEditingProfile}
+                                  className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                  Редагувати
+                                </button>
+                                <a
+                                  href="https://forms.gle/kcDLFPYfXmGP183h6"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold rounded-xl border border-blue-100 transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5 text-center text-xs"
+                                >
+                                  <MessageSquare size={12} />
+                                  <span>Відгук</span>
+                                </a>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Generate Invite Link Button (Default to member, no role selector dropdown) */}
                           <button
+                            type="button"
                             onClick={handleGenerateInvite}
-                            className="w-full mt-2.5 py-3 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-xl transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                            className="w-full mt-4 py-3.5 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-xl transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                           >
                             Згенерувати реферальне посилання
                           </button>
-
-                          {/* Leave Feedback Button */}
-                          <a
-                            href="https://forms.gle/kcDLFPYfXmGP183h6"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
-                          >
-                            <MessageSquare size={13} />
-                            <span>Залишити відгук</span>
-                          </a>
 
                           {/* Organization Members Section */}
                           <div className="mt-6 border-t border-gray-150 pt-5 text-left font-semibold">
@@ -2718,6 +2738,7 @@ export default function App() {
 
                                         {canDelete && (
                                           <button
+                                            type="button"
                                             onClick={() => handleRemoveMember(member.id, member.name)}
                                             className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
                                             title="Вилучити з організації"
@@ -2738,31 +2759,37 @@ export default function App() {
                       )}
                     </div>
 
-                    <button
-                      onClick={toggleRole}
-                      className="w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-full border border-gray-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-                    >
-                      <User size={15} className="text-[#FF5522]" />
-                      <span>Повернутися до акаунту Волонтера (B2C)</span>
-                    </button>
-
-                    {user.company_role !== 'owner' && (
+                    <div className="mt-6 pt-4 border-t border-gray-150 space-y-2.5">
                       <button
-                        onClick={handleLeaveOrganization}
-                        className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-full border border-red-200 shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+                        type="button"
+                        onClick={toggleRole}
+                        className="w-full py-3.5 bg-white hover:bg-gray-50 text-gray-700 font-extrabold rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
                       >
-                        <LogOut size={15} className="text-red-500" />
-                        <span>Вийти з організації</span>
+                        <User size={14} className="text-[#FF5522]" />
+                        <span>Кабінет Волонтера (B2C)</span>
                       </button>
-                    )}
 
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-full border border-red-200 shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-                    >
-                      <LogOut size={15} className="text-red-550" />
-                      <span>Вийти з акаунту</span>
-                    </button>
+                      <div className="flex gap-2">
+                        {user.company_role !== 'owner' && (
+                          <button
+                            type="button"
+                            onClick={handleLeaveOrganization}
+                            className="flex-1 py-3 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-xl border border-red-100 transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <LogOut size={13} className="text-red-550" />
+                            <span>Вийти з компанії</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="flex-1 py-3 bg-red-50 hover:bg-red-100 text-red-650 font-bold rounded-xl border border-red-100 transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <LogOut size={13} className="text-red-550" />
+                          <span>Вийти з акаунту</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 

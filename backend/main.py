@@ -680,7 +680,17 @@ def auto_close_past_shifts(db: Session):
     ).all()
     for s in past_shifts:
         s.status = "closed"
-    if past_shifts:
+        
+    # Also close any open shifts where all applications are already reviewed or rejected
+    open_shifts = db.query(models.Shift).filter(models.Shift.status == "open").all()
+    closed_any = False
+    for s in open_shifts:
+        if s.applications:
+            if all(a.status in ["reviewed", "rejected"] for a in s.applications):
+                s.status = "closed"
+                closed_any = True
+                
+    if past_shifts or closed_any:
         db.commit()
 
 
@@ -968,6 +978,12 @@ def rate_volunteer(
     
     # Update application status
     app.status = "reviewed"
+    
+    # Auto-close shift if all applications for this shift are fully processed (reviewed or rejected)
+    all_apps = db.query(models.Application).filter(models.Application.shift_id == app.shift_id).all()
+    if all_apps and all(a.status in ["reviewed", "rejected"] for a in all_apps):
+        app.shift.status = "closed"
+        
     db.commit()
     db.refresh(review)
     
