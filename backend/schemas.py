@@ -15,6 +15,8 @@ class UserCreate(UserBase):
     org_address: Optional[str] = None
     org_description: Optional[str] = None
     password: Optional[str] = None
+    otp_code: Optional[str] = None
+
 
 class GoogleLoginRequest(BaseModel):
     access_token: str
@@ -131,4 +133,21 @@ class InvitationResponse(BaseModel):
 
 class MemberRoleUpdate(BaseModel):
     role: str  # 'owner' | 'manager' | 'member'
+
+
+class EmailVerificationRequest(BaseModel):
+    email: str
+    code: str
+
+
+class SmsVerificationRequest(BaseModel):
+    phone: str
+    code: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+    otp_code: str
+
 
