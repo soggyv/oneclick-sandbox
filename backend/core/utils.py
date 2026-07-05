@@ -43,3 +43,9 @@ def generate_check_in_code() -> str:
     chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     code = "".join(random.choice(chars) for _ in range(4))
     return f"1C-{code}"
+
+def send_email_background_task(email: str, subject: str, html_content: str, code: str):
+    success = send_smtp_email(email, subject, html_content)
+    if not success:
+        print(f"\n[LOCAL DEV EMAIL SIMULATION] To: {email}\nSubject: {subject}\nCode: {code}\n")
+

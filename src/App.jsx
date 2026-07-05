@@ -59,10 +59,10 @@ export default function App() {
   const pickerMarkerRef = useRef(null);
 
   // Form Inputs
-  const [regName, setRegName] = useState('Дмитро');
-  const [regPhone, setRegPhone] = useState('0931234567');
-  const [regEmail, setRegEmail] = useState('coordinator@example.com');
-  const [regPassword, setRegPassword] = useState('123456');
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const [otpMode, setOtpMode] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [enteredOtp, setEnteredOtp] = useState('');
@@ -78,9 +78,9 @@ export default function App() {
   const [newPassword, setNewPassword] = useState('');
 
   // Organization Register Form
-  const [regOrgName, setRegOrgName] = useState('Foundation Coffee');
-  const [regOrgDesc, setRegOrgDesc] = useState('Кав\'ярня третьої хвилі, хаб студентських ініціатив');
-  const [regOrgAddr, setRegOrgAddr] = useState('вул. Канатна, 15');
+  const [regOrgName, setRegOrgName] = useState('');
+  const [regOrgDesc, setRegOrgDesc] = useState('');
+  const [regOrgAddr, setRegOrgAddr] = useState('');
 
   // Shift Create Form
   const [formTitle, setFormTitle] = useState('');
@@ -153,6 +153,10 @@ export default function App() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editEmailOtpCode, setEditEmailOtpCode] = useState('');
+  const [emailOtpMode, setEmailOtpMode] = useState(false);
+  const [sentEmailOtp, setSentEmailOtp] = useState('');
   const [editOrgName, setEditOrgName] = useState('');
   const [editOrgDesc, setEditOrgDesc] = useState('');
   const [editOrgAddr, setEditOrgAddr] = useState('');
@@ -179,12 +183,9 @@ export default function App() {
     const headers = {
       'Content-Type': 'application/json',
     };
-    if (user) {
-      if (user.token) {
-        headers['Authorization'] = `Bearer ${user.token}`;
-      } else {
-        headers['x-user-id'] = String(user.id);
-      }
+    const token = localStorage.getItem('oneclick_user_token') || (user && user.token);
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     const config = {
       method,
@@ -196,6 +197,13 @@ export default function App() {
     try {
       const response = await fetch(`${API_URL}${endpoint}`, config);
       if (!response.ok) {
+        if (response.status === 401) {
+          setUser(null);
+          setOrganization(null);
+          localStorage.removeItem('oneclick_user_id');
+          localStorage.removeItem('oneclick_user_role');
+          localStorage.removeItem('oneclick_user_token');
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || 'Помилка запиту');
       }
@@ -522,6 +530,9 @@ export default function App() {
   const startEditingProfile = () => {
     setEditName(user.name || '');
     setEditPhone(user.phone ? user.phone.replace('+380', '') : '');
+    setEditEmail(user.email || '');
+    setEmailOtpMode(false);
+    setEditEmailOtpCode('');
     if (organization) {
       setEditOrgName(organization.name || '');
       setEditOrgDesc(organization.description || '');
@@ -530,16 +541,54 @@ export default function App() {
     setIsEditingProfile(true);
   };
 
+  const cancelEditingProfile = () => {
+    setIsEditingProfile(false);
+    setEmailOtpMode(false);
+    setEditEmailOtpCode('');
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!editName.trim()) {
       showToastMsg("Ім'я не може бути порожнім", "error");
       return;
     }
+
+    const newEmail = editEmail.trim();
+    const currentEmail = user.email || '';
+    if (newEmail && newEmail !== currentEmail && !emailOtpMode) {
+      // Send OTP
+      const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
+      setSentEmailOtp(generatedCode);
+      try {
+        await apiCall('/users/send-email-otp', 'POST', {
+          email: newEmail,
+          code: generatedCode
+        });
+        setEmailOtpMode(true);
+        setEditEmailOtpCode('');
+        showToastMsg("Код підтвердження надіслано на пошту!", "success");
+        setTimeout(() => {
+          alert(`[СИМУЛЯЦІЯ EMAIL] Код підтвердження для прив'язки пошти: ${generatedCode}`);
+        }, 300);
+      } catch (err) {
+        console.error(err);
+        showToastMsg(err.message || "Помилка при надсиланні коду", "error");
+      }
+      return;
+    }
+
+    if (emailOtpMode && editEmailOtpCode !== sentEmailOtp) {
+      showToastMsg("Невірний код підтвердження пошти", "error");
+      return;
+    }
+
     try {
       const updatedUser = await apiCall('/users/profile', 'PUT', {
         name: editName,
         phone: editPhone ? `+380${editPhone}` : null,
+        email: editEmail || null,
+        email_otp_code: emailOtpMode ? editEmailOtpCode : null,
         org_name: currentRole === 'B2B' ? editOrgName : null,
         org_address: currentRole === 'B2B' ? editOrgAddr : null,
         org_description: currentRole === 'B2B' ? editOrgDesc : null,
@@ -555,6 +604,8 @@ export default function App() {
       }
 
       setIsEditingProfile(false);
+      setEmailOtpMode(false);
+      setEditEmailOtpCode('');
       showToastMsg("Профіль успішно оновлено!", "success");
       loadData();
     } catch (err) {
@@ -758,6 +809,16 @@ export default function App() {
 
       // Simulate sending OTP code
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
+      
+      try {
+        await apiCall('/auth/send-verification-sms', 'POST', {
+          phone: '+380' + regPhone,
+          code: generatedCode
+        });
+      } catch (err) {
+        console.error("SMS simulation send failed:", err);
+      }
+
       setOtpCode(generatedCode);
       setOtpMode(true);
       setEnteredOtp('');
@@ -781,10 +842,12 @@ export default function App() {
         name: regName,
         email: regEmail,
         password: regPassword,
+        otp_code: enteredOtp,
         role: 'B2B'
       } : {
         name: regName,
         phone: `+380${regPhone}`,
+        otp_code: enteredOtp,
         role: regRole
       };
 
@@ -1193,7 +1256,7 @@ export default function App() {
           </div>
 
           <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
-            © 2026 OneClick. Університетський тест
+            © 2026 OneClick
           </div>
         </div>
       </div>
@@ -1269,7 +1332,7 @@ export default function App() {
           </div>
 
           <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
-            © 2026 OneClick. Університетський тест
+            © 2026 OneClick
           </div>
         </div>
       </div>
@@ -1349,6 +1412,12 @@ export default function App() {
                 setEditName={setEditName}
                 editPhone={editPhone}
                 setEditPhone={setEditPhone}
+                editEmail={editEmail}
+                setEditEmail={setEditEmail}
+                editEmailOtpCode={editEmailOtpCode}
+                setEditEmailOtpCode={setEditEmailOtpCode}
+                emailOtpMode={emailOtpMode}
+                cancelEditingProfile={cancelEditingProfile}
                 handleSaveProfile={handleSaveProfile}
                 handleAvatarUpload={handleAvatarUpload}
                 fetchVolunteerReviews={fetchVolunteerReviews}

@@ -2,12 +2,12 @@ import datetime
 import urllib.request
 import json
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from backend import models, schemas
 from backend.database import get_db
 from backend.core.security import pwd_context, create_access_token, normalize_phone, get_current_user_id
-from backend.core.utils import send_smtp_email
+from backend.core.utils import send_smtp_email, send_email_background_task
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -66,15 +66,32 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         # Check password if B2B user and password is provided or expected
         if user_data.role == "B2B":
             if user_data.password:
-                if user.password and not pwd_context.verify(user_data.password, user.password):
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Невірний пароль для цього облікового запису"
-                    )
-                elif not user.password:
+                if not user.password:
                     user.password = pwd_context.hash(user_data.password)
                     db.commit()
                     db.refresh(user)
+                else:
+                    # Check if the stored password is in plain text (backward compatibility)
+                    is_hash = user.password.startswith("$")
+                    if not is_hash:
+                        # Plain text comparison
+                        if user.password == user_data.password:
+                            # Upgrade plaintext password to hash
+                            user.password = pwd_context.hash(user_data.password)
+                            db.commit()
+                            db.refresh(user)
+                        else:
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Невірний пароль для цього облікового запису"
+                            )
+                    else:
+                        # Hashed comparison
+                        if not pwd_context.verify(user_data.password, user.password):
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Невірний пароль для цього облікового запису"
+                            )
             else:
                 raise HTTPException(status_code=400, detail="Необхідно ввести пароль")
     else:
@@ -112,7 +129,11 @@ def check_phone(phone: str, db: Session = Depends(get_db)):
     return {"exists": user is not None}
 
 @router.post("/send-verification-email")
-def send_verification_email(payload: schemas.EmailVerificationRequest, db: Session = Depends(get_db)):
+def send_verification_email(
+    payload: schemas.EmailVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     # Rate limiting check (60 seconds)
     now = datetime.datetime.utcnow()
     last_sent = otp_timestamps.get(payload.email)
@@ -138,12 +159,6 @@ def send_verification_email(payload: schemas.EmailVerificationRequest, db: Sessi
     </html>
     """
     
-    success = send_smtp_email(
-        to_email=payload.email,
-        subject="Код підтвердження OneClick B2B",
-        html_content=html_content
-    )
-    
     # Save code to DB
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.query(models.OTPCode).filter(models.OTPCode.target == payload.email).delete()
@@ -159,16 +174,22 @@ def send_verification_email(payload: schemas.EmailVerificationRequest, db: Sessi
     # Update last sent timestamp
     otp_timestamps[payload.email] = now
     
-    if not success:
-        print(f"\n[LOCAL DEV] SMTP failed. Code for {payload.email} is: {payload.code}\n")
-        return {"status": "simulated"}
+    # Send email notification in background
+    background_tasks.add_task(
+        send_email_background_task,
+        payload.email,
+        "Код підтвердження OneClick B2B",
+        html_content,
+        payload.code
+    )
     return {"status": "ok"}
 
 @router.post("/send-verification-sms")
 def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session = Depends(get_db)):
+    phone_normalized = normalize_phone(payload.phone)
     # Rate limiting check (60 seconds)
     now = datetime.datetime.utcnow()
-    last_sent = otp_timestamps.get(payload.phone)
+    last_sent = otp_timestamps.get(phone_normalized)
     if last_sent and (now - last_sent).total_seconds() < 60:
         raise HTTPException(
             status_code=429,
@@ -177,9 +198,9 @@ def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session =
 
     # Save B2C OTP code to DB
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
-    db.query(models.OTPCode).filter(models.OTPCode.target == payload.phone).delete()
+    db.query(models.OTPCode).filter(models.OTPCode.target == phone_normalized).delete()
     otp_entry = models.OTPCode(
-        target=payload.phone,
+        target=phone_normalized,
         code=payload.code,
         expires_at=expires_at,
         is_used=False
@@ -188,9 +209,9 @@ def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session =
     db.commit()
     
     # Update last sent timestamp
-    otp_timestamps[payload.phone] = now
+    otp_timestamps[phone_normalized] = now
     
-    print(f"\n[LOCAL DEV] SMS simulation. Code for {payload.phone} is: {payload.code}\n")
+    print(f"\n[LOCAL DEV] SMS simulation. Code for {phone_normalized} is: {payload.code}\n")
     return {"status": "ok"}
 
 @router.post("/reset-password")
@@ -280,6 +301,7 @@ def get_me(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
     response.completed_shifts_count = completed_count
+    response.token = create_access_token(user.id)
     return response
 
 @router.get("/my-org", response_model=Optional[schemas.OrganizationResponse])

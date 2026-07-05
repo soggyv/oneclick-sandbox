@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from backend import models, schemas
 from backend.database import get_db
@@ -7,6 +7,47 @@ from backend.core.security import get_current_user_id
 from backend.core.utils import generate_check_in_code
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
+
+def send_candidate_notification_email(email: str, volunteer_name: str, shift_title: str, status: str, check_in_code: str = None):
+    from backend.core.utils import send_smtp_email
+    
+    if status == "approved":
+        subject = f"OneClick: Вашу заявку на зміну '{shift_title}' схвалено!"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
+          <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid #e5e5e7;">
+            <h2 style="color: #FF5522; margin-top: 0;">OneClick</h2>
+            <p>Вітаємо, <b>{volunteer_name}</b>!</p>
+            <p>Організатор схвалив вашу кандидатуру на участь у події <b>{shift_title}</b>.</p>
+            <p>Ваш персональний код для позначки відвідування (check-in):</p>
+            <div style="font-size: 24px; font-weight: bold; color: #FF5522; padding: 15px; background-color: #fff0eb; border-radius: 10px; text-align: center; letter-spacing: 2px; margin: 20px 0;">
+              {check_in_code}
+            </div>
+            <p style="font-size: 13px; color: #555555;">Будь ласка, повідомте цей код координатору під час початку зміни.</p>
+          </div>
+        </body>
+        </html>
+        """
+    else:
+        subject = f"OneClick: Статус вашої заявки на зміну '{shift_title}'"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
+          <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid #e5e5e7;">
+            <h2 style="color: #666666; margin-top: 0;">OneClick</h2>
+            <p>Вітаємо, <b>{volunteer_name}</b>!</p>
+            <p>На жаль, організатор відхилив вашу заявку на подію <b>{shift_title}</b> цього разу.</p>
+            <p>Не засмучуйтесь, у стрічці пошуку є ще багато інших цікавих змін!</p>
+          </div>
+        </body>
+        </html>
+        """
+        
+    success = send_smtp_email(email, subject, html)
+    if not success:
+        print(f"\n[LOCAL DEV EMAIL SIMULATION] To: {email}\nSubject: {subject}\nBody: {html}\n")
+
 
 @router.post("/apply", response_model=schemas.ApplicationResponse)
 def apply_to_shift(
@@ -92,6 +133,7 @@ def get_b2b_applications(x_user_id: int = Depends(get_current_user_id), db: Sess
 def review_candidate(
     app_id: int,
     status: str,  # 'approved' or 'rejected'
+    background_tasks: BackgroundTasks,
     x_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
@@ -123,6 +165,16 @@ def review_candidate(
     db.commit()
     db.refresh(app)
     
+    if app.volunteer.email:
+        background_tasks.add_task(
+            send_candidate_notification_email,
+            app.volunteer.email,
+            app.volunteer.name,
+            app.shift.title,
+            status,
+            app.check_in_code
+        )
+        
     res = schemas.ApplicationResponse.model_validate(app)
     res.volunteer_name = app.volunteer.name
     res.volunteer_avatar_url = app.volunteer.avatar_url

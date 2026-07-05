@@ -112,6 +112,8 @@ class ReviewResponse(BaseModel):
 class ProfileUpdate(BaseModel):
     name: str
     phone: Optional[str] = None
+    email: Optional[str] = None
+    email_otp_code: Optional[str] = None
     org_name: Optional[str] = None
     org_address: Optional[str] = None
     org_description: Optional[str] = None

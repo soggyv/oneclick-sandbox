@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect, text
+
 
 # Ensure backend directory is in the import path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,53 +16,8 @@ import backend.core.config
 from backend.database import engine, Base, SessionLocal
 from backend import models
 
-# Create tables
+# Create tables (fallback for rapid local setup, Alembic handles migrations)
 Base.metadata.create_all(bind=engine)
-
-# Run SQLite migrations/upgrades on startup
-with engine.connect() as conn:
-    inspector = inspect(conn)
-    columns_users = [col['name'] for col in inspector.get_columns('users')]
-    
-    if 'password' not in columns_users:
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN password TEXT"))
-            conn.commit()
-            print("Successfully migrated: Added 'password' column to 'users' table.")
-        except Exception as e:
-            print(f"Migration error (users.password): {e}")
-            
-    if 'company_id' not in columns_users:
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN company_id INTEGER REFERENCES organizations(id)"))
-            conn.commit()
-            print("Successfully migrated: Added 'company_id' column to 'users' table.")
-        except Exception as e:
-            print(f"Migration error (users.company_id): {e}")
-            
-    if 'company_role' not in columns_users:
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN company_role TEXT DEFAULT 'member'"))
-            conn.commit()
-            print("Successfully migrated: Added 'company_role' column to 'users' table.")
-        except Exception as e:
-            print(f"Migration error (users.company_role): {e}")
-
-    try:
-        conn.execute(text("UPDATE users SET phone = replace(phone, ' ', '') WHERE phone LIKE '% %'"))
-        conn.commit()
-        print("Successfully migrated: Normalized phone numbers in 'users' table.")
-    except Exception as e:
-        print(f"Migration error (normalize phones): {e}")
-
-    columns_shifts = [col['name'] for col in inspector.get_columns('shifts')]
-    if 'created_by_id' not in columns_shifts:
-        try:
-            conn.execute(text("ALTER TABLE shifts ADD COLUMN created_by_id INTEGER REFERENCES users(id)"))
-            conn.commit()
-            print("Successfully migrated: Added 'created_by_id' column to 'shifts' table.")
-        except Exception as e:
-            print(f"Migration error (shifts.created_by_id): {e}")
 
 # 3. Initialize FastAPI App
 app = FastAPI(title="OneClick Volunteering API")

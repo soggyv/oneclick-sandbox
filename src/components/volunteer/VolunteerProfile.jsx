@@ -10,6 +10,12 @@ export default function VolunteerProfile({
   setEditName,
   editPhone,
   setEditPhone,
+  editEmail,
+  setEditEmail,
+  editEmailOtpCode,
+  setEditEmailOtpCode,
+  emailOtpMode,
+  cancelEditingProfile,
   handleSaveProfile,
   handleAvatarUpload,
   fetchVolunteerReviews,
@@ -27,6 +33,18 @@ export default function VolunteerProfile({
         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Ваш студентський профіль волонтера</p>
       </div>
 
+      {!isEditingProfile && !user.email && (
+        <div className="bg-[#FF5522]/10 border border-[#FF5522]/20 rounded-2xl p-4 text-left text-xs text-gray-700 mb-5 flex items-start gap-3">
+          <span className="text-lg">✉️</span>
+          <div>
+            <p className="font-extrabold text-gray-900 mb-0.5 text-[#FF5522]">Прив'яжіть електронну пошту</p>
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Вкажіть ваш email у профілі, щоб миттєво отримувати сповіщення, коли організатори схвалюють ваші заявки на зміни.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center mb-6">
         {isEditingProfile ? (
           <form onSubmit={handleSaveProfile} className="text-left space-y-4">
@@ -37,9 +55,10 @@ export default function VolunteerProfile({
               <input
                 type="text"
                 required
+                disabled={emailOtpMode}
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
             <div>
@@ -53,13 +72,48 @@ export default function VolunteerProfile({
                 <input
                   type="text"
                   required
+                  disabled={emailOtpMode}
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="9-значний номер"
-                  className="w-full bg-white border border-gray-250 rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                  className="w-full bg-white border border-gray-250 rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 disabled:text-gray-400"
                 />
               </div>
             </div>
+            <div>
+              <label className="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-0.5">
+                Електронна пошта (для сповіщень)
+              </label>
+              <input
+                type="email"
+                disabled={emailOtpMode}
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="Введіть email (напр. user@student.ua)"
+                className="w-full bg-white border border-gray-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 disabled:text-gray-400"
+              />
+              <p className="text-[10px] text-gray-450 mt-1 pl-0.5 leading-relaxed text-left">
+                Потрібно виключно для надсилання сповіщень про статус ваших заявок на зміни.
+              </p>
+            </div>
+            {emailOtpMode && (
+              <div className="bg-[#FF5522]/5 border border-[#FF5522]/20 rounded-xl p-4 space-y-2 mt-2">
+                <label className="block text-[9px] font-bold text-[#FF5522] uppercase tracking-widest px-0.5">
+                  Введіть код підтвердження з пошти
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editEmailOtpCode}
+                  onChange={(e) => setEditEmailOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="4-значний код"
+                  className="w-full bg-white border border-[#FF5522]/40 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm text-center tracking-widest text-lg"
+                />
+                <p className="text-[10px] text-gray-400 text-center leading-normal">
+                  Ми надіслали 4-значний код на адресу <b>{editEmail}</b>. Введіть його для підтвердження.
+                </p>
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
@@ -69,7 +123,7 @@ export default function VolunteerProfile({
               </button>
               <button
                 type="button"
-                onClick={() => setIsEditingProfile(false)}
+                onClick={cancelEditingProfile}
                 className="flex-1 py-3 border border-gray-300 hover:bg-gray-50 text-gray-600 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
                 Скасувати
@@ -137,6 +191,12 @@ export default function VolunteerProfile({
                 <span className="text-gray-950 font-bold">{user.phone}</span>
               </div>
               <div className="flex justify-between">
+                <span>Email для сповіщень:</span>
+                <span className="text-gray-950 font-bold">
+                  {user.email || <span className="text-gray-400 italic font-medium">Не прив'язано</span>}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span>Статус:</span>
                 <span className="text-green-600 font-bold">Готовий допомогти</span>
               </div>
@@ -157,7 +217,7 @@ export default function VolunteerProfile({
               className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
             >
               <MessageSquare size={13} />
-              <span>Залишити відгук</span>
+              <span>Залишити відгук про платформу</span>
             </a>
           </>
         )}

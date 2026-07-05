@@ -3,7 +3,7 @@ import random
 import shutil
 from typing import List
 from PIL import Image
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 from backend import models, schemas
 from backend.database import get_db
@@ -15,6 +15,49 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 uploads_dir = os.path.join(static_dir, "uploads")
 os.makedirs(uploads_dir, exist_ok=True)
+
+@router.post("/send-email-otp")
+def send_email_otp(
+    payload: schemas.EmailVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    import datetime
+    from backend.core.utils import send_email_background_task
+    
+    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
+    db.query(models.OTPCode).filter(models.OTPCode.target == payload.email).delete()
+    
+    otp_entry = models.OTPCode(
+        target=payload.email,
+        code=payload.code,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.add(otp_entry)
+    db.commit()
+    
+    # Send email notification in background
+    subject = "OneClick: Підтвердження електронної пошти"
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
+      <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid #e5e5e7;">
+        <h2 style="color: #FF5522; margin-top: 0;">OneClick</h2>
+        <p>Вітаємо!</p>
+        <p>Ви вказали цю адресу для отримання сповіщень у OneClick.</p>
+        <p>Ваш код підтвердження:</p>
+        <div style="font-size: 24px; font-weight: bold; color: #FF5522; padding: 15px; background-color: #fff0eb; border-radius: 10px; text-align: center; letter-spacing: 2px; margin: 20px 0;">
+          {payload.code}
+        </div>
+        <p style="font-size: 13px; color: #555555;">Будь ласка, введіть цей код на сторінці профілю для завершення прив'язки.</p>
+      </div>
+    </body>
+    </html>
+    """
+    
+    background_tasks.add_task(send_email_background_task, payload.email, subject, html, payload.code)
+    return {"status": "ok"}
 
 @router.put("/profile", response_model=schemas.UserResponse)
 def update_profile(
@@ -29,6 +72,35 @@ def update_profile(
     user.name = profile_data.name
     if profile_data.phone:
         user.phone = profile_data.phone
+        
+    if profile_data.email is not None:
+        email_clean = profile_data.email.strip().lower()
+        current_email = user.email.lower() if user.email else ""
+        if email_clean and email_clean != current_email:
+            if not profile_data.email_otp_code:
+                raise HTTPException(status_code=400, detail="Код підтвердження електронної пошти обов'язковий")
+                
+            import datetime
+            now = datetime.datetime.utcnow()
+            otp = db.query(models.OTPCode).filter(
+                models.OTPCode.target == email_clean,
+                models.OTPCode.code == profile_data.email_otp_code,
+                models.OTPCode.expires_at > now,
+                models.OTPCode.is_used == False
+            ).first()
+            
+            if not otp:
+                raise HTTPException(status_code=400, detail="Невірний або прострочений код підтвердження")
+                
+            # Check uniqueness
+            dup = db.query(models.User).filter(models.User.email == email_clean, models.User.id != user.id).first()
+            if dup:
+                raise HTTPException(status_code=400, detail="Цей email вже використовується іншим користувачем")
+                
+            otp.is_used = True
+            user.email = email_clean
+        elif not email_clean:
+            user.email = None
         
     # If B2B user and has a linked company, allow updating company info
     if user.role == "B2B" and user.company_id and profile_data.org_name:
