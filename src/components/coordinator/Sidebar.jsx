@@ -16,7 +16,7 @@ export default function Sidebar({
   ];
 
   return (
-    <div className="hidden md:flex flex-col justify-between w-64 bg-white border-r border-gray-200 p-6 shrink-0 h-full min-h-screen">
+    <div className="hidden md:flex flex-col justify-between w-64 bg-white border-r border-gray-200 p-6 shrink-0 h-full">
       <div>
         {/* Brand Logo */}
         <div className="flex items-center gap-3 mb-8 px-2">

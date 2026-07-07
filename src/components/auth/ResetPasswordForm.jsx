@@ -23,6 +23,9 @@ export default function ResetPasswordForm({
           </label>
           <p className="text-[10px] text-gray-400 font-semibold mb-3 px-1 leading-relaxed">
             Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 font-black">{resetEmail}</span> (симуляція: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
+            <span className="block mt-1 text-[#FF5522] font-bold text-[9px] uppercase tracking-wide">
+              * Якщо лист не надходить, перевірте папку "Спам"
+            </span>
           </p>
           <input
             type="text"
@@ -44,8 +47,12 @@ export default function ResetPasswordForm({
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
+            minLength={6}
             className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
           />
+          <span className="text-[9px] text-gray-400 mt-1 block px-1">
+            Мінімум 6 символів
+          </span>
         </div>
 
         <button

@@ -67,6 +67,8 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         if user_data.role == "B2B":
             if user_data.password:
                 if not user.password:
+                    if len(user_data.password) < 6:
+                        raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
                     user.password = pwd_context.hash(user_data.password)
                     db.commit()
                     db.refresh(user)
@@ -95,6 +97,9 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
             else:
                 raise HTTPException(status_code=400, detail="Необхідно ввести пароль")
     else:
+        if user_data.role == "B2B":
+            if not user_data.password or len(user_data.password) < 6:
+                raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
         hashed_password = pwd_context.hash(user_data.password) if user_data.password else None
         user = models.User(
             name=user_data.name,
@@ -232,6 +237,8 @@ def reset_password(payload: schemas.ResetPasswordRequest, db: Session = Depends(
     if not otp_entry:
         raise HTTPException(status_code=400, detail="Недійсний або прострочений код підтвердження")
         
+    if not payload.new_password or len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
     otp_entry.is_used = True
     user.password = pwd_context.hash(payload.new_password)
     db.commit()

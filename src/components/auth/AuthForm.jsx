@@ -81,8 +81,12 @@ export default function AuthForm({
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
               required
+              minLength={6}
               className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
             />
+            <span className="text-[9px] text-gray-400 mt-1 block px-1">
+              Мінімум 6 символів
+            </span>
             <button
               type="button"
               onClick={() => {

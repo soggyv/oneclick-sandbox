@@ -721,6 +721,10 @@ function AppContent() {
             showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
             return;
           }
+          if (!regPassword || regPassword.length < 6) {
+            showToastMsg("Пароль має містити щонайменше 6 символів", "error");
+            return;
+          }
           const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
 
           await apiCall('/auth/send-verification-email', 'POST', {
@@ -1277,9 +1281,9 @@ function AppContent() {
       <Toast toast={toast} />
 
       {/* Main frame */}
-      <div className={`w-full bg-[#f5f5f7] relative text-[#111111] border border-gray-200 shadow-2xl transition-all duration-300 ${
+      <div className={`w-full bg-[#f5f5f7] relative text-[#111111] border border-gray-250 shadow-2xl transition-all duration-300 ${
         (user && currentRole === 'B2B' && organization)
-          ? 'md:max-w-6xl md:rounded-[40px] md:min-h-[85vh] md:flex md:pb-0 md:overflow-hidden'
+          ? 'md:max-w-6xl md:rounded-[40px] md:h-[85vh] md:flex md:pb-0 md:overflow-hidden'
           : 'max-w-[450px] min-h-screen pb-[110px] overflow-x-hidden'
       }`}>
 
@@ -1359,7 +1363,7 @@ function AppContent() {
           {/* Coordinator Routes */}
           <Route path="/coordinator/*" element={
             currentRole === 'B2B' ? (
-              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0">
+              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
                 {organization && (
                   <Sidebar
                     activeTab={activeB2BTab}
@@ -1371,7 +1375,7 @@ function AppContent() {
                   />
                 )}
                 
-                <div className="w-full px-4 pt-6 flex-1 md:p-8 md:overflow-y-auto md:max-h-[85vh] pb-[110px] md:pb-8">
+                <div className="w-full px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
                   {!organization ? (
                     <div className="animate-fadeIn py-6 text-left">
                       <div className="flex justify-between items-center mb-5">
@@ -1515,6 +1519,13 @@ function AppContent() {
                             setIsEditingProfile={setIsEditingProfile}
                             editName={editName}
                             setEditName={setEditName}
+                            editPhone={editPhone}
+                            setEditPhone={setEditPhone}
+                            editEmail={editEmail}
+                            setEditEmail={setEditEmail}
+                            editEmailOtpCode={editEmailOtpCode}
+                            setEditEmailOtpCode={setEditEmailOtpCode}
+                            emailOtpMode={emailOtpMode}
                             editOrgName={editOrgName}
                             setEditOrgName={setEditOrgName}
                             editOrgAddr={editOrgAddr}
@@ -1522,11 +1533,15 @@ function AppContent() {
                             editOrgDesc={editOrgDesc}
                             setEditOrgDesc={setEditOrgDesc}
                             handleSaveProfile={handleSaveProfile}
+                            startEditingProfile={startEditingProfile}
+                            cancelEditingProfile={cancelEditingProfile}
+                            handleAvatarUpload={handleAvatarUpload}
                             handleGenerateInvite={handleGenerateInvite}
                             isMembersListExpanded={isMembersListExpanded}
                             setIsMembersListExpanded={setIsMembersListExpanded}
                             orgMembers={orgMembers}
                             handleRemoveMember={handleRemoveMember}
+                            handleUpdateMemberRole={handleUpdateMemberRole}
                             toggleRole={toggleRole}
                             handleLeaveOrganization={handleLeaveOrganization}
                             handleSignOut={handleSignOut}

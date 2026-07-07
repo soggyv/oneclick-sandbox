@@ -97,10 +97,10 @@ export default function CoordinatorShifts({
                         <button
                           type="button"
                           onClick={() => setEditingShift(shift)}
-                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                          className="p-2 hover:bg-blue-50 rounded-xl text-gray-400 hover:text-blue-600 transition-all active:scale-90 cursor-pointer"
                           title="Редагувати зміну"
                         >
-                          <Edit2 size={12} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           type="button"
@@ -109,10 +109,10 @@ export default function CoordinatorShifts({
                               deleteShift(shift.id);
                             }
                           }}
-                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-655 transition-colors cursor-pointer"
+                          className="p-2 hover:bg-red-50 rounded-xl text-gray-400 hover:text-red-600 transition-all active:scale-90 cursor-pointer"
                           title="Видалити зміну"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={16} />
                         </button>
                       </>
                     )}

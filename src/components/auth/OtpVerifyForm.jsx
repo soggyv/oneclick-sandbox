@@ -21,6 +21,9 @@ export default function OtpVerifyForm({
           {regRole === 'B2B' ? (
             <>
               Ми надіслали 4-значний код на пошту <span className="text-gray-900 font-black">{regEmail}</span> (симуляція: <span className="text-[#FF5522] font-black">{otpCode}</span>)
+              <span className="block mt-1 text-[#FF5522] font-bold text-[9px] uppercase tracking-wide">
+                * Якщо код не приходить протягом хвилини, перевірте папку "Спам"
+              </span>
             </>
           ) : (
             <>

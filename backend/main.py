@@ -23,9 +23,12 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="OneClick Volunteering API")
 
 # Configure CORS
+origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
