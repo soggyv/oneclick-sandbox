@@ -21,6 +21,8 @@ import {
   Trash2,
   Settings
 } from 'lucide-react'
+import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { useStore } from './store/useStore'
 
 const API_URL = "http://localhost:8000/api";
 
@@ -42,21 +44,24 @@ import CoordinatorProfile from './components/coordinator/CoordinatorProfile';
 import Navigation from './components/shared/Navigation';
 import Sidebar from './components/coordinator/Sidebar';
 
-export default function App() {
-  // --- Centralized Core State Object ---
-  const [user, setUser] = useState(null); // Current logged in user object
-  const [organization, setOrganization] = useState(null); // User's organization if B2B
-  const [currentRole, setCurrentRole] = useState('B2C'); // 'B2C' (volunteer) or 'B2B' (organizer)
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Navigation Tabs
-  const [activeB2CTab, setActiveB2CTab] = useState('search'); // 'search' | 'myshifts' | 'profile'
-  const [activeB2BTab, setActiveB2BTab] = useState('manage'); // 'manage' | 'create' | 'profile'
-  const [activeB2BFilter, setActiveB2BFilter] = useState("АКТИВНІ"); // B2B managed filter: 'АКТИВНІ' | 'ЗАКРИТІ'
-  const [activeB2CShiftsFilter, setActiveB2CShiftsFilter] = useState("АКТИВНІ"); // 'АКТИВНІ' | 'ЗАВЕРШЕНІ'
-
-  // Map Picker Refs
-  const pickerMapRef = useRef(null);
-  const pickerMarkerRef = useRef(null);
+  const {
+    user, setUser, organization, setOrganization, currentRole, setCurrentRole,
+    activeB2CTab, setActiveB2CTab, activeB2BTab, setActiveB2BTab,
+    shifts, bookedShifts, b2bApplications, b2bShifts, orgMembers,
+    toast, showToastMsg, logout, loadData, fetchVolunteerReviews, apiCall,
+    isOrgRegisterModalOpen, setIsOrgRegisterModalOpen,
+    selectedVolunteerProfile, setSelectedVolunteerProfile,
+    volunteerReviews, setVolunteerReviews,
+    reviewsModalUserName, setReviewsModalUserName,
+    isReviewsModalOpen, setIsReviewsModalOpen,
+    showSettingsPanel, setShowSettingsPanel,
+    activeB2BFilter, setActiveB2BFilter,
+    activeB2CShiftsFilter, setActiveB2CShiftsFilter
+  } = useStore();
 
   // Form Inputs
   const [regName, setRegName] = useState('');
@@ -97,13 +102,9 @@ export default function App() {
   const [formAddress, setFormAddress] = useState('');
   const [formDescription, setFormDescription] = useState('');
 
-  // Data States
-  const [shifts, setShifts] = useState([]); // Available B2C shifts
-  const [bookedShifts, setBookedShifts] = useState([]); // Applied B2C shifts (applications)
-  const [b2bApplications, setB2bApplications] = useState([]); // B2B applications for approval/check-in
-  const [b2bShifts, setB2bShifts] = useState([]); // Organizer created shifts
-  const [orgMembers, setOrgMembers] = useState([]); // Members of organization
-  const [activeB2BSubView, setActiveB2BSubView] = useState('applications'); // 'applications' | 'shifts'
+  // Map Picker Refs
+  const pickerMapRef = useRef(null);
+  const pickerMarkerRef = useRef(null);
 
   // Attendance Code input state per application
   const [attendanceCodes, setAttendanceCodes] = useState({}); // { appId: 'code' }
@@ -113,18 +114,23 @@ export default function App() {
   const [ratings, setRatings] = useState({}); // { appId: 5 }
   const [reviews, setReviews] = useState({}); // { appId: 'comment' }
 
-  // Modal / Detail States
-  const [toast, setToast] = useState(null);
+  // Search and Profile Editing States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editEmailOtpCode, setEditEmailOtpCode] = useState('');
+  const [emailOtpMode, setEmailOtpMode] = useState(false);
+  const [sentEmailOtp, setSentEmailOtp] = useState('');
+  const [editOrgName, setEditOrgName] = useState('');
+  const [editOrgDesc, setEditOrgDesc] = useState('');
+  const [editOrgAddr, setEditOrgAddr] = useState('');
+
   const [currentDetailsShift, setCurrentDetailsShift] = useState(null);
-  const [volunteerReviews, setVolunteerReviews] = useState([]); // Reviews of selected volunteer
-  const [selectedVolunteerProfile, setSelectedVolunteerProfile] = useState(null);
-  const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
-  const [reviewsModalUserName, setReviewsModalUserName] = useState('');
-  const [isOrgRegisterModalOpen, setIsOrgRegisterModalOpen] = useState(false);
   const [inviteOrgName, setInviteOrgName] = useState(null);
   const [isMembersListExpanded, setIsMembersListExpanded] = useState(true);
   const [showCreateMapPicker, setShowCreateMapPicker] = useState(false);
-  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   // 14-day rolling calendar YYYY-MM-DD
   const calendarDays = useMemo(() => {
@@ -148,19 +154,6 @@ export default function App() {
   const [selectedDateStr, setSelectedDateStr] = useState(calendarDays[0].dateStr);
   const [selectedFilter, setSelectedFilter] = useState("Всі сфери");
 
-  // Search and Profile Editing States
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editEmailOtpCode, setEditEmailOtpCode] = useState('');
-  const [emailOtpMode, setEmailOtpMode] = useState(false);
-  const [sentEmailOtp, setSentEmailOtp] = useState('');
-  const [editOrgName, setEditOrgName] = useState('');
-  const [editOrgDesc, setEditOrgDesc] = useState('');
-  const [editOrgAddr, setEditOrgAddr] = useState('');
-
   // Dynamic Spheres list derived from shifts
   const b2cFilters = useMemo(() => {
     const base = ["Всі сфери", "Кав'ярні", "Склади", "IT-відділ", "Рітейл"];
@@ -172,140 +165,43 @@ export default function App() {
     return base;
   }, [shifts]);
 
-  // Toast Helper
-  const showToastMsg = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // API Call Wrapper
-  const apiCall = useCallback(async (endpoint, method = 'GET', body = null) => {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    const token = localStorage.getItem('oneclick_user_token') || (user && user.token);
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    const config = {
-      method,
-      headers,
-    };
-    if (body) {
-      config.body = JSON.stringify(body);
-    }
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, config);
-      if (!response.ok) {
-        if (response.status === 401) {
-          setUser(null);
-          setOrganization(null);
-          localStorage.removeItem('oneclick_user_id');
-          localStorage.removeItem('oneclick_user_role');
-          localStorage.removeItem('oneclick_user_token');
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Помилка запиту');
-      }
-      return await response.json();
-    } catch (err) {
-      showToastMsg(err.message, 'error');
-      throw err;
-    }
-  }, [user]);
-
-  // Load Volunteer Profile / Reviews
-  const fetchVolunteerReviews = async (volunteerId, volunteerName) => {
-    try {
-      const [profileData, reviewsData] = await Promise.all([
-        apiCall(`/users/${volunteerId}`),
-        apiCall(`/users/${volunteerId}/reviews`)
-      ]);
-      setSelectedVolunteerProfile(profileData);
-      setVolunteerReviews(reviewsData);
-      setReviewsModalUserName(volunteerName);
-      setIsReviewsModalOpen(true);
-    } catch (err) {
-      console.error("Помилка при завантаженні профілю/відгуків:", err);
-    }
-  };
-
-  // Load data depending on current tab/role
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    try {
-      if (currentRole === 'B2C') {
-        // Fetch available shifts
-        const fetchedShifts = await apiCall(`/shifts?date=${selectedDateStr}&category=${encodeURIComponent(selectedFilter)}&search=${encodeURIComponent(searchQuery)}`);
-        setShifts(fetchedShifts);
-        // Fetch booked shifts
-        const booked = await apiCall('/applications/my');
-        setBookedShifts(booked);
-      } else {
-        // B2B role: Fetch applications, created shifts, and members
-        const [apps, b2bShiftsData, membersData] = await Promise.all([
-          apiCall('/applications/b2b'),
-          apiCall('/shifts/b2b'),
-          apiCall('/organizations/members').catch(() => [])
-        ]);
-        setB2bApplications(apps);
-        setB2bShifts(b2bShiftsData);
-        setOrgMembers(membersData);
-      }
-    } catch (err) {
-      console.error("Помилка завантаження даних:", err);
-    }
-  }, [user, currentRole, selectedDateStr, selectedFilter, searchQuery, apiCall]);
-
-  // Restore user session on mount
+  // Sync route path changes to active tab state
   useEffect(() => {
-    const restoreSession = async () => {
-      const storedUserId = localStorage.getItem('oneclick_user_id');
-      const storedUserRole = localStorage.getItem('oneclick_user_role');
-      const storedUserToken = localStorage.getItem('oneclick_user_token');
-      if (storedUserId) {
-        try {
-          const reqHeaders = {};
-          if (storedUserToken) {
-            reqHeaders['Authorization'] = `Bearer ${storedUserToken}`;
-          } else {
-            reqHeaders['x-user-id'] = String(storedUserId);
-          }
-
-          const userData = await fetch(`${API_URL}/auth/me`, {
-            headers: reqHeaders
-          }).then(async r => {
-            if (!r.ok) throw new Error("Session invalid");
-            return r.json();
-          });
-
-          setUser(userData);
-          setCurrentRole(storedUserRole || userData.role);
-
-          // Fetch organization info if any
-          const org = await fetch(`${API_URL}/auth/my-org`, {
-            headers: reqHeaders
-          }).then(r => r.json()).catch(() => null);
-
-          if (org) {
-            setOrganization(org);
-          }
-        } catch (err) {
-          console.warn("Помилка відновлення сесії:", err);
-          localStorage.removeItem('oneclick_user_id');
-          localStorage.removeItem('oneclick_user_role');
-          localStorage.removeItem('oneclick_user_token');
-        }
+    const path = location.pathname;
+    if (path.startsWith('/volunteer/')) {
+      const tab = path.split('/').pop();
+      if (['search', 'myshifts', 'profile'].includes(tab)) {
+        setActiveB2CTab(tab);
+        setCurrentRole('B2C');
       }
-    };
-    restoreSession();
-  }, []);
+    } else if (path.startsWith('/coordinator/')) {
+      const tab = path.split('/').pop();
+      if (['manage', 'create', 'profile'].includes(tab)) {
+        setActiveB2BTab(tab);
+        setCurrentRole('B2B');
+      }
+    }
+  }, [location.pathname, setActiveB2CTab, setActiveB2BTab, setCurrentRole]);
 
   // Handle invitation links
   const handleInviteToken = useCallback(async (token, currentUser) => {
     if (!currentUser) {
       sessionStorage.setItem('pending_invite_token', token);
       return;
+    }
+    
+    // Remove immediately to prevent duplicate parallel runs during re-renders/state updates
+    sessionStorage.removeItem('pending_invite_token');
+    
+    // Clear token from URL query string if present
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('invite')) {
+        url.searchParams.delete('invite');
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+      }
+    } catch (e) {
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
     
     try {
@@ -322,11 +218,9 @@ export default function App() {
       const orgName = valData.organization_name;
       
       const headers = {};
-      const tokenLocal = localStorage.getItem('oneclick_user_token');
+      const tokenLocal = localStorage.getItem('oneclick_user_token') || currentUser.token;
       if (tokenLocal) {
         headers['Authorization'] = `Bearer ${tokenLocal}`;
-      } else {
-        headers['x-user-id'] = String(currentUser.id);
       }
       
       if (currentUser.company_id) {
@@ -337,7 +231,6 @@ export default function App() {
             sessionStorage.removeItem('pending_invite_token');
             return;
           }
-          // Delete old organization first
           const delRes = await fetch(`${API_URL}/organizations`, {
             method: 'DELETE',
             headers: headers
@@ -353,7 +246,6 @@ export default function App() {
             sessionStorage.removeItem('pending_invite_token');
             return;
           }
-          // Leave old organization first
           const leaveRes = await fetch(`${API_URL}/organizations/leave`, {
             method: 'POST',
             headers: headers
@@ -396,14 +288,14 @@ export default function App() {
       
       window.history.replaceState({}, document.title, window.location.pathname);
       sessionStorage.removeItem('pending_invite_token');
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка обробки запрошення", "error");
       window.history.replaceState({}, document.title, window.location.pathname);
       sessionStorage.removeItem('pending_invite_token');
     }
-  }, [loadData]);
+  }, [loadData, selectedDateStr, selectedFilter, searchQuery, setUser, setOrganization, setCurrentRole, showToastMsg]);
 
   useEffect(() => {
     const inviteToken = new URLSearchParams(window.location.search).get('invite');
@@ -434,8 +326,10 @@ export default function App() {
 
   // Fetch data on parameters change
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (user) {
+      loadData(selectedDateStr, selectedFilter, searchQuery);
+    }
+  }, [loadData, user, currentRole, selectedDateStr, selectedFilter, searchQuery]);
 
   // Leaflet Map Picker Initialization (Odessa-bound)
   useEffect(() => {
@@ -444,7 +338,6 @@ export default function App() {
         const mapContainer = document.getElementById('address-picker-map');
         if (!mapContainer) return;
 
-        // Odessa coordinates: 46.4825, 30.7233
         const defaultLat = 46.4825;
         const defaultLng = 30.7233;
 
@@ -557,7 +450,6 @@ export default function App() {
     const newEmail = editEmail.trim();
     const currentEmail = user.email || '';
     if (newEmail && newEmail !== currentEmail && !emailOtpMode) {
-      // Send OTP
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
       setSentEmailOtp(generatedCode);
       try {
@@ -607,9 +499,10 @@ export default function App() {
       setEmailOtpMode(false);
       setEditEmailOtpCode('');
       showToastMsg("Профіль успішно оновлено!", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
+      showToastMsg(err.message || "Помилка оновлення профілю", "error");
     }
   };
 
@@ -633,7 +526,7 @@ export default function App() {
         role: newRole
       });
       showToastMsg("Роль успішно оновлено!", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка оновлення ролі", "error");
@@ -647,7 +540,7 @@ export default function App() {
     try {
       await apiCall(`/organizations/members/${memberId}`, 'DELETE');
       showToastMsg(`${memberName} вилучено з організації`, "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка вилучення учасника", "error");
@@ -663,8 +556,9 @@ export default function App() {
       setUser(updatedUser);
       setOrganization(null);
       setCurrentRole('B2C');
+      navigate('/volunteer/search');
       showToastMsg("Ви успішно вийшли з організації", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка виходу з організації", "error");
@@ -680,8 +574,9 @@ export default function App() {
       setUser(updatedUser);
       setOrganization(null);
       setCurrentRole('B2C');
+      navigate('/volunteer/search');
       showToastMsg("Організацію успішно видалено", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка видалення організації", "error");
@@ -724,24 +619,75 @@ export default function App() {
       const updatedUser = await response.json();
       setUser(updatedUser);
       showToastMsg("Фото профілю оновлено!", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Не вдалося завантажити фото", "error");
     }
   };
 
+  // Restore user session on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedUserId = localStorage.getItem('oneclick_user_id');
+      const storedUserRole = localStorage.getItem('oneclick_user_role');
+      const storedUserToken = localStorage.getItem('oneclick_user_token');
+      if (storedUserId) {
+        try {
+          const reqHeaders = {};
+          if (storedUserToken) {
+            reqHeaders['Authorization'] = `Bearer ${storedUserToken}`;
+          } else {
+            reqHeaders['x-user-id'] = String(storedUserId);
+          }
 
-  // Handle registration/login initiation (Send OTP simulation or Direct password login)
+          const userData = await fetch(`${API_URL}/auth/me`, {
+            headers: reqHeaders
+          }).then(async r => {
+            if (!r.ok) throw new Error("Session invalid");
+            return r.json();
+          });
+
+          setUser(userData);
+          const activeRole = storedUserRole || userData.role;
+          setCurrentRole(activeRole);
+
+          // Fetch organization info if any
+          const org = await fetch(`${API_URL}/auth/my-org`, {
+            headers: reqHeaders
+          }).then(r => r.json()).catch(() => null);
+
+          if (org) {
+            setOrganization(org);
+          }
+
+          // Initial routing based on authenticated user's role
+          if (location.pathname === '/' || location.pathname === '/login') {
+            if (activeRole === 'B2C') {
+              navigate('/volunteer/search');
+            } else {
+              navigate('/coordinator/manage');
+            }
+          }
+        } catch (err) {
+          console.warn("Помилка відновлення сесії:", err);
+          logout();
+          navigate('/login');
+        }
+      } else {
+        navigate('/login');
+      }
+    };
+    restoreSession();
+  }, []);
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (regRole === 'B2B') {
       try {
-        // 1. Check if email exists
         const checkRes = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(regEmail)}`).then(r => r.json());
 
         if (checkRes.exists) {
-          // If user exists, log them in directly
           const userData = await apiCall('/auth/login-or-register', 'POST', {
             name: regName || "",
             email: regEmail,
@@ -765,17 +711,18 @@ export default function App() {
             setOrganization(org);
             setCurrentRole('B2B');
             localStorage.setItem('oneclick_user_role', 'B2B');
+            navigate('/coordinator/manage');
+          } else {
+            navigate('/coordinator/manage');
           }
           showToastMsg(`Вітаємо, ${userData.name}! Вхід успішний.`, 'success');
         } else {
-          // If user does not exist (registration), check if name is provided
           if (!regName || !regName.trim()) {
             showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
             return;
           }
           const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
 
-          // Send real verification email via backend SMTP
           await apiCall('/auth/send-verification-email', 'POST', {
             email: regEmail,
             code: generatedCode
@@ -796,7 +743,6 @@ export default function App() {
         return;
       }
 
-      // Check if user with this phone exists
       try {
         const checkRes = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent('+380' + regPhone)}`).then(r => r.json());
         if (!checkRes.exists && (!regName || !regName.trim())) {
@@ -807,7 +753,6 @@ export default function App() {
         console.error(err);
       }
 
-      // Simulate sending OTP code
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
       
       try {
@@ -823,7 +768,6 @@ export default function App() {
       setOtpMode(true);
       setEnteredOtp('');
 
-      // Wait a brief moment then show simulation alert
       setTimeout(() => {
         alert(`[СИМУЛЯЦІЯ SMS] Код підтвердження для входу: ${generatedCode}`);
       }, 300);
@@ -854,7 +798,6 @@ export default function App() {
       const userData = await apiCall('/auth/login-or-register', 'POST', payload);
       setUser(userData);
 
-      // Check if user already has organization
       const org = await fetch(`${API_URL}/auth/my-org`, {
         headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
       }).then(r => r.json()).catch(() => null);
@@ -877,13 +820,18 @@ export default function App() {
       setOtpMode(false);
       setOtpCode('');
       setEnteredOtp('');
+      
+      if (initialRole === 'B2C') {
+        navigate('/volunteer/search');
+      } else {
+        navigate('/coordinator/manage');
+      }
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка реєстрації", "error");
     }
   };
 
-  // Handle Password Reset Request
   const handleRequestResetOtp = async (e) => {
     e.preventDefault();
     try {
@@ -910,7 +858,6 @@ export default function App() {
     }
   };
 
-  // Handle New Password Submission
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     if (resetEnteredOtp !== resetOtpCode) {
@@ -929,14 +876,13 @@ export default function App() {
       setResetOtpMode(false);
       setResetEnteredOtp('');
       setNewPassword('');
-      setRegEmail(resetEmail); // autofill
+      setRegEmail(resetEmail);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка при зміні паролю", "error");
     }
   };
 
-  // Handle Google OAuth login/registration
   const handleGoogleLogin = () => {
     if (typeof window === 'undefined' || !window.google) {
       showToastMsg("Google SDK не завантажився. Будь ласка, зачекайте або оновіть сторінку.", "error");
@@ -959,7 +905,6 @@ export default function App() {
               });
               setUser(userData);
 
-              // Check if user already has organization
               const org = await fetch(`${API_URL}/auth/my-org`, {
                 headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
               }).then(r => r.json()).catch(() => null);
@@ -979,6 +924,12 @@ export default function App() {
                 localStorage.setItem('oneclick_user_token', userData.token);
               }
               showToastMsg(`Вітаємо, ${userData.name}! Вхід через Google успішний.`, 'success');
+              
+              if (initialRole === 'B2C') {
+                navigate('/volunteer/search');
+              } else {
+                navigate('/coordinator/manage');
+              }
             } catch (err) {
               console.error("Помилка авторизації на бекенді:", err);
             }
@@ -992,20 +943,12 @@ export default function App() {
     }
   };
 
-  // Handle Logout
   const handleSignOut = () => {
-    setUser(null);
-    setOrganization(null);
-    setCurrentRole('B2C');
-    setActiveB2CTab('search');
-    setActiveB2BTab('manage');
-    localStorage.removeItem('oneclick_user_id');
-    localStorage.removeItem('oneclick_user_role');
-    localStorage.removeItem('oneclick_user_token');
+    logout();
+    navigate('/login');
     showToastMsg("Ви вийшли з системи", "success");
   };
 
-  // Handle Organization Registration
   const handleOrgRegisterSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -1016,19 +959,18 @@ export default function App() {
       });
       setOrganization(orgData);
 
-      // Refetch user to get updated role (B2B)
       const updatedUser = await apiCall('/auth/me');
       setUser(updatedUser);
       setCurrentRole('B2B');
       localStorage.setItem('oneclick_user_role', 'B2B');
       setIsOrgRegisterModalOpen(false);
       showToastMsg(`Організацію "${orgData.name}" успішно створено!`, 'success');
+      navigate('/coordinator/manage');
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Switch role between B2C and B2B (only if they have organization)
   const toggleRole = () => {
     if (currentRole === 'B2C' && !organization) {
       setIsOrgRegisterModalOpen(true);
@@ -1038,9 +980,13 @@ export default function App() {
     setCurrentRole(nextRole);
     localStorage.setItem('oneclick_user_role', nextRole);
     showToastMsg(`Перехід до кабінету ${nextRole === 'B2C' ? 'Волонтера' : 'Організатора'}`, 'info');
+    if (nextRole === 'B2C') {
+      navigate('/volunteer/search');
+    } else {
+      navigate('/coordinator/manage');
+    }
   };
 
-  // Volunteer Apply to Shift
   const handleApplyShift = async (shift) => {
     if (bookedShifts.some(s => s.shift_id === shift.id)) {
       showToastMsg("Ви вже відгукнулися на цю зміну!", "error");
@@ -1051,25 +997,23 @@ export default function App() {
       await apiCall('/applications/apply', 'POST', { shift_id: shift.id });
       showToastMsg(`Ви відгукнулися на зміну: "${shift.title}"!`, "success");
       setCurrentDetailsShift(null);
-      setActiveB2CTab('myshifts');
-      loadData();
+      navigate('/volunteer/myshifts');
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Organizer Approve/Reject Volunteer
   const handleReviewCandidate = async (appId, status) => {
     try {
       await apiCall(`/applications/${appId}/review-candidate?status=${status}`, 'POST');
       showToastMsg(status === 'approved' ? "Кандидата підтверджено!" : "Кандидата відхилено.", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Organizer Confirm Attendance by Code
   const handleConfirmAttendance = async (appId) => {
     const code = attendanceCodes[appId];
     if (!code || !code.trim()) {
@@ -1079,13 +1023,12 @@ export default function App() {
     try {
       await apiCall('/applications/confirm-attendance', 'POST', { code });
       showToastMsg("Присутність волонтера підтверджено!", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Organizer Rate Volunteer
   const handleRateVolunteer = async (appId) => {
     const rating = ratings[appId] || 5;
     const comment = reviews[appId] || "";
@@ -1096,9 +1039,8 @@ export default function App() {
         comment
       });
       showToastMsg("Дякуємо! Відгук успішно надіслано.", "success");
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
 
-      // Update local rating state
       const updatedUser = await apiCall('/auth/me');
       setUser(updatedUser);
     } catch (err) {
@@ -1125,9 +1067,9 @@ export default function App() {
       });
       showToastMsg("Захід успішно створено та опубліковано!", "success");
       setFormTitle('');
-      setActiveB2BTab('manage');
+      navigate('/coordinator/manage');
       setActiveB2BFilter('АКТИВНІ');
-      loadData();
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
     }
@@ -1144,17 +1086,6 @@ export default function App() {
     });
   }, [b2bShifts, activeB2BFilter]);
 
-  // Filtered applications for B2B lists
-  const filteredB2BApplications = useMemo(() => {
-    return b2bApplications.filter(app => {
-      if (activeB2BFilter === "ВІДКРИТІ") {
-        return app.status === "pending" || app.status === "rejected";
-      } else {
-        return app.status === "approved" || app.status === "attended" || app.status === "reviewed";
-      }
-    });
-  }, [b2bApplications, activeB2BFilter]);
-
   // Filtered booked shifts for B2C lists (Active vs Completed)
   const filteredB2CBookedShifts = useMemo(() => {
     return bookedShifts.filter(app => {
@@ -1166,58 +1097,43 @@ export default function App() {
     });
   }, [bookedShifts, activeB2CShiftsFilter]);
 
-  // --- STAGE 1.5: GOOGLE LOGIN MISSING PHONE FLOW ---
+  // Google Login Missing Phone Flow
   if (user && !user.phone && user.role !== 'B2B') {
+    const handleGooglePhoneSubmit = async (e) => {
+      e.preventDefault();
+      if (googlePhone.length !== 10) {
+        showToastMsg("Введіть коректний 10-значний номер телефону", "error");
+        return;
+      }
+      try {
+        const updatedUser = await apiCall('/users/profile', 'PUT', {
+          name: user.name,
+          phone: `+380${googlePhone}`
+        });
+        setUser(updatedUser);
+        showToastMsg("Номер телефону додано!", "success");
+        navigate('/volunteer/search');
+        loadData(selectedDateStr, selectedFilter, searchQuery);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     return (
       <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex items-center justify-center p-4">
         <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-white/10 p-6 text-[#111111]">
-
           <div className="flex-1 flex flex-col items-center justify-center my-auto">
             <div className="w-20 h-20 bg-gradient-to-tr from-[#FF5522] to-[#FFCC00] rounded-2xl shadow-lg flex items-center justify-center mb-6">
               <span className="text-white text-3xl font-black tracking-tight">1C</span>
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-gray-900 mb-1">ONECLICK</h1>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+            <h1 className="text-xl font-black tracking-tight text-gray-900 mb-1">Останній крок</h1>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Завершіть реєстрацію</p>
 
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (googlePhone.length !== 10) {
-                  showToastMsg("Введіть коректний 10-значний номер телефону", "error");
-                  return;
-                }
-                try {
-                  // 1. Update user profile to save phone number
-                  const updatedUser = await apiCall('/users/profile', 'PUT', {
-                    name: user.name,
-                    phone: `+380${googlePhone}`
-                  });
-
-                  // 2. If B2B, register organization
-                  if (user.role === 'B2B' || regRole === 'B2B') {
-                    const orgData = await apiCall('/auth/register-org', 'POST', {
-                      name: regOrgName,
-                      description: regOrgDesc,
-                      address: regOrgAddr
-                    });
-                    setOrganization(orgData);
-                  }
-
-                  setUser(updatedUser);
-                  showToastMsg("Дані успішно збережено!", "success");
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
-              className="space-y-4 w-full max-w-[320px] animate-fadeIn text-left"
-            >
-              <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">
-                  Завершення реєстрації
+            <form onSubmit={handleGooglePhoneSubmit} className="w-full max-w-[320px] space-y-4">
+              <div className="text-left">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                  Номер телефону
                 </label>
-                <p className="text-[10px] text-gray-400 font-semibold mb-3 px-1 leading-relaxed">
-                  Будь ласка, вкажіть ваш номер телефону{(user.role === 'B2B' || regRole === 'B2B') ? " та дані організації" : ""} для завершення реєстрації у системі:
-                </p>
                 <div className="flex gap-2 items-center">
                   <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
                     +380
@@ -1235,8 +1151,6 @@ export default function App() {
                   Введіть 10 цифр (наприклад, 0931234567)
                 </span>
               </div>
-
-
 
               <button
                 type="submit"
@@ -1263,83 +1177,87 @@ export default function App() {
     );
   }
 
-  // --- STAGE 1: LOGIN FLOW ---
+  // Auth Flow Route
   if (!user) {
     return (
-      <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex items-center justify-center p-4">
-        <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-white/10 p-6 text-[#111111]">
-
-          <div className="flex-1 flex flex-col items-center justify-center my-auto">
-            <div className="w-20 h-20 bg-gradient-to-tr from-[#FF5522] to-[#FFCC00] rounded-2xl shadow-lg flex items-center justify-center mb-6">
-              <span className="text-white text-3xl font-black tracking-tight">1C</span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tight text-gray-900 mb-1">ONECLICK</h1>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
-
-            {inviteOrgName && (
-              <div className="w-full max-w-[320px] mb-6 bg-orange-50 border border-orange-200 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
-                <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
-                <div className="text-[10px] text-gray-700 font-semibold leading-relaxed">
-                  <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+      <Routes>
+        <Route path="/login" element={
+          <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex items-center justify-center p-4">
+            <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-white/10 p-6 text-[#111111]">
+              <div className="flex-1 flex flex-col items-center justify-center my-auto">
+                <div className="w-20 h-20 bg-gradient-to-tr from-[#FF5522] to-[#FFCC00] rounded-2xl shadow-lg flex items-center justify-center mb-6">
+                  <span className="text-white text-3xl font-black tracking-tight">1C</span>
                 </div>
+                <h1 className="text-3xl font-black tracking-tight text-gray-900 mb-1">ONECLICK</h1>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+
+                {inviteOrgName && (
+                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 border border-orange-200 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
+                    <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
+                    <div className="text-[10px] text-gray-700 font-semibold leading-relaxed">
+                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                    </div>
+                  </div>
+                )}
+
+                {otpMode ? (
+                  <OtpVerifyForm
+                    enteredOtp={enteredOtp}
+                    setEnteredOtp={setEnteredOtp}
+                    otpCode={otpCode}
+                    regEmail={regEmail}
+                    regPhone={regPhone}
+                    regRole={regRole}
+                    setOtpMode={setOtpMode}
+                    setOtpCode={setOtpCode}
+                    handleVerifyOtp={handleVerifyOtp}
+                  />
+                ) : forgotPasswordMode ? (
+                  <ResetPasswordForm
+                    resetEmail={resetEmail}
+                    setResetEmail={setResetEmail}
+                    newPassword={newPassword}
+                    setNewPassword={setNewPassword}
+                    resetOtpCode={resetOtpCode}
+                    resetEnteredOtp={resetEnteredOtp}
+                    setResetEnteredOtp={setResetEnteredOtp}
+                    resetOtpMode={resetOtpMode}
+                    setResetOtpMode={setResetOtpMode}
+                    handleResetPasswordSubmit={handleResetPasswordSubmit}
+                    handleRequestResetOtp={handleRequestResetOtp}
+                    setForgotPasswordMode={setForgotPasswordMode}
+                  />
+                ) : (
+                  <AuthForm
+                    regRole={regRole}
+                    setRegRole={setRegRole}
+                    regName={regName}
+                    setRegName={setRegName}
+                    regPhone={regPhone}
+                    setRegPhone={setRegPhone}
+                    regEmail={regEmail}
+                    setRegEmail={setRegEmail}
+                    regPassword={regPassword}
+                    setRegPassword={setRegPassword}
+                    handleLoginSubmit={handleLoginSubmit}
+                    handleGoogleLogin={handleGoogleLogin}
+                    setForgotPasswordMode={setForgotPasswordMode}
+                  />
+                )}
               </div>
-            )}
 
-            {otpMode ? (
-              <OtpVerifyForm
-                enteredOtp={enteredOtp}
-                setEnteredOtp={setEnteredOtp}
-                otpCode={otpCode}
-                regEmail={regEmail}
-                regPhone={regPhone}
-                regRole={regRole}
-                setOtpMode={setOtpMode}
-                setOtpCode={setOtpCode}
-                handleVerifyOtp={handleVerifyOtp}
-              />
-            ) : forgotPasswordMode ? (
-              <ResetPasswordForm
-                resetEmail={resetEmail}
-                setResetEmail={setResetEmail}
-                newPassword={newPassword}
-                setNewPassword={setNewPassword}
-                resetOtpCode={resetOtpCode}
-                resetEnteredOtp={resetEnteredOtp}
-                setResetEnteredOtp={setResetEnteredOtp}
-                resetOtpMode={resetOtpMode}
-                setResetOtpMode={setResetOtpMode}
-                handleResetPasswordSubmit={handleResetPasswordSubmit}
-                handleRequestResetOtp={handleRequestResetOtp}
-                setForgotPasswordMode={setForgotPasswordMode}
-              />
-            ) : (
-              <AuthForm
-                regRole={regRole}
-                setRegRole={setRegRole}
-                regName={regName}
-                setRegName={setRegName}
-                regPhone={regPhone}
-                setRegPhone={setRegPhone}
-                regEmail={regEmail}
-                setRegEmail={setRegEmail}
-                regPassword={regPassword}
-                setRegPassword={setRegPassword}
-                handleLoginSubmit={handleLoginSubmit}
-                handleGoogleLogin={handleGoogleLogin}
-                setForgotPasswordMode={setForgotPasswordMode}
-              />
-            )}
+              <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
+                © 2026 OneClick
+              </div>
+            </div>
           </div>
-
-          <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
-            © 2026 OneClick
-          </div>
-        </div>
-      </div>
+        } />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     );
   }
 
-  // --- STAGE 2: DETAILS OVERLAY ---
+  // Details overlay
   if (currentDetailsShift) {
     return (
       <ShiftDetailsModal
@@ -1352,7 +1270,6 @@ export default function App() {
     );
   }
 
-  // --- STAGE 3: MAIN APP VIEW ---
   return (
     <div className="w-full min-h-screen bg-slate-900/40 py-4 flex items-center justify-center relative">
 
@@ -1366,270 +1283,291 @@ export default function App() {
           : 'max-w-[450px] min-h-screen pb-[110px] overflow-x-hidden'
       }`}>
 
-        {/* ------------------------------------------------------------- */}
-        {/* --- B2C WORKSPACE (VOLUNTEER) --- */}
-        {/* ------------------------------------------------------------- */}
-        {currentRole === 'B2C' && (
-          <div className="w-full px-4 pt-6">
-            {/* VIEW 1: SEARCH TAB */}
-            {activeB2CTab === 'search' && (
-              <VolunteerDashboard
-                shifts={shifts}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                b2cFilters={b2cFilters}
-                selectedFilter={selectedFilter}
-                setSelectedFilter={setSelectedFilter}
-                calendarDays={calendarDays}
-                selectedDateStr={selectedDateStr}
-                setSelectedDateStr={setSelectedDateStr}
-                setCurrentDetailsShift={setCurrentDetailsShift}
-                toggleRole={toggleRole}
-                organization={organization}
-              />
-            )}
-
-            {/* VIEW 2: BOOKED SHIFTS TAB */}
-            {activeB2CTab === 'myshifts' && (
-              <BookedShiftsList
-                filteredB2CBookedShifts={filteredB2CBookedShifts}
-                activeB2CShiftsFilter={activeB2CShiftsFilter}
-                setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
-                setCurrentDetailsShift={setCurrentDetailsShift}
-                showQrCodes={showQrCodes}
-                setShowQrCodes={setShowQrCodes}
-              />
-            )}
-
-            {/* VIEW 3: PROFILE TAB */}
-            {activeB2CTab === 'profile' && (
-              <VolunteerProfile
-                user={user}
-                organization={organization}
-                isEditingProfile={isEditingProfile}
-                setIsEditingProfile={setIsEditingProfile}
-                editName={editName}
-                setEditName={setEditName}
-                editPhone={editPhone}
-                setEditPhone={setEditPhone}
-                editEmail={editEmail}
-                setEditEmail={setEditEmail}
-                editEmailOtpCode={editEmailOtpCode}
-                setEditEmailOtpCode={setEditEmailOtpCode}
-                emailOtpMode={emailOtpMode}
-                cancelEditingProfile={cancelEditingProfile}
-                handleSaveProfile={handleSaveProfile}
-                handleAvatarUpload={handleAvatarUpload}
-                fetchVolunteerReviews={fetchVolunteerReviews}
-                startEditingProfile={startEditingProfile}
-                toggleRole={toggleRole}
-                setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
-                handleLeaveOrganization={handleLeaveOrganization}
-                handleSignOut={handleSignOut}
-                API_URL={API_URL}
-              />
-            )}
-
-            {/* B2C Floating Bottom Navigation */}
-            <Navigation
-              role="B2C"
-              activeTab={activeB2CTab}
-              setActiveTab={setActiveB2CTab}
-            />
-          </div>
-        )}
-        {/* ------------------------------------------------------------- */}
-        {/* --- B2B WORKSPACE (ORGANIZER) --- */}
-        {/* ------------------------------------------------------------- */}
-        {currentRole === 'B2B' && (
-          <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0">
-            {organization && (
-              <Sidebar
-                activeTab={activeB2BTab}
-                setActiveTab={setActiveB2BTab}
-                organization={organization}
-                toggleRole={toggleRole}
-                handleSignOut={handleSignOut}
-                user={user}
-              />
-            )}
-            
-            <div className="w-full px-4 pt-6 flex-1 md:p-8 md:overflow-y-auto md:max-h-[85vh] pb-[110px] md:pb-8">
-              {!organization ? (
-                <div className="animate-fadeIn py-6 text-left">
-                  <div className="flex justify-between items-center mb-5">
-                    <div>
-                      <h1 className="text-xl font-black tracking-tight text-gray-900">Реєстрація організації</h1>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                        Вкажіть дані вашої організації для продовження
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={toggleRole}
-                      className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
-                    >
-                      <span>Волонтер</span>
-                      <User size={12} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Назва організації
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="напр. Foundation Coffee"
-                        value={regOrgName}
-                        onChange={(e) => setRegOrgName(e.target.value)}
-                        required
-                        className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Адреса / Локація офісу
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="напр. вул. Канатна, 15"
-                        value={regOrgAddr}
-                        onChange={(e) => setRegOrgAddr(e.target.value)}
-                        required
-                        className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
-                        Опис організації
-                      </label>
-                      <textarea
-                        rows="3"
-                        placeholder="Короткий опис діяльності організації..."
-                        value={regOrgDesc}
-                        onChange={(e) => setRegOrgDesc(e.target.value)}
-                        required
-                        className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
-                    >
-                      Зареєструвати компанію
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="w-full py-3.5 bg-[#FF5522]/10 hover:bg-[#FF5522]/20 text-[#FF5522] font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      Вийти з акаунту
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <>
-                  {/* VIEW 1: MANAGE TAB */}
-                  {activeB2BTab === 'manage' && (
-                    <CoordinatorShifts
-                      organization={organization}
-                      toggleRole={toggleRole}
-                      activeB2BFilter={activeB2BFilter}
-                      setActiveB2BFilter={setActiveB2BFilter}
-                      filteredB2BShifts={filteredB2BShifts}
-                      b2bApplications={b2bApplications}
-                      setCurrentDetailsShift={setCurrentDetailsShift}
-                      fetchVolunteerReviews={fetchVolunteerReviews}
-                      handleReviewCandidate={handleReviewCandidate}
-                      attendanceCodes={attendanceCodes}
-                      setAttendanceCodes={setAttendanceCodes}
-                      handleConfirmAttendance={handleConfirmAttendance}
-                      ratings={ratings}
-                      setRatings={setRatings}
-                      reviews={reviews}
-                      setReviews={setReviews}
-                      handleRateVolunteer={handleRateVolunteer}
-                      API_URL={API_URL}
-                    />
-                  )}
-
-                  {/* VIEW 2: CREATE FORM TAB */}
-                  {activeB2BTab === 'create' && (
-                    <ShiftCreateForm
-                      formTitle={formTitle}
-                      setFormTitle={setFormTitle}
-                      formSphere={formSphere}
-                      setFormSphere={setFormSphere}
-                      startTime={startTime}
-                      setStartTime={setStartTime}
-                      endTime={endTime}
-                      setEndTime={setEndTime}
-                      formLocation={formLocation}
-                      setFormLocation={setFormLocation}
+        <Routes>
+          {/* Volunteer Routes */}
+          <Route path="/volunteer/*" element={
+            currentRole === 'B2C' ? (
+              <div className="w-full px-4 pt-6">
+                <Routes>
+                  <Route path="search" element={
+                    <VolunteerDashboard
+                      shifts={shifts}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      b2cFilters={b2cFilters}
+                      selectedFilter={selectedFilter}
+                      setSelectedFilter={setSelectedFilter}
+                      calendarDays={calendarDays}
                       selectedDateStr={selectedDateStr}
                       setSelectedDateStr={setSelectedDateStr}
-                      calendarDays={calendarDays}
-                      formAddress={formAddress}
-                      setFormAddress={setFormAddress}
-                      handleAddressBlur={handleAddressBlur}
-                      showCreateMapPicker={showCreateMapPicker}
-                      setShowCreateMapPicker={setShowCreateMapPicker}
-                      formDescription={formDescription}
-                      setFormDescription={setFormDescription}
-                      handleCreateShift={handleCreateShift}
-                      setTempStartHour={setTempStartHour}
-                      setTempStartMin={setTempStartMin}
-                      setTempEndHour={setTempEndHour}
-                      setTempEndMin={setTempEndMin}
-                      setIsTimePickerOpen={setIsTimePickerOpen}
+                      setCurrentDetailsShift={setCurrentDetailsShift}
+                      toggleRole={toggleRole}
+                      organization={organization}
                     />
-                  )}
-
-                  {/* VIEW 3: CORPORATE PROFILE TAB */}
-                  {activeB2BTab === 'profile' && (
-                    <CoordinatorProfile
+                  } />
+                  <Route path="myshifts" element={
+                    <BookedShiftsList
+                      filteredB2CBookedShifts={filteredB2CBookedShifts}
+                      activeB2CShiftsFilter={activeB2CShiftsFilter}
+                      setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
+                      setCurrentDetailsShift={setCurrentDetailsShift}
+                      showQrCodes={showQrCodes}
+                      setShowQrCodes={setShowQrCodes}
+                    />
+                  } />
+                  <Route path="profile" element={
+                    <VolunteerProfile
                       user={user}
                       organization={organization}
                       isEditingProfile={isEditingProfile}
                       setIsEditingProfile={setIsEditingProfile}
                       editName={editName}
                       setEditName={setEditName}
-                      editOrgName={editOrgName}
-                      setEditOrgName={setEditOrgName}
-                      editOrgAddr={editOrgAddr}
-                      setEditOrgAddr={setEditOrgAddr}
-                      editOrgDesc={editOrgDesc}
-                      setEditOrgDesc={setEditOrgDesc}
+                      editPhone={editPhone}
+                      setEditPhone={setEditPhone}
+                      editEmail={editEmail}
+                      setEditEmail={setEditEmail}
+                      editEmailOtpCode={editEmailOtpCode}
+                      setEditEmailOtpCode={setEditEmailOtpCode}
+                      emailOtpMode={emailOtpMode}
+                      cancelEditingProfile={cancelEditingProfile}
                       handleSaveProfile={handleSaveProfile}
-                      handleGenerateInvite={handleGenerateInvite}
-                      isMembersListExpanded={isMembersListExpanded}
-                      setIsMembersListExpanded={setIsMembersListExpanded}
-                      orgMembers={orgMembers}
-                      handleRemoveMember={handleRemoveMember}
+                      handleAvatarUpload={handleAvatarUpload}
+                      fetchVolunteerReviews={fetchVolunteerReviews}
+                      startEditingProfile={startEditingProfile}
                       toggleRole={toggleRole}
+                      setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
                       handleLeaveOrganization={handleLeaveOrganization}
                       handleSignOut={handleSignOut}
                       API_URL={API_URL}
                     />
-                  )}
+                  } />
+                  <Route path="*" element={<Navigate to="search" replace />} />
+                </Routes>
+                
+                <Navigation
+                  role="B2C"
+                  activeTab={activeB2CTab}
+                  setActiveTab={(tab) => navigate(`/volunteer/${tab}`)}
+                />
+              </div>
+            ) : (
+              <Navigate to="/coordinator/manage" replace />
+            )
+          } />
 
-                  {/* B2B Floating Bottom Navigation */}
-                  <Navigation
-                    role="B2B"
+          {/* Coordinator Routes */}
+          <Route path="/coordinator/*" element={
+            currentRole === 'B2B' ? (
+              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0">
+                {organization && (
+                  <Sidebar
                     activeTab={activeB2BTab}
-                    setActiveTab={setActiveB2BTab}
+                    setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
+                    organization={organization}
+                    toggleRole={toggleRole}
+                    handleSignOut={handleSignOut}
+                    user={user}
                   />
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                )}
+                
+                <div className="w-full px-4 pt-6 flex-1 md:p-8 md:overflow-y-auto md:max-h-[85vh] pb-[110px] md:pb-8">
+                  {!organization ? (
+                    <div className="animate-fadeIn py-6 text-left">
+                      <div className="flex justify-between items-center mb-5">
+                        <div>
+                          <h1 className="text-xl font-black tracking-tight text-gray-900">Реєстрація організації</h1>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                            Вкажіть дані вашої організації для продовження
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleRole}
+                          className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
+                        >
+                          <span>Волонтер</span>
+                          <User size={12} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Назва організації
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="напр. Foundation Coffee"
+                            value={regOrgName}
+                            onChange={(e) => setRegOrgName(e.target.value)}
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Адреса / Локація офісу
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="напр. вул. Канатна, 15"
+                            value={regOrgAddr}
+                            onChange={(e) => setRegOrgAddr(e.target.value)}
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                            Опис організації
+                          </label>
+                          <textarea
+                            rows="3"
+                            placeholder="Короткий опис діяльності організації..."
+                            value={regOrgDesc}
+                            onChange={(e) => setRegOrgDesc(e.target.value)}
+                            required
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+                        >
+                          Зареєструвати компанію
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="w-full py-3.5 bg-[#FF5522]/10 hover:bg-[#FF5522]/20 text-[#FF5522] font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          Вийти з акаунту
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <>
+                      <Routes>
+                        <Route path="manage" element={
+                          <CoordinatorShifts
+                            organization={organization}
+                            toggleRole={toggleRole}
+                            activeB2BFilter={activeB2BFilter}
+                            setActiveB2BFilter={setActiveB2BFilter}
+                            filteredB2BShifts={filteredB2BShifts}
+                            b2bApplications={b2bApplications}
+                            setCurrentDetailsShift={setCurrentDetailsShift}
+                            fetchVolunteerReviews={fetchVolunteerReviews}
+                            handleReviewCandidate={handleReviewCandidate}
+                            attendanceCodes={attendanceCodes}
+                            setAttendanceCodes={setAttendanceCodes}
+                            handleConfirmAttendance={handleConfirmAttendance}
+                            ratings={ratings}
+                            setRatings={setRatings}
+                            reviews={reviews}
+                            setReviews={setReviews}
+                            handleRateVolunteer={handleRateVolunteer}
+                            API_URL={API_URL}
+                          />
+                        } />
+
+                        <Route path="create" element={
+                          <ShiftCreateForm
+                            formTitle={formTitle}
+                            setFormTitle={setFormTitle}
+                            formSphere={formSphere}
+                            setFormSphere={setFormSphere}
+                            startTime={startTime}
+                            setStartTime={setStartTime}
+                            endTime={endTime}
+                            setEndTime={setEndTime}
+                            formLocation={formLocation}
+                            setFormLocation={setFormLocation}
+                            selectedDateStr={selectedDateStr}
+                            setSelectedDateStr={setSelectedDateStr}
+                            calendarDays={calendarDays}
+                            formAddress={formAddress}
+                            setFormAddress={setFormAddress}
+                            handleAddressBlur={handleAddressBlur}
+                            showCreateMapPicker={showCreateMapPicker}
+                            setShowCreateMapPicker={setShowCreateMapPicker}
+                            formDescription={formDescription}
+                            setFormDescription={setFormDescription}
+                            handleCreateShift={handleCreateShift}
+                            setTempStartHour={setTempStartHour}
+                            setTempStartMin={setTempStartMin}
+                            setTempEndHour={setTempEndHour}
+                            setTempEndMin={setTempEndMin}
+                            setIsTimePickerOpen={setIsTimePickerOpen}
+                          />
+                        } />
+
+                        <Route path="profile" element={
+                          <CoordinatorProfile
+                            user={user}
+                            organization={organization}
+                            isEditingProfile={isEditingProfile}
+                            setIsEditingProfile={setIsEditingProfile}
+                            editName={editName}
+                            setEditName={setEditName}
+                            editOrgName={editOrgName}
+                            setEditOrgName={setEditOrgName}
+                            editOrgAddr={editOrgAddr}
+                            setEditOrgAddr={setEditOrgAddr}
+                            editOrgDesc={editOrgDesc}
+                            setEditOrgDesc={setEditOrgDesc}
+                            handleSaveProfile={handleSaveProfile}
+                            handleGenerateInvite={handleGenerateInvite}
+                            isMembersListExpanded={isMembersListExpanded}
+                            setIsMembersListExpanded={setIsMembersListExpanded}
+                            orgMembers={orgMembers}
+                            handleRemoveMember={handleRemoveMember}
+                            toggleRole={toggleRole}
+                            handleLeaveOrganization={handleLeaveOrganization}
+                            handleSignOut={handleSignOut}
+                            API_URL={API_URL}
+                          />
+                        } />
+                        <Route path="*" element={<Navigate to="manage" replace />} />
+                      </Routes>
+                      
+                      <Navigation
+                        role="B2B"
+                        activeTab={activeB2BTab}
+                        setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <Navigate to="/volunteer/search" replace />
+            )
+          } />
+
+          {/* Root Redirects */}
+          <Route path="/" element={
+            currentRole === 'B2C' ? (
+              <Navigate to="/volunteer/search" replace />
+            ) : (
+              <Navigate to="/coordinator/manage" replace />
+            )
+          } />
+          
+          <Route path="*" element={
+            currentRole === 'B2C' ? (
+              <Navigate to="/volunteer/search" replace />
+            ) : (
+              <Navigate to="/coordinator/manage" replace />
+            )
+          } />
+        </Routes>
+
       </div>
 
       {/* --- TIME PICKER MODAL --- */}
@@ -1678,5 +1616,13 @@ export default function App() {
       />
 
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <AppContent />
+    </HashRouter>
   );
 }

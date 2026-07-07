@@ -1,5 +1,7 @@
-import React from 'react';
-import { User, Clock, MapPin, Star, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Clock, MapPin, Star, Calendar, Edit2, Trash2 } from 'lucide-react';
+import { useStore } from '../../store/useStore';
+import EditShiftModal from './EditShiftModal';
 
 export default function CoordinatorShifts({
   organization,
@@ -21,6 +23,8 @@ export default function CoordinatorShifts({
   handleRateVolunteer,
   API_URL
 }) {
+  const deleteShift = useStore((state) => state.deleteShift);
+  const [editingShift, setEditingShift] = useState(null);
   return (
     <div className="animate-fadeIn">
       <div className="flex justify-between items-center mb-5">
@@ -79,11 +83,40 @@ export default function CoordinatorShifts({
                   <span className="px-2.5 py-0.5 text-[9px] font-extrabold rounded-full bg-gray-50 text-gray-500 uppercase tracking-wider">
                     {shift.category}
                   </span>
-                  <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${
-                    shift.status === 'open' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {shift.status === 'open' ? 'Активний' : 'Закритий'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${
+                      shift.status === 'open' ? 'bg-green-50 text-green-600' :
+                      shift.status === 'cancelled' ? 'bg-red-50 text-red-600' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {shift.status === 'open' ? 'Активний' :
+                       shift.status === 'cancelled' ? 'Скасовано' : 'Закритий'}
+                    </span>
+                    {shift.status === 'open' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditingShift(shift)}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                          title="Редагувати зміну"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Ви дійсно хочете видалити/скасувати цю зміну?")) {
+                              deleteShift(shift.id);
+                            }
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-655 transition-colors cursor-pointer"
+                          title="Видалити зміну"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <h3
@@ -278,6 +311,11 @@ export default function CoordinatorShifts({
           </div>
         )}
       </div>
+      <EditShiftModal
+        isOpen={!!editingShift}
+        onClose={() => setEditingShift(null)}
+        shift={editingShift}
+      />
     </div>
   );
 }
