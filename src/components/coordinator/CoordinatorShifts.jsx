@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Clock, MapPin, Star, Calendar, Edit2, Trash2 } from 'lucide-react';
+import { User, Clock, MapPin, Star, Calendar, Edit2, Trash2, Eye } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import EditShiftModal from './EditShiftModal';
 
@@ -156,18 +156,26 @@ export default function CoordinatorShifts({
                                 <img
                                   src={`${API_URL.replace('/api', '')}${app.volunteer_avatar_url}`}
                                   alt="Avatar"
-                                  className="w-6 h-6 rounded-full object-cover"
+                                  onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
+                                  className="w-6 h-6 rounded-full object-cover cursor-pointer hover:opacity-80 active:scale-95 transition-all"
+                                  title="Переглянути профіль волонтера"
                                 />
                               ) : (
-                                <div className="w-6 h-6 bg-[#FFCC00] text-black text-[10px] font-black rounded-full flex items-center justify-center">
+                                <div
+                                  onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
+                                  className="w-6 h-6 bg-[#FFCC00] text-black text-[10px] font-black rounded-full flex items-center justify-center cursor-pointer hover:opacity-85 active:scale-95 transition-all"
+                                  title="Переглянути профіль волонтера"
+                                >
                                   {app.volunteer_name ? app.volunteer_name.charAt(0).toUpperCase() : 'У'}
                                 </div>
                               )}
                               <span
                                 onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
-                                className="text-xs font-black text-blue-600 underline cursor-pointer hover:text-blue-800"
+                                className="group text-xs font-black text-gray-800 hover:text-[#FF5522] cursor-pointer flex items-center gap-1.5 transition-colors duration-150"
+                                title="Переглянути профіль волонтера"
                               >
-                                {app.volunteer_name}
+                                <span>{app.volunteer_name}</span>
+                                <Eye size={12} className="text-gray-450 group-hover:text-[#FF5522] shrink-0 transition-colors duration-150" />
                               </span>
                             </div>
                             
@@ -212,18 +220,18 @@ export default function CoordinatorShifts({
                               <label className="block text-[8px] font-bold text-gray-400 uppercase tracking-widest">
                                 Введіть код волонтера (check-in)
                               </label>
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                   type="text"
                                   placeholder="напр. 1C-489A"
                                   value={attendanceCodes[app.id] || ""}
                                   onChange={(e) => setAttendanceCodes(prev => ({ ...prev, [app.id]: e.target.value.toUpperCase() }))}
-                                  className="flex-1 bg-gray-50 border border-gray-250 rounded-lg px-2.5 py-1.5 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
+                                  className="w-full sm:flex-1 bg-gray-50 border border-gray-250 rounded-lg px-2.5 py-1.5 text-xs font-black tracking-widest text-center focus:outline-none focus:border-[#FF5522]"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleConfirmAttendance(app.id)}
-                                  className="px-3.5 py-1.5 bg-black hover:bg-black/90 text-white font-bold text-[9px] rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                                  className="w-full sm:w-auto px-3.5 py-2 bg-black hover:bg-black/90 text-white font-bold text-[9px] rounded-lg uppercase tracking-wider transition-all active:scale-95 cursor-pointer shrink-0"
                                 >
                                   Перевірити
                                 </button>

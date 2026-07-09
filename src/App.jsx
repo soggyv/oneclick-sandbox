@@ -459,10 +459,7 @@ function AppContent() {
         });
         setEmailOtpMode(true);
         setEditEmailOtpCode('');
-        showToastMsg("Код підтвердження надіслано на пошту!", "success");
-        setTimeout(() => {
-          alert(`[СИМУЛЯЦІЯ EMAIL] Код підтвердження для прив'язки пошти: ${generatedCode}`);
-        }, 300);
+        showToastMsg(`Код підтвердження надіслано на пошту! (Код: ${generatedCode})`, "success");
       } catch (err) {
         console.error(err);
         showToastMsg(err.message || "Помилка при надсиланні коду", "error");
@@ -742,8 +739,8 @@ function AppContent() {
         showToastMsg(err.message || "Невірний пароль або помилка авторизації", "error");
       }
     } else {
-      if (regPhone.length !== 10) {
-        showToastMsg("Введіть коректний 10-значний номер телефону", "error");
+      if (regPhone.length !== 9) {
+        showToastMsg("Введіть коректний 9-значний номер телефону (без першого нуля)", "error");
         return;
       }
 
@@ -772,9 +769,8 @@ function AppContent() {
       setOtpMode(true);
       setEnteredOtp('');
 
-      setTimeout(() => {
-        alert(`[СИМУЛЯЦІЯ SMS] Код підтвердження для входу: ${generatedCode}`);
-      }, 300);
+      // Code is visible on the screen in OtpVerifyForm
+      console.log(`[SMS Simulation] Verification code: ${generatedCode}`);
     }
   };
 
@@ -1105,8 +1101,8 @@ function AppContent() {
   if (user && !user.phone && user.role !== 'B2B') {
     const handleGooglePhoneSubmit = async (e) => {
       e.preventDefault();
-      if (googlePhone.length !== 10) {
-        showToastMsg("Введіть коректний 10-значний номер телефону", "error");
+      if (googlePhone.length !== 9) {
+        showToastMsg("Введіть коректний 9-значний номер телефону (без першого нуля)", "error");
         return;
       }
       try {
@@ -1144,15 +1140,15 @@ function AppContent() {
                   </span>
                   <input
                     type="text"
-                    placeholder="0931234567"
+                    placeholder="931234567"
                     value={googlePhone}
-                    onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                     required
                     className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                   />
                 </div>
                 <span className="text-[9px] text-gray-400 mt-1 block px-1">
-                  Введіть 10 цифр (наприклад, 0931234567)
+                  Введіть 9 цифр (наприклад, 931234567)
                 </span>
               </div>
 

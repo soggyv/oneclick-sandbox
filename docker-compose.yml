@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: oneclick-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-oneclick_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_here}
+      POSTGRES_DB: ${DB_NAME:-oneclick_prod}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Bind to localhost only to prevent direct external access to database
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: oneclick-backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-oneclick_user}:${DB_PASSWORD:-secure_password_here}@db:5432/${DB_NAME:-oneclick_prod}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - JWT_SECRET=${JWT_SECRET}
+      # Add mail configuration here if needed:
+      # - MAIL_USERNAME=${MAIL_USERNAME}
+      # - MAIL_PASSWORD=${MAIL_PASSWORD}
+      # - MAIL_FROM=${MAIL_FROM}
+      # - MAIL_PORT=${MAIL_PORT}
+      # - MAIL_SERVER=${MAIL_SERVER}
+    volumes:
+      - uploads-data:/app/backend/static/uploads
+    # Bind to localhost only for security
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: oneclick-frontend
+    restart: always
+    ports:
+      - "80:80"
+      # If running HTTPS on the host direct, uncomment:
+      # - "443:443"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads-data:

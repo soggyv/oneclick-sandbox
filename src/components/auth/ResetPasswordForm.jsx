@@ -22,7 +22,7 @@ export default function ResetPasswordForm({
             Код відновлення
           </label>
           <p className="text-[10px] text-gray-400 font-semibold mb-3 px-1 leading-relaxed">
-            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 font-black">{resetEmail}</span> (симуляція: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
+            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 font-black">{resetEmail}</span> (Код доступу: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
             <span className="block mt-1 text-[#FF5522] font-bold text-[9px] uppercase tracking-wide">
               * Якщо лист не надходить, перевірте папку "Спам"
             </span>

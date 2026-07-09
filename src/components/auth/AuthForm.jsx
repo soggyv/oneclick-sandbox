@@ -109,15 +109,15 @@ export default function AuthForm({
             </span>
             <input
               type="text"
-              placeholder="0931234567"
+              placeholder="931234567"
               value={regPhone}
-              onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 12))}
+              onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
               required
               className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
             />
           </div>
           <span className="text-[9px] text-gray-400 mt-1 block px-1">
-            Введіть 10 цифр (наприклад, 0931234567)
+            Введіть 9 цифр (наприклад, 931234567)
           </span>
         </div>
       )}

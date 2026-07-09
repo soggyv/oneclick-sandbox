@@ -1,0 +1,13 @@
+# Exclude local directories and sandbox from docker context build
+oneclick-sandbox/
+node_modules/
+backend/venv/
+backend/__pycache__/
+.venv/
+.git/
+dist/
+database.db
+.oxlintrc.json
+tsconfig.tsbuildinfo
+*.log
+.env.local

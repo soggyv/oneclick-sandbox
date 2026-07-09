@@ -75,13 +75,16 @@ export const useStore = create((set, get) => ({
       if (!response.ok) {
         if (response.status === 401) {
           get().logout();
+          throw new Error('UNAUTHORIZED');
         }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || 'Помилка запиту');
       }
       return await response.json();
     } catch (err) {
-      get().showToastMsg(err.message, 'error');
+      if (err.message !== 'UNAUTHORIZED') {
+        get().showToastMsg(err.message, 'error');
+      }
       throw err;
     }
   },

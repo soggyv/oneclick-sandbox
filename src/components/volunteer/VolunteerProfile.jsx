@@ -74,8 +74,8 @@ export default function VolunteerProfile({
                   required
                   disabled={emailOtpMode}
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="9-значний номер"
+                  onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                  placeholder="9-значний номер (напр. 931234567)"
                   className="w-full bg-white border border-gray-250 rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 disabled:text-gray-400"
                 />
               </div>
