@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, MapPin, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
@@ -210,7 +211,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-[#f5f5f7] w-full max-w-[450px] rounded-[32px] border border-white/10 p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-left">
         <button
@@ -375,6 +376,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

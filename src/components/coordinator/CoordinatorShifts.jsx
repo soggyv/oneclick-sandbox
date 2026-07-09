@@ -34,15 +34,6 @@ export default function CoordinatorShifts({
             Організація: {organization ? organization.name : "..."}
           </p>
         </div>
-
-        {/* Switch to B2C */}
-        <button
-          onClick={toggleRole}
-          className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#f97316] uppercase tracking-wider cursor-pointer font-sans"
-        >
-          <span>Волонтер</span>
-          <User size={12} />
-        </button>
       </div>
 
       {/* Event filters */}

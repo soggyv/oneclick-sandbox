@@ -278,7 +278,7 @@ function AppContent() {
         setCurrentRole('B2B');
         localStorage.setItem('oneclick_user_role', 'B2B');
         
-        const orgRes = await fetch(`${API_URL}/auth/my-org`, { headers }).then(r => r.json()).catch(() => null);
+        const orgRes = await fetch(`${API_URL}/auth/my-org`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (orgRes) {
           setOrganization(orgRes);
         }
@@ -317,6 +317,7 @@ function AppContent() {
           })
           .catch(() => {
             setInviteOrgName(null);
+            sessionStorage.removeItem('pending_invite_token');
           });
       }
     } else {
@@ -593,12 +594,11 @@ function AppContent() {
     formData.append("file", file);
 
     const headers = {};
-    if (user) {
-      if (user.token) {
-        headers['Authorization'] = `Bearer ${user.token}`;
-      } else {
-        headers['x-user-id'] = String(user.id);
-      }
+    const token = localStorage.getItem('oneclick_user_token') || (user && user.token);
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    } else if (user) {
+      headers['x-user-id'] = String(user.id);
     }
 
     try {
@@ -652,7 +652,7 @@ function AppContent() {
           // Fetch organization info if any
           const org = await fetch(`${API_URL}/auth/my-org`, {
             headers: reqHeaders
-          }).then(r => r.json()).catch(() => null);
+          }).then(r => r.ok ? r.json() : null).catch(() => null);
 
           if (org) {
             setOrganization(org);
@@ -702,7 +702,7 @@ function AppContent() {
 
           const org = await fetch(`${API_URL}/auth/my-org`, {
             headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-          }).then(r => r.json()).catch(() => null);
+          }).then(r => r.ok ? r.json() : null).catch(() => null);
 
           if (org) {
             setOrganization(org);
@@ -800,7 +800,7 @@ function AppContent() {
 
       const org = await fetch(`${API_URL}/auth/my-org`, {
         headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-      }).then(r => r.json()).catch(() => null);
+      }).then(r => r.ok ? r.json() : null).catch(() => null);
 
       if (org) {
         setOrganization(org);
@@ -907,7 +907,7 @@ function AppContent() {
 
               const org = await fetch(`${API_URL}/auth/my-org`, {
                 headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-              }).then(r => r.json()).catch(() => null);
+              }).then(r => r.ok ? r.json() : null).catch(() => null);
 
               if (org) {
                 setOrganization(org);
@@ -952,6 +952,18 @@ function AppContent() {
   const handleOrgRegisterSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (user && !user.phone) {
+        if (googlePhone.length !== 9) {
+          showToastMsg("Введіть коректний 9-значний номер телефону (без першого нуля)", "error");
+          return;
+        }
+        const updatedUser = await apiCall('/users/profile', 'PUT', {
+          name: user.name,
+          phone: `+380${googlePhone}`
+        });
+        setUser(updatedUser);
+      }
+
       const orgData = await apiCall('/auth/register-org', 'POST', {
         name: regOrgName,
         description: regOrgDesc,
@@ -966,8 +978,10 @@ function AppContent() {
       setIsOrgRegisterModalOpen(false);
       showToastMsg(`Організацію "${orgData.name}" успішно створено!`, 'success');
       navigate('/coordinator/manage');
+      loadData(selectedDateStr, selectedFilter, searchQuery);
     } catch (err) {
       console.error(err);
+      showToastMsg(err.message || "Помилка реєстрації організації", "error");
     }
   };
 
@@ -1381,17 +1395,33 @@ function AppContent() {
                             Вкажіть дані вашої організації для продовження
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={toggleRole}
-                          className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
-                        >
-                          <span>Волонтер</span>
-                          <User size={12} />
-                        </button>
                       </div>
 
                       <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                        {user && !user.phone && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#FF5522] uppercase tracking-widest mb-1.5 px-1">
+                              Номер мобільного телефону
+                            </label>
+                            <div className="flex gap-2 items-center">
+                              <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                                +380
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="931234567"
+                                value={googlePhone}
+                                onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                required
+                                className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                              />
+                            </div>
+                            <span className="text-[9px] text-gray-400 mt-1 block px-1">
+                              Потрібен для зв'язку волонтерів з вами як організатором
+                            </span>
+                          </div>
+                        )}
+
                         <div>
                           <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
                             Назва організації

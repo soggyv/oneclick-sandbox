@@ -32,7 +32,15 @@ export const useStore = create((set, get) => ({
   isReviewsModalOpen: false,
 
   // Actions
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    if (user && !user.token) {
+      const currentToken = get().user?.token || localStorage.getItem('oneclick_user_token');
+      if (currentToken) {
+        user = { ...user, token: currentToken };
+      }
+    }
+    set({ user });
+  },
   setOrganization: (org) => set({ organization: org }),
   setCurrentRole: (role) => set({ currentRole: role }),
   setActiveB2CTab: (tab) => set({ activeB2CTab: tab }),
@@ -97,7 +105,7 @@ export const useStore = create((set, get) => ({
   },
 
   loadData: async (selectedDateStr, selectedFilter, searchQuery) => {
-    const { user, currentRole, apiCall } = get();
+    const { user, organization, currentRole, apiCall } = get();
     if (!user) return;
     try {
       if (currentRole === 'B2C') {
@@ -106,6 +114,14 @@ export const useStore = create((set, get) => ({
         const booked = await apiCall('/applications/my');
         set({ bookedShifts: booked });
       } else {
+        if (!organization) {
+          set({
+            b2bApplications: [],
+            b2bShifts: [],
+            orgMembers: []
+          });
+          return;
+        }
         const [apps, b2bShiftsData, membersData] = await Promise.all([
           apiCall('/applications/b2b'),
           apiCall('/shifts/b2b'),

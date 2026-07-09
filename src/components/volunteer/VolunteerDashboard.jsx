@@ -24,15 +24,6 @@ export default function VolunteerDashboard({
           <h1 className="text-xl font-black tracking-tight text-gray-900">Пошук заходів</h1>
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Знайдіть волонтерські завдання</p>
         </div>
-
-        {/* Switch to B2B or Register */}
-        <button
-          onClick={toggleRole}
-          className="px-3.5 py-2 bg-white hover:bg-gray-50 text-[10px] font-extrabold rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5 transition-all active:scale-95 text-[#FF5522] uppercase tracking-wider cursor-pointer font-sans"
-        >
-          <span>{organization ? "Організатор" : "Реєстрація компанії"}</span>
-          <Building2 size={12} />
-        </button>
       </div>
 
       {/* 14-day calendar */}

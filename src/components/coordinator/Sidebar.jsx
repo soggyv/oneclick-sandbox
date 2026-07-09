@@ -67,13 +67,7 @@ export default function Sidebar({
           <p className="text-xs font-extrabold text-gray-800 truncate">{user.name}</p>
         </div>
 
-        <button
-          onClick={toggleRole}
-          className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-extrabold rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer"
-        >
-          <User size={13} className="text-[#FF5522]" />
-          <span>Перейти до B2C</span>
-        </button>
+
 
         <button
           onClick={handleSignOut}

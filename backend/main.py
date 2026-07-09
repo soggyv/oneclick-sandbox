@@ -26,13 +26,19 @@ app = FastAPI(title="OneClick Volunteering API")
 origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 origins = [o.strip() for o in origins_str.split(",") if o.strip()]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_params = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+
+if "*" in origins:
+    # Use regex to allow any http/https origin with credentials
+    cors_params["allow_origin_regex"] = r"https?://.*"
+else:
+    cors_params["allow_origins"] = origins
+
+app.add_middleware(CORSMiddleware, **cors_params)
 
 # Mount static files for serving uploads (create directory first)
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

@@ -270,7 +270,7 @@ def google_auth(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_d
         user = models.User(
             name=name,
             email=email,
-            role="B2C"
+            role=payload.role if payload.role in ["B2C", "B2B"] else "B2C"
         )
         db.add(user)
         db.commit()
