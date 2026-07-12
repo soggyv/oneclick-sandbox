@@ -19,14 +19,12 @@ import {
   ChevronDown,
   MessageSquare,
   Trash2,
-  Settings,
-  Moon,
-  Sun
+  Settings
 } from 'lucide-react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore'
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:8000/api" : "/api");
 
 import Toast from './components/Toast';
 import TimePickerModal from './components/TimePickerModal';
@@ -62,8 +60,7 @@ function AppContent() {
     isReviewsModalOpen, setIsReviewsModalOpen,
     showSettingsPanel, setShowSettingsPanel,
     activeB2BFilter, setActiveB2BFilter,
-    activeB2CShiftsFilter, setActiveB2CShiftsFilter,
-    theme, toggleTheme
+    activeB2CShiftsFilter, setActiveB2CShiftsFilter
   } = useStore();
 
   // Form Inputs
@@ -134,6 +131,7 @@ function AppContent() {
   const [inviteOrgName, setInviteOrgName] = useState(null);
   const [isMembersListExpanded, setIsMembersListExpanded] = useState(true);
   const [showCreateMapPicker, setShowCreateMapPicker] = useState(false);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // 14-day rolling calendar YYYY-MM-DD
   const calendarDays = useMemo(() => {
@@ -328,12 +326,12 @@ function AppContent() {
     }
   }, [user, handleInviteToken]);
 
-  // Fetch data on parameters change
+  // Fetch data on parameters change, role change or organization change
   useEffect(() => {
     if (user) {
       loadData(selectedDateStr, selectedFilter, searchQuery);
     }
-  }, [loadData, user, currentRole, selectedDateStr, selectedFilter, searchQuery]);
+  }, [loadData, user, currentRole, organization?.id, selectedDateStr, selectedFilter, searchQuery]);
 
   // Leaflet Map Picker Initialization (Odessa-bound)
   useEffect(() => {
@@ -500,7 +498,7 @@ function AppContent() {
       setEmailOtpMode(false);
       setEditEmailOtpCode('');
       showToastMsg("Профіль успішно оновлено!", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка оновлення профілю", "error");
@@ -513,11 +511,43 @@ function AppContent() {
         role: 'member'
       });
       const inviteUrl = `${window.location.origin}/?invite=${data.token}`;
-      await navigator.clipboard.writeText(inviteUrl);
-      showToastMsg("Посилання для запрошення згенеровано та скопійовано в буфер обміну!", "success");
+      
+      let copied = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(inviteUrl);
+          copied = true;
+        } catch (clipErr) {
+          console.warn("Failed navigator.clipboard, trying fallback", clipErr);
+        }
+      }
+      
+      if (!copied) {
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = inviteUrl;
+          textArea.style.position = "fixed";
+          textArea.style.top = "0";
+          textArea.style.left = "0";
+          textArea.style.opacity = "0";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(textArea);
+        } catch (fallbackErr) {
+          console.error("Fallback copy failed", fallbackErr);
+        }
+      }
+      
+      if (copied) {
+        showToastMsg("Посилання для запрошення згенеровано та скопійовано в буфер обміну!", "success");
+      } else {
+        window.prompt("Посилання згенеровано! Скопіюйте його вручну:", inviteUrl);
+      }
     } catch (err) {
       console.error(err);
-      showToastMsg("Помилка генерації запрошення", "error");
+      showToastMsg(err.message || "Помилка генерації запрошення", "error");
     }
   };
 
@@ -527,7 +557,7 @@ function AppContent() {
         role: newRole
       });
       showToastMsg("Роль успішно оновлено!", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка оновлення ролі", "error");
@@ -541,7 +571,7 @@ function AppContent() {
     try {
       await apiCall(`/organizations/members/${memberId}`, 'DELETE');
       showToastMsg(`${memberName} вилучено з організації`, "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка вилучення учасника", "error");
@@ -559,7 +589,7 @@ function AppContent() {
       setCurrentRole('B2C');
       navigate('/volunteer/search');
       showToastMsg("Ви успішно вийшли з організації", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка виходу з організації", "error");
@@ -577,7 +607,7 @@ function AppContent() {
       setCurrentRole('B2C');
       navigate('/volunteer/search');
       showToastMsg("Організацію успішно видалено", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
       showToastMsg(err.message || "Помилка видалення організації", "error");
@@ -673,9 +703,12 @@ function AppContent() {
           console.warn("Помилка відновлення сесії:", err);
           logout();
           navigate('/login');
+        } finally {
+          setIsRestoringSession(false);
         }
       } else {
         navigate('/login');
+        setIsRestoringSession(false);
       }
     };
     restoreSession();
@@ -1015,7 +1048,7 @@ function AppContent() {
       showToastMsg(`Ви відгукнулися на зміну: "${shift.title}"!`, "success");
       setCurrentDetailsShift(null);
       navigate('/volunteer/myshifts');
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
     }
@@ -1025,7 +1058,7 @@ function AppContent() {
     try {
       await apiCall(`/applications/${appId}/review-candidate?status=${status}`, 'POST');
       showToastMsg(status === 'approved' ? "Кандидата підтверджено!" : "Кандидата відхилено.", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
     }
@@ -1040,7 +1073,7 @@ function AppContent() {
     try {
       await apiCall('/applications/confirm-attendance', 'POST', { code });
       showToastMsg("Присутність волонтера підтверджено!", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
     }
@@ -1056,7 +1089,7 @@ function AppContent() {
         comment
       });
       showToastMsg("Дякуємо! Відгук успішно надіслано.", "success");
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
 
       const updatedUser = await apiCall('/auth/me');
       setUser(updatedUser);
@@ -1086,7 +1119,7 @@ function AppContent() {
       setFormTitle('');
       navigate('/coordinator/manage');
       setActiveB2BFilter('АКТИВНІ');
-      loadData(selectedDateStr, selectedFilter, searchQuery);
+      loadData(selectedDateStr, selectedFilter, searchQuery, true);
     } catch (err) {
       console.error(err);
     }
@@ -1114,6 +1147,28 @@ function AppContent() {
     });
   }, [bookedShifts, activeB2CShiftsFilter]);
 
+  // Session Restoring Loading Screen
+  if (isRestoringSession) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-br from-[#111111] via-[#1a1a24] to-[#0e0e12] flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-[#FF5522]/20 border-t-[#FF5522] animate-spin"></div>
+            <div className="absolute inset-2 rounded-full bg-[#FF5522]/10 flex items-center justify-center">
+              <div className="w-3.5 h-3.5 rounded-full bg-[#FF5522] animate-ping"></div>
+            </div>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-white mt-2">
+            <span className="text-[#FF5522]">One</span>Click
+          </h1>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+            Завантаження сесії...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Google Login Missing Phone Flow
   if (user && !user.phone && user.role !== 'B2B') {
     const handleGooglePhoneSubmit = async (e) => {
@@ -1137,19 +1192,22 @@ function AppContent() {
     };
 
     return (
-      <div className="w-full min-h-screen bg-slate-900/40 dark:bg-dark-bg/60 py-4 flex items-center justify-center relative transition-colors duration-300">
-        <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] dark:bg-dark-card rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-gray-250 dark:border-dark-border p-6 text-[#111111] dark:text-dark-text-header transition-colors duration-300">
+      <div className="w-full min-h-screen bg-[#f5f5f7] flex items-center justify-center">
+        <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111]">
           <div className="flex-1 flex flex-col items-center justify-center my-auto">
-            <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-dark-text-header mb-1">Останній крок</h1>
-            <p className="text-xs text-gray-400 dark:text-dark-text-muted font-bold uppercase tracking-wider mb-8">Завершіть реєстрацію</p>
+            <h1 className="text-3xl font-black tracking-tight mb-2">
+              <span className="text-[#FF5522]">One</span><span className="text-gray-950">Click</span>
+            </h1>
+            <h2 className="text-sm font-bold text-gray-900 mb-1">Останній крок</h2>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Завершіть реєстрацію</p>
 
             <form onSubmit={handleGooglePhoneSubmit} className="w-full max-w-[320px] space-y-4">
               <div className="text-left">
-                <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
                   Номер телефону
                 </label>
                 <div className="flex gap-2 items-center">
-                  <span className="bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-500 dark:text-dark-text-body font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                  <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
                     +380
                   </span>
                   <input
@@ -1158,10 +1216,10 @@ function AppContent() {
                     value={googlePhone}
                     onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                     required
-                    className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                   />
                 </div>
-                <span className="text-[9px] text-gray-400 dark:text-dark-text-muted mt-1 block px-1">
+                <span className="text-[9px] text-gray-400 mt-1 block px-1">
                   Введіть 9 цифр (наприклад, 931234567)
                 </span>
               </div>
@@ -1176,14 +1234,14 @@ function AppContent() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full py-3.5 bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-card-hover border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text-body font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
               >
                 Скасувати
               </button>
             </form>
           </div>
 
-          <div className="text-center text-[10px] text-gray-400 dark:text-dark-text-muted mt-6 font-bold uppercase tracking-wider">
+          <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
             © 2026 OneClick
           </div>
         </div>
@@ -1196,28 +1254,19 @@ function AppContent() {
     return (
       <Routes>
         <Route path="/login" element={
-          <div className="w-full min-h-screen bg-slate-900/40 dark:bg-dark-bg/60 py-4 flex items-center justify-center relative transition-colors duration-300">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className="absolute top-6 right-6 p-2.5 bg-white dark:bg-dark-card text-gray-800 dark:text-dark-text-header rounded-2xl shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer z-50 border border-gray-150 dark:border-dark-border flex items-center justify-center"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon size={16} className="text-gray-700" /> : <Sun size={16} className="text-amber-400" />}
-            </button>
-
-            <div className="w-full max-w-[450px] min-h-[680px] bg-[#f5f5f7] dark:bg-dark-card rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col justify-between border border-gray-250 dark:border-dark-border p-6 text-[#111111] dark:text-dark-text-header transition-all duration-300">
+          <div className="w-full min-h-screen bg-[#f5f5f7] flex items-center justify-center">
+            <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111]">
               <div className="flex-1 flex flex-col items-center justify-center my-auto">
-                <h1 className="text-3xl font-black tracking-tight mb-1">
-                  <span className="text-[#FF5522]">One</span><span className="text-gray-950 dark:text-dark-text-header">Click</span>
+                <h1 className="text-4xl font-black tracking-tight mb-2">
+                  <span className="text-[#FF5522]">One</span><span className="text-gray-950">Click</span>
                 </h1>
-                <p className="text-xs text-gray-400 dark:text-dark-text-muted font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
 
                 {inviteOrgName && (
-                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5 transition-colors duration-300">
+                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 border border-orange-200 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
                     <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
-                    <div className="text-[10px] text-gray-700 dark:text-dark-text-body font-semibold leading-relaxed">
-                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 dark:text-dark-text-header select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                    <div className="text-[10px] text-gray-700 font-semibold leading-relaxed">
+                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
                     </div>
                   </div>
                 )}
@@ -1293,17 +1342,17 @@ function AppContent() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-900/40 dark:bg-dark-bg/60 py-4 flex items-center justify-center relative transition-colors duration-300">
+    <div className={(user && currentRole === 'B2B' && organization) ? "w-full h-screen bg-[#f5f5f7] relative overflow-hidden" : "w-full min-h-screen bg-[#f5f5f7] relative"}>
 
       {/* Toast Notification */}
       <Toast toast={toast} />
 
       {/* Main frame */}
-      <div className={`w-full bg-[#f5f5f7] dark:bg-dark-bg relative text-[#111111] dark:text-dark-text-header border border-gray-250 dark:border-dark-border shadow-2xl transition-all duration-300 ${
+      <div className={
         (user && currentRole === 'B2B' && organization)
-          ? 'md:max-w-6xl md:rounded-[40px] md:h-[85vh] md:flex md:pb-0 md:overflow-hidden'
-          : 'max-w-[450px] min-h-screen pb-[110px] overflow-x-hidden'
-      }`}>
+          ? "w-full h-full bg-[#f5f5f7] relative text-[#111111] flex pb-0 overflow-hidden"
+          : "w-full bg-[#f5f5f7] relative text-[#111111] max-w-[450px] mx-auto min-h-screen pb-[110px] overflow-x-hidden"
+      }>
 
         <Routes>
           {/* Volunteer Routes */}
@@ -1395,24 +1444,24 @@ function AppContent() {
                 
                 <div className="w-full px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
                   {!organization ? (
-                    <div className="animate-fadeIn py-6 text-left transition-colors duration-300">
+                    <div className="animate-fadeIn py-6 text-left">
                       <div className="flex justify-between items-center mb-5">
                         <div>
-                          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-dark-text-header">Реєстрація організації</h1>
-                          <p className="text-[10px] text-gray-400 dark:text-dark-text-muted font-bold uppercase tracking-wider">
+                          <h1 className="text-xl font-black tracking-tight text-gray-900">Реєстрація організації</h1>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                             Вкажіть дані вашої організації для продовження
                           </p>
                         </div>
                       </div>
 
-                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white dark:bg-dark-card p-5 rounded-3xl border border-gray-100 dark:border-dark-border shadow-sm transition-colors duration-300">
+                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
                         {user && !user.phone && (
                           <div>
                             <label className="block text-[10px] font-bold text-[#FF5522] uppercase tracking-widest mb-1.5 px-1">
                               Номер мобільного телефону
                             </label>
                             <div className="flex gap-2 items-center">
-                              <span className="bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-500 dark:text-dark-text-body font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                              <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
                                 +380
                               </span>
                               <input
@@ -1421,17 +1470,17 @@ function AppContent() {
                                 value={googlePhone}
                                 onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                                 required
-                                className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+                                className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                               />
                             </div>
-                            <span className="text-[9px] text-gray-400 dark:text-dark-text-muted mt-1 block px-1">
+                            <span className="text-[9px] text-gray-400 mt-1 block px-1">
                               Потрібен для зв'язку волонтерів з вами як організатором
                             </span>
                           </div>
                         )}
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
                             Назва організації
                           </label>
                           <input
@@ -1440,12 +1489,12 @@ function AppContent() {
                             value={regOrgName}
                             onChange={(e) => setRegOrgName(e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
                             Адреса / Локація офісу
                           </label>
                           <input
@@ -1454,12 +1503,12 @@ function AppContent() {
                             value={regOrgAddr}
                             onChange={(e) => setRegOrgAddr(e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
                             Опис організації
                           </label>
                           <textarea
@@ -1468,7 +1517,7 @@ function AppContent() {
                             value={regOrgDesc}
                             onChange={(e) => setRegOrgDesc(e.target.value)}
                             required
-                            className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all resize-none"
+                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
                           />
                         </div>
 
@@ -1482,7 +1531,7 @@ function AppContent() {
                         <button
                           type="button"
                           onClick={handleSignOut}
-                          className="w-full py-3.5 bg-[#FF5522]/10 dark:bg-[#FF5522]/5 hover:bg-[#FF5522]/20 dark:hover:bg-[#FF5522]/10 text-[#FF5522] dark:text-orange-500 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                          className="w-full py-3.5 bg-[#FF5522]/10 hover:bg-[#FF5522]/20 text-[#FF5522] font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                         >
                           Вийти з акаунту
                         </button>

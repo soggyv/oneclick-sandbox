@@ -10,7 +10,6 @@ export const useStore = create((set, get) => ({
   activeB2BTab: 'manage',
   activeB2BFilter: 'АКТИВНІ',
   activeB2CShiftsFilter: 'АКТИВНІ',
-  theme: localStorage.getItem('oneclick_theme') || 'light',
 
   // Forms and settings
   isOrgRegisterModalOpen: false,
@@ -56,16 +55,6 @@ export const useStore = create((set, get) => ({
   setVolunteerReviews: (reviews) => set({ volunteerReviews: reviews }),
   setReviewsModalUserName: (name) => set({ reviewsModalUserName: name }),
   setIsReviewsModalOpen: (open) => set({ isReviewsModalOpen: open }),
-  toggleTheme: () => {
-    const nextTheme = get().theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('oneclick_theme', nextTheme);
-    if (nextTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    set({ theme: nextTheme });
-  },
 
   showToastMsg: (message, type = 'success') => {
     set({ toast: { message, type } });

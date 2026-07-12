@@ -18,11 +18,11 @@ export default function ResetPasswordForm({
     return (
       <form onSubmit={handleResetPasswordSubmit} className="space-y-4 w-full max-w-[320px] animate-fadeIn">
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1 px-1">
+          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 px-1">
             Код відновлення
           </label>
-          <p className="text-[10px] text-gray-400 dark:text-dark-text-muted font-semibold mb-3 px-1 leading-relaxed">
-            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 dark:text-gray-200 font-black">{resetEmail}</span> (Код доступу: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
+          <p className="text-[10px] text-gray-400 font-semibold mb-3 px-1 leading-relaxed">
+            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 font-black">{resetEmail}</span> (Код доступу: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
             <span className="block mt-1 text-[#FF5522] font-bold text-[9px] uppercase tracking-wide">
               * Якщо лист не надходить, перевірте папку "Спам"
             </span>
@@ -33,12 +33,12 @@ export default function ResetPasswordForm({
             value={resetEnteredOtp}
             onChange={(e) => setResetEnteredOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
             required
-            className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-center text-lg font-black tracking-widest text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-center text-lg font-black tracking-widest text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
             Новий пароль
           </label>
           <input
@@ -48,9 +48,9 @@ export default function ResetPasswordForm({
             onChange={(e) => setNewPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
           />
-          <span className="text-[9px] text-gray-400 dark:text-dark-text-muted mt-1 block px-1">
+          <span className="text-[9px] text-gray-400 mt-1 block px-1">
             Мінімум 6 символів
           </span>
         </div>
@@ -69,7 +69,7 @@ export default function ResetPasswordForm({
             setResetEnteredOtp('');
             setNewPassword('');
           }}
-          className="w-full py-3.5 bg-white hover:bg-gray-50 dark:bg-dark-bg dark:hover:bg-dark-card-hover border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text-body font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
         >
           Назад
         </button>
@@ -79,11 +79,11 @@ export default function ResetPasswordForm({
 
   return (
     <form onSubmit={handleRequestResetOtp} className="space-y-4 w-full max-w-[320px] animate-fadeIn">
-      <h2 className="text-sm font-bold text-gray-800 dark:text-dark-text-header mb-2 px-1 text-center font-black tracking-tight">
+      <h2 className="text-sm font-bold text-gray-850 mb-2 px-1 text-center font-black tracking-tight">
         Відновлення паролю
       </h2>
       <div>
-        <label className="block text-[10px] font-bold text-gray-400 dark:text-dark-text-muted uppercase tracking-widest mb-1.5 px-1">
+        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
           Електронна пошта
         </label>
         <input
@@ -92,7 +92,7 @@ export default function ResetPasswordForm({
           value={resetEmail}
           onChange={(e) => setResetEmail(e.target.value)}
           required
-          className="w-full bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-dark-text-header focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+          className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
         />
       </div>
 
@@ -108,7 +108,7 @@ export default function ResetPasswordForm({
         onClick={() => {
           setForgotPasswordMode(false);
         }}
-        className="w-full py-3.5 bg-white hover:bg-gray-50 dark:bg-dark-bg dark:hover:bg-dark-card-hover border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text-body font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+        className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
       >
         Назад до входу
       </button>
