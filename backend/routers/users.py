@@ -165,6 +165,16 @@ def upload_avatar(
         print(f"Error processing avatar image: {e}")
         raise HTTPException(status_code=400, detail="Помилка при обробці зображення")
         
+    # Delete old avatar if exists to prevent bloat
+    if user.avatar_url:
+        old_filename = user.avatar_url.split("/")[-1]
+        old_file_path = os.path.join(uploads_dir, old_filename)
+        if os.path.exists(old_file_path):
+            try:
+                os.remove(old_file_path)
+            except Exception as e:
+                print(f"Error deleting old avatar file {old_file_path}: {e}")
+
     # Update DB avatar_url (relative path)
     user.avatar_url = f"/static/uploads/{filename}"
     db.commit()

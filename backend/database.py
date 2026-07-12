@@ -2,6 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import backend.core.config
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database.db")
 

@@ -70,6 +70,7 @@ class ShiftResponse(ShiftBase):
     status: str
     organization_name: Optional[str] = None
     approved_count: Optional[int] = 0
+    contact_phone: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

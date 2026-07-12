@@ -58,6 +58,7 @@ def get_shifts(
         res = schemas.ShiftResponse.model_validate(shift)
         res.organization_name = shift.organization.name
         res.approved_count = len([a for a in shift.applications if a.status in ['approved', 'attended', 'reviewed']])
+        res.contact_phone = shift.creator.phone if shift.creator else (shift.organization.coordinator.phone if shift.organization.coordinator else None)
         response_list.append(res)
     return response_list
 
@@ -95,6 +96,7 @@ def create_shift(
     res = schemas.ShiftResponse.model_validate(new_shift)
     res.organization_name = org.name
     res.approved_count = 0
+    res.contact_phone = new_shift.creator.phone if new_shift.creator else (org.coordinator.phone if org.coordinator else None)
     return res
 
 @router.get("/b2b", response_model=List[schemas.ShiftResponse])
@@ -115,6 +117,7 @@ def get_b2b_shifts(x_user_id: int = Depends(get_current_user_id), db: Session = 
         res = schemas.ShiftResponse.model_validate(shift)
         res.organization_name = org.name
         res.approved_count = len([a for a in shift.applications if a.status in ['approved', 'attended', 'reviewed']])
+        res.contact_phone = shift.creator.phone if shift.creator else (org.coordinator.phone if org.coordinator else None)
         response_list.append(res)
     return response_list
 
@@ -153,6 +156,7 @@ def update_shift(
     res = schemas.ShiftResponse.model_validate(shift)
     res.organization_name = shift.organization.name
     res.approved_count = len([a for a in shift.applications if a.status in ['approved', 'attended', 'reviewed']])
+    res.contact_phone = shift.creator.phone if shift.creator else (shift.organization.coordinator.phone if shift.organization.coordinator else None)
     return res
 
 

@@ -12,12 +12,12 @@ export default function BookedShiftsList({
   return (
     <div className="animate-fadeIn text-left">
       <div className="mb-5">
-        <h1 className="text-xl font-black tracking-tight text-gray-900">Мої заходи</h1>
-        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Список ваших запланованих робіт</p>
+        <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-dark-text-header">Мої заходи</h1>
+        <p className="text-[10px] text-gray-400 dark:text-dark-text-muted font-bold uppercase tracking-wider">Список ваших запланованих робіт</p>
       </div>
 
       {/* Tabs Filter (АКТИВНІ / ЗАВЕРШЕНІ) */}
-      <div className="flex border border-gray-100 mb-5 bg-white p-1 rounded-full shadow-sm">
+      <div className="flex border border-gray-100 dark:border-dark-border mb-5 bg-white dark:bg-dark-card p-1 rounded-full shadow-sm transition-colors duration-300">
         {["АКТИВНІ", "ЗАВЕРШЕНІ"].map((tab) => (
           <button
             key={tab}
@@ -26,7 +26,7 @@ export default function BookedShiftsList({
             className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-150 cursor-pointer text-center ${
               activeB2CShiftsFilter === tab
                 ? 'bg-[#FF5522] text-white shadow-sm'
-                : 'text-gray-400 hover:text-gray-700'
+                : 'text-gray-400 hover:text-gray-700 dark:text-dark-text-muted dark:hover:text-dark-text-header'
             }`}
           >
             {tab}
@@ -39,17 +39,15 @@ export default function BookedShiftsList({
           filteredB2CBookedShifts.map((app) => (
             <div
               key={app.id}
-              className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden"
+              className="bg-white dark:bg-dark-card rounded-2xl p-5 border border-gray-100 dark:border-dark-border shadow-sm relative overflow-hidden transition-colors duration-300"
             >
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FFCC00]"></div>
-
               <div className="flex justify-between items-start gap-2 mb-2">
                 <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1 ${
                   app.status === 'attended' || app.status === 'reviewed'
-                    ? 'bg-green-50 text-green-600'
+                    ? 'bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400'
                     : app.status === 'rejected'
-                      ? 'bg-red-50 text-red-600'
-                      : 'bg-orange-50 text-orange-600'
+                      ? 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400'
+                      : 'bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400'
                 }`}>
                   {app.status === 'pending' && 'Очікує підтвердження'}
                   {app.status === 'approved' && 'Схвалено'}
@@ -61,18 +59,18 @@ export default function BookedShiftsList({
 
               <h3
                 onClick={() => setCurrentDetailsShift(app.shift)}
-                className="font-black text-gray-900 text-sm leading-snug mb-2 cursor-pointer hover:underline"
+                className="font-black text-gray-900 dark:text-dark-text-header text-sm leading-snug mb-2 cursor-pointer hover:underline"
               >
                 {app.shift.title}
               </h3>
 
-              <div className="space-y-1 mb-4 text-[11px] text-gray-500 font-semibold">
+              <div className="space-y-1 mb-4 text-[11px] text-gray-500 dark:text-dark-text-body font-semibold">
                 <p className="flex items-center gap-1.5">
-                  <Building2 size={12} className="text-gray-300" />
+                  <Building2 size={12} className="text-gray-300 dark:text-dark-text-muted" />
                   <span>Організація: {app.shift.organization_name}</span>
                 </p>
                 <p className="flex items-center gap-1.5">
-                  <Clock size={12} className="text-gray-300" />
+                  <Clock size={12} className="text-gray-300 dark:text-dark-text-muted" />
                   <span>Час: {app.shift.time} ({app.shift.date})</span>
                 </p>
               </div>
@@ -84,20 +82,20 @@ export default function BookedShiftsList({
                       e.stopPropagation();
                       setShowQrCodes(prev => ({ ...prev, [app.id]: !prev[app.id] }));
                     }}
-                    className="w-full py-2 bg-orange-50 border border-orange-100 hover:bg-orange-100/50 text-[#FF5522] font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 text-[#FF5522] font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>{showQrCodes[app.id] ? "Приховати код підтвердження" : "Показати код підтвердження"}</span>
                   </button>
 
                   {showQrCodes[app.id] && (
-                    <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3.5 text-center animate-fadeIn">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">
+                    <div className="bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl p-3.5 text-center animate-fadeIn transition-colors duration-300">
+                      <p className="text-[10px] text-gray-400 dark:text-dark-text-muted font-bold uppercase tracking-wider mb-1">
                         Код для підтвердження присутності
                       </p>
-                      <span className="text-base font-black text-gray-900 tracking-widest select-all">
+                      <span className="text-base font-black text-gray-900 dark:text-dark-text-header tracking-widest select-all">
                         {app.check_in_code}
                       </span>
-                      <p className="text-[9px] text-gray-400 mt-1 font-semibold leading-relaxed">
+                      <p className="text-[9px] text-gray-400 dark:text-dark-text-muted mt-1 font-semibold leading-relaxed">
                         Покажіть цей код організатору при зустрічі, щоб підтвердити свою присутність на події.
                       </p>
                     </div>
@@ -107,14 +105,14 @@ export default function BookedShiftsList({
             </div>
           ))
         ) : (
-          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center flex flex-col items-center justify-center">
-            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-3">
+          <div className="bg-white dark:bg-dark-card rounded-2xl p-8 border border-gray-100 dark:border-dark-border shadow-sm text-center flex flex-col items-center justify-center transition-colors duration-300">
+            <div className="w-12 h-12 bg-gray-50 dark:bg-dark-bg rounded-full flex items-center justify-center text-gray-400 dark:text-dark-text-muted mb-3 border dark:border-dark-border">
               <Calendar size={20} />
             </div>
-            <h4 className="font-bold text-gray-800 text-xs mb-1">
+            <h4 className="font-bold text-gray-800 dark:text-dark-text-header text-xs mb-1">
               {activeB2CShiftsFilter === 'АКТИВНІ' ? 'Немає запланованих заходів' : 'Немає завершених заходів'}
             </h4>
-            <p className="text-[10px] text-gray-400 max-w-[180px] leading-relaxed">
+            <p className="text-[10px] text-gray-400 dark:text-dark-text-muted max-w-[180px] leading-relaxed">
               {activeB2CShiftsFilter === 'АКТИВНІ'
                 ? 'Ви ще не відгукнулися на жодне активне волонтерське завдання.'
                 : 'У вас поки що немає відвіданих або завершених заходів.'}
