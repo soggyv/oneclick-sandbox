@@ -9,13 +9,13 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
           <button
             key={day.dateStr}
             onClick={() => setSelectedDateStr(day.dateStr)}
-            className={`flex-shrink-0 w-12 h-20 rounded-full flex flex-col justify-between items-center py-3 transition-all duration-200 active:scale-95 ${
+            className={`flex-shrink-0 w-12 h-20 rounded-full flex flex-col justify-between items-center py-3 transition-all duration-200 active:scale-95 cursor-pointer ${
               isActive
-                ? 'bg-black text-white shadow-md scale-105'
-                : 'bg-white text-gray-600 border border-gray-100 hover:border-gray-200'
+                ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-md scale-105'
+                : 'bg-white text-gray-600 dark:bg-[#27272A] dark:text-zinc-300 border border-gray-100 dark:border-transparent hover:border-gray-200 dark:hover:bg-zinc-700 dark:hover:text-white'
             }`}
           >
-            <span className={`text-[9px] font-bold tracking-wider ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
+            <span className={`text-[9px] font-bold tracking-wider ${isActive ? 'text-orange-100' : 'text-gray-400 dark:text-zinc-550'}`}>
               {day.weekday}
             </span>
             <span className="text-base font-black leading-none">

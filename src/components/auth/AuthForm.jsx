@@ -18,14 +18,14 @@ export default function AuthForm({
   return (
     <form onSubmit={handleLoginSubmit} className="space-y-4 w-full max-w-[320px]">
       {/* Role Toggle Tabs */}
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl border border-gray-200 mb-4">
+      <div className="flex gap-2 p-1 bg-gray-100 dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700 mb-4">
         <button
           type="button"
           onClick={() => setRegRole('B2C')}
           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
             regRole === 'B2C'
-              ? 'bg-[#FF5522] text-white shadow-sm'
-              : 'text-gray-500 hover:text-black'
+              ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
+              : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
           Волонтер (B2C)
@@ -35,8 +35,8 @@ export default function AuthForm({
           onClick={() => setRegRole('B2B')}
           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
             regRole === 'B2B'
-              ? 'bg-[#FF5522] text-white shadow-sm'
-              : 'text-gray-500 hover:text-black'
+              ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
+              : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
           Організатор (B2B)
@@ -44,7 +44,7 @@ export default function AuthForm({
       </div>
 
       <div>
-        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
           Ваше ім'я
         </label>
         <input
@@ -52,14 +52,14 @@ export default function AuthForm({
           placeholder="напр. Дмитро"
           value={regName}
           onChange={(e) => setRegName(e.target.value)}
-          className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+          className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-855 dark:text-gray-250 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
         />
       </div>
 
       {regRole === 'B2B' ? (
         <>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
               Електронна пошта
             </label>
             <input
@@ -68,11 +68,11 @@ export default function AuthForm({
               value={regEmail}
               onChange={(e) => setRegEmail(e.target.value)}
               required
-              className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
               Пароль
             </label>
             <input
@@ -82,9 +82,9 @@ export default function AuthForm({
               onChange={(e) => setRegPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
             />
-            <span className="text-[9px] text-gray-400 mt-1 block px-1">
+            <span className="text-[9px] text-gray-400 dark:text-gray-555 mt-1 block px-1">
               Мінімум 6 символів
             </span>
             <button
@@ -92,7 +92,7 @@ export default function AuthForm({
               onClick={() => {
                 setForgotPasswordMode(true);
               }}
-              className="text-[10px] text-[#FF5522] hover:underline font-bold mt-1.5 block px-1 cursor-pointer"
+              className="text-[10px] text-[#FF5522] dark:text-[#F97316] hover:underline font-bold mt-1.5 block px-1 cursor-pointer"
             >
               Забули пароль?
             </button>
@@ -100,11 +100,11 @@ export default function AuthForm({
         </>
       ) : (
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
             Телефон
           </label>
           <div className="flex gap-2 items-center">
-            <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+            <span className="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-gray-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
               +380
             </span>
             <input
@@ -113,10 +113,10 @@ export default function AuthForm({
               value={regPhone}
               onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
               required
-              className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
             />
           </div>
-          <span className="text-[9px] text-gray-400 mt-1 block px-1">
+          <span className="text-[9px] text-gray-400 dark:text-gray-550 mt-1 block px-1">
             Введіть 9 цифр (наприклад, 931234567)
           </span>
         </div>
@@ -124,16 +124,16 @@ export default function AuthForm({
 
       <button
         type="submit"
-        className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+        className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
       >
         Увійти / Зареєструватися
       </button>
 
       <div className="relative my-4 flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200"></div>
+          <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
         </div>
-        <span className="relative px-3 bg-[#f5f5f7] text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+        <span className="relative px-3 bg-[#f5f5f7] dark:bg-[#18181b] text-[10px] text-gray-400 dark:text-gray-550 font-bold uppercase tracking-wider">
           або
         </span>
       </div>
@@ -141,7 +141,7 @@ export default function AuthForm({
       <button
         type="button"
         onClick={handleGoogleLogin}
-        className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+        className="w-full py-3.5 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-200 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
       >
         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

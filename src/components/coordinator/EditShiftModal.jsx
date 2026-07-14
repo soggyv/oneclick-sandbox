@@ -227,23 +227,23 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
   return createPortal(
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
-      <div className="bg-[#f5f5f7] w-full max-w-[450px] rounded-[32px] border border-white/10 p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-left">
+      <div className="bg-[#f5f5f7] dark:bg-[#18181B] w-full max-w-[450px] rounded-[32px] border border-white/10 dark:border-transparent p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto text-left">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center border border-gray-100 shadow-sm transition-all active:scale-90 text-gray-500 cursor-pointer"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 dark:hover:text-white flex items-center justify-center border border-gray-100 dark:border-transparent shadow-sm transition-all active:scale-90 text-gray-500 dark:text-zinc-400 cursor-pointer"
         >
           <X size={16} />
         </button>
 
         <div className="mb-5">
-          <h2 className="text-lg font-black tracking-tight text-gray-900">Редагування заходу</h2>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Оновіть інформацію для волонтерів</p>
+          <h2 className="text-lg font-black tracking-tight text-gray-900 dark:text-zinc-200">Редагування заходу</h2>
+          <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">Оновіть інформацію для волонтерів</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
               Назва заходу / Завдання
             </label>
             <input
@@ -251,13 +251,13 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-855 focus:outline-none focus:border-[#FF5522] shadow-sm"
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                 Напрямок
               </label>
               <input
@@ -265,18 +265,18 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 required
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-855 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                 Дата заходу
               </label>
               <select
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm cursor-pointer"
               >
                 {calendarDays.map(day => (
                   <option key={day.dateStr} value={day.dateStr}>
@@ -297,12 +297,12 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
             }}
             className="cursor-pointer"
           >
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1 cursor-pointer">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1 cursor-pointer">
               Години роботи
             </label>
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3.5 shadow-sm hover:border-[#FF5522]/50 transition-colors">
-              <Clock size={14} className="text-gray-400" />
-              <span className="text-xs font-black text-gray-800">
+            <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3.5 shadow-sm hover:border-[#FF5522]/50 transition-colors">
+              <Clock size={14} className="text-gray-400 dark:text-zinc-500" />
+              <span className="text-xs font-black text-gray-800 dark:text-zinc-200">
                 {startTime} — {endTime}
               </span>
             </div>
@@ -310,7 +310,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
 
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
                 Локація (приміщення)
               </label>
               <input
@@ -318,13 +318,13 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-855 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
               Фізична адреса (Одеса)
             </label>
             <div className="flex gap-2">
@@ -334,15 +334,15 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 onChange={(e) => setAddress(e.target.value)}
                 onBlur={handleAddressBlur}
                 required
-                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-855 focus:outline-none focus:border-[#FF5522] shadow-sm"
+                className="flex-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => setShowMap(!showMap)}
                 className={`px-4 py-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   showMap
-                    ? 'bg-orange-500 border-orange-500 text-white shadow-md'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                    ? 'bg-[#FF5522] dark:bg-orange-500 border-transparent text-white shadow-md'
+                    : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white shadow-sm'
                 }`}
               >
                 <MapPin size={15} />
@@ -351,7 +351,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
             </div>
 
             {showMap && (
-              <div className="mt-3 bg-white p-2 rounded-2xl border border-gray-150 shadow-inner overflow-hidden animate-fadeIn">
+              <div className="mt-3 bg-white dark:bg-zinc-850 p-2 rounded-2xl border border-gray-155 dark:border-transparent shadow-inner overflow-hidden animate-fadeIn">
                 <div
                   id="edit-address-picker-map"
                   className="w-full h-[180px] rounded-xl z-0"
@@ -362,20 +362,20 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
               Опис / Задачі
             </label>
             <textarea
               rows="3"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-semibold text-gray-855 focus:outline-none focus:border-[#FF5522] shadow-sm resize-none"
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm resize-none"
             ></textarea>
           </div>
 
           <button
             type="submit"
-            className="w-full py-4 mt-4 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+            className="w-full py-4 mt-4 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
           >
             ЗБЕРЕГТИ ЗМІНИ
           </button>

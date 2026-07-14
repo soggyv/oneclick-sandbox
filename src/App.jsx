@@ -19,7 +19,9 @@ import {
   ChevronDown,
   MessageSquare,
   Trash2,
-  Settings
+  Settings,
+  Sun,
+  Moon
 } from 'lucide-react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore'
@@ -47,6 +49,24 @@ import Sidebar from './components/coordinator/Sidebar';
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
 
   const {
     user, setUser, organization, setOrganization, currentRole, setCurrentRole,
@@ -1192,22 +1212,22 @@ function AppContent() {
     };
 
     return (
-      <div className="w-full min-h-screen bg-[#f5f5f7] flex items-center justify-center">
-        <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111]">
+      <div className="w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181b] flex items-center justify-center">
+        <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] dark:bg-[#18181b] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111] dark:text-gray-250">
           <div className="flex-1 flex flex-col items-center justify-center my-auto">
             <h1 className="text-3xl font-black tracking-tight mb-2">
-              <span className="text-[#FF5522]">One</span><span className="text-gray-950">Click</span>
+              <span className="text-[#FF5522]">One</span><span className="text-gray-950 dark:text-gray-200">Click</span>
             </h1>
-            <h2 className="text-sm font-bold text-gray-900 mb-1">Останній крок</h2>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Завершіть реєстрацію</p>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-zinc-200 mb-1">Останній крок</h2>
+            <p className="text-xs text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider mb-8">Завершіть реєстрацію</p>
 
             <form onSubmit={handleGooglePhoneSubmit} className="w-full max-w-[320px] space-y-4">
               <div className="text-left">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                   Номер телефону
                 </label>
                 <div className="flex gap-2 items-center">
-                  <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                  <span className="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
                     +380
                   </span>
                   <input
@@ -1216,17 +1236,17 @@ function AppContent() {
                     value={googlePhone}
                     onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                     required
-                    className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                    className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                   />
                 </div>
-                <span className="text-[9px] text-gray-400 mt-1 block px-1">
+                <span className="text-[9px] text-gray-400 dark:text-zinc-500 mt-1 block px-1">
                   Введіть 9 цифр (наприклад, 931234567)
                 </span>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+                className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
               >
                 Зберегти та продовжити
               </button>
@@ -1234,14 +1254,14 @@ function AppContent() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-200 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
               >
                 Скасувати
               </button>
             </form>
           </div>
 
-          <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
+          <div className="text-center text-[10px] text-gray-400 dark:text-zinc-550 mt-6 font-bold uppercase tracking-wider">
             © 2026 OneClick
           </div>
         </div>
@@ -1254,19 +1274,29 @@ function AppContent() {
     return (
       <Routes>
         <Route path="/login" element={
-          <div className="w-full min-h-screen bg-[#f5f5f7] flex items-center justify-center">
-            <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111]">
+          <div className="w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181b] flex items-center justify-center">
+            <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] dark:bg-[#18181b] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111] dark:text-gray-200">
+              <div className="absolute top-6 right-6">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="p-2.5 bg-gray-50 border border-transparent hover:bg-gray-100 dark:bg-[#27272A] dark:border-transparent dark:hover:bg-zinc-700 text-gray-500 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100 rounded-full shadow-sm transition-all active:scale-90 cursor-pointer flex items-center justify-center"
+                  title={isDark ? "Світла тема" : "Темна тема"}
+                >
+                  {isDark ? <Sun size={14} className="text-[#FF5522]" /> : <Moon size={14} className="text-[#FF5522]" />}
+                </button>
+              </div>
               <div className="flex-1 flex flex-col items-center justify-center my-auto">
                 <h1 className="text-4xl font-black tracking-tight mb-2">
-                  <span className="text-[#FF5522]">One</span><span className="text-gray-950">Click</span>
+                  <span className="text-[#FF5522]">One</span><span className="text-gray-950 dark:text-gray-200">Click</span>
                 </h1>
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
 
                 {inviteOrgName && (
-                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 border border-orange-200 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
+                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
                     <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
-                    <div className="text-[10px] text-gray-700 font-semibold leading-relaxed">
-                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                    <div className="text-[10px] text-gray-700 dark:text-gray-300 font-semibold leading-relaxed">
+                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 dark:text-gray-100 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
                     </div>
                   </div>
                 )}
@@ -1342,7 +1372,7 @@ function AppContent() {
   }
 
   return (
-    <div className={(user && currentRole === 'B2B' && organization) ? "w-full h-screen bg-[#f5f5f7] relative overflow-hidden" : "w-full min-h-screen bg-[#f5f5f7] relative"}>
+    <div className={(user && currentRole === 'B2B' && organization) ? "w-full h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative overflow-hidden" : "w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative"}>
 
       {/* Toast Notification */}
       <Toast toast={toast} />
@@ -1350,8 +1380,8 @@ function AppContent() {
       {/* Main frame */}
       <div className={
         (user && currentRole === 'B2B' && organization)
-          ? "w-full h-full bg-[#f5f5f7] relative text-[#111111] flex pb-0 overflow-hidden"
-          : "w-full bg-[#f5f5f7] relative text-[#111111] max-w-[450px] mx-auto min-h-screen pb-[110px] overflow-x-hidden"
+          ? "w-full h-full bg-[#f5f5f7] dark:bg-[#18181B] relative text-[#111111] dark:text-gray-200 flex pb-0 overflow-hidden"
+          : "w-full bg-[#f5f5f7] dark:bg-[#18181B] relative text-[#111111] dark:text-gray-200 max-w-[450px] mx-auto min-h-screen pb-[110px] overflow-x-hidden"
       }>
 
         <Routes>
@@ -1374,6 +1404,8 @@ function AppContent() {
                       setCurrentDetailsShift={setCurrentDetailsShift}
                       toggleRole={toggleRole}
                       organization={organization}
+                      isDark={isDark}
+                      toggleTheme={toggleTheme}
                     />
                   } />
                   <Route path="myshifts" element={
@@ -1411,6 +1443,8 @@ function AppContent() {
                       handleLeaveOrganization={handleLeaveOrganization}
                       handleSignOut={handleSignOut}
                       API_URL={API_URL}
+                      isDark={isDark}
+                      toggleTheme={toggleTheme}
                     />
                   } />
                   <Route path="*" element={<Navigate to="search" replace />} />
@@ -1447,21 +1481,21 @@ function AppContent() {
                     <div className="animate-fadeIn py-6 text-left">
                       <div className="flex justify-between items-center mb-5">
                         <div>
-                          <h1 className="text-xl font-black tracking-tight text-gray-900">Реєстрація організації</h1>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-200">Реєстрація організації</h1>
+                          <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">
                             Вкажіть дані вашої організації для продовження
                           </p>
                         </div>
                       </div>
 
-                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white dark:bg-zinc-800 p-5 rounded-3xl border border-gray-100 dark:border-transparent shadow-sm">
                         {user && !user.phone && (
                           <div>
                             <label className="block text-[10px] font-bold text-[#FF5522] uppercase tracking-widest mb-1.5 px-1">
                               Номер мобільного телефону
                             </label>
                             <div className="flex gap-2 items-center">
-                              <span className="bg-gray-100 border border-gray-200 text-gray-500 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                              <span className="bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
                                 +380
                               </span>
                               <input
@@ -1470,17 +1504,17 @@ function AppContent() {
                                 value={googlePhone}
                                 onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                                 required
-                                className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                               />
                             </div>
-                            <span className="text-[9px] text-gray-400 mt-1 block px-1">
+                            <span className="text-[9px] text-gray-400 dark:text-zinc-500 mt-1 block px-1">
                               Потрібен для зв'язку волонтерів з вами як організатором
                             </span>
                           </div>
                         )}
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                             Назва організації
                           </label>
                           <input
@@ -1489,12 +1523,12 @@ function AppContent() {
                             value={regOrgName}
                             onChange={(e) => setRegOrgName(e.target.value)}
                             required
-                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                             Адреса / Локація офісу
                           </label>
                           <input
@@ -1503,12 +1537,12 @@ function AppContent() {
                             value={regOrgAddr}
                             onChange={(e) => setRegOrgAddr(e.target.value)}
                             required
-                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
+                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">
+                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
                             Опис організації
                           </label>
                           <textarea
@@ -1517,13 +1551,13 @@ function AppContent() {
                             value={regOrgDesc}
                             onChange={(e) => setRegOrgDesc(e.target.value)}
                             required
-                            className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
+                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+                          className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
                         >
                           Зареєструвати компанію
                         </button>
@@ -1531,7 +1565,7 @@ function AppContent() {
                         <button
                           type="button"
                           onClick={handleSignOut}
-                          className="w-full py-3.5 bg-[#FF5522]/10 hover:bg-[#FF5522]/20 text-[#FF5522] font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                          className="w-full py-3.5 bg-gray-55 dark:bg-zinc-900 border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-700 dark:text-zinc-200 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                         >
                           Вийти з акаунту
                         </button>
@@ -1560,6 +1594,8 @@ function AppContent() {
                             setReviews={setReviews}
                             handleRateVolunteer={handleRateVolunteer}
                             API_URL={API_URL}
+                            isDark={isDark}
+                            toggleTheme={toggleTheme}
                           />
                         } />
 
@@ -1629,6 +1665,8 @@ function AppContent() {
                             handleLeaveOrganization={handleLeaveOrganization}
                             handleSignOut={handleSignOut}
                             API_URL={API_URL}
+                            isDark={isDark}
+                            toggleTheme={toggleTheme}
                           />
                         } />
                         <Route path="*" element={<Navigate to="manage" replace />} />

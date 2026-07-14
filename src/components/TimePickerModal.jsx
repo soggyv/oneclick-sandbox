@@ -18,8 +18,8 @@ export default function TimePickerModal({
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
-        <div className="flex items-center gap-2 mb-4 text-[#FF5522]">
+      <div className="bg-white dark:bg-[#27272A] rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
+        <div className="flex items-center gap-2 mb-4 text-[#FF5522] dark:text-[#F97316]">
           <Clock size={16} />
           <h3 className="text-xs font-black uppercase tracking-wider">
             Оберіть години роботи
@@ -29,7 +29,7 @@ export default function TimePickerModal({
         <div className="space-y-6">
           {/* Start Time block */}
           <div>
-            <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
+            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-2 px-1">
               Час початку зміни
             </span>
             <div className="flex items-center justify-center gap-3">
@@ -42,7 +42,7 @@ export default function TimePickerModal({
                     num = num >= 23 ? 0 : num + 1;
                     setTempStartHour(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronUp size={18} />
                 </button>
@@ -67,7 +67,7 @@ export default function TimePickerModal({
                       setTempStartHour(String(parseInt(tempStartHour, 10) || 0).padStart(2, '0'));
                     }
                   }}
-                  className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
+                  className="w-16 h-14 bg-orange-50/50 dark:bg-orange-950/20 text-[#FF5522] dark:text-[#F97316] font-black text-2xl text-center rounded-2xl border border-orange-200/55 dark:border-orange-900/20 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#F97316] transition-all"
                 />
                 <button
                   type="button"
@@ -76,13 +76,13 @@ export default function TimePickerModal({
                     num = num <= 0 ? 23 : num - 1;
                     setTempStartHour(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronDown size={18} />
                 </button>
               </div>
 
-              <span className="text-[#FF5522] font-black text-2xl pb-6">:</span>
+              <span className="text-[#FF5522] dark:text-[#F97316] font-black text-2xl pb-6">:</span>
 
               {/* Start Minute */}
               <div className="flex flex-col items-center">
@@ -93,7 +93,7 @@ export default function TimePickerModal({
                     num = num >= 59 ? 0 : num + 1;
                     setTempStartMin(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronUp size={18} />
                 </button>
@@ -118,7 +118,7 @@ export default function TimePickerModal({
                       setTempStartMin(String(parseInt(tempStartMin, 10) || 0).padStart(2, '0'));
                     }
                   }}
-                  className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
+                  className="w-16 h-14 bg-orange-50/50 dark:bg-orange-950/20 text-[#FF5522] dark:text-[#F97316] font-black text-2xl text-center rounded-2xl border border-orange-200/55 dark:border-orange-900/20 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#F97316] transition-all"
                 />
                 <button
                   type="button"
@@ -127,7 +127,7 @@ export default function TimePickerModal({
                     num = num <= 0 ? 59 : num - 1;
                     setTempStartMin(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronDown size={18} />
                 </button>
@@ -137,7 +137,7 @@ export default function TimePickerModal({
 
           {/* End Time block */}
           <div>
-            <span className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
+            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-2 px-1">
               Час закінчення зміни
             </span>
             <div className="flex items-center justify-center gap-3">
@@ -150,7 +150,7 @@ export default function TimePickerModal({
                     num = num >= 23 ? 0 : num + 1;
                     setTempEndHour(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronUp size={18} />
                 </button>
@@ -175,7 +175,7 @@ export default function TimePickerModal({
                       setTempEndHour(String(parseInt(tempEndHour, 10) || 0).padStart(2, '0'));
                     }
                   }}
-                  className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
+                  className="w-16 h-14 bg-orange-50/50 dark:bg-orange-950/20 text-[#FF5522] dark:text-[#F97316] font-black text-2xl text-center rounded-2xl border border-orange-200/55 dark:border-orange-900/20 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#F97316] transition-all"
                 />
                 <button
                   type="button"
@@ -184,13 +184,13 @@ export default function TimePickerModal({
                     num = num <= 0 ? 23 : num - 1;
                     setTempEndHour(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronDown size={18} />
                 </button>
               </div>
 
-              <span className="text-[#FF5522] font-black text-2xl pb-6">:</span>
+              <span className="text-[#FF5522] dark:text-[#F97316] font-black text-2xl pb-6">:</span>
 
               {/* End Minute */}
               <div className="flex flex-col items-center">
@@ -201,7 +201,7 @@ export default function TimePickerModal({
                     num = num >= 59 ? 0 : num + 1;
                     setTempEndMin(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronUp size={18} />
                 </button>
@@ -226,7 +226,7 @@ export default function TimePickerModal({
                       setTempEndMin(String(parseInt(tempEndMin, 10) || 0).padStart(2, '0'));
                     }
                   }}
-                  className="w-16 h-14 bg-orange-50/50 text-[#FF5522] font-black text-2xl text-center rounded-2xl border border-orange-200/55 focus:outline-none focus:border-[#FF5522] focus:bg-orange-50 transition-all"
+                  className="w-16 h-14 bg-orange-50/50 dark:bg-orange-950/20 text-[#FF5522] dark:text-[#F97316] font-black text-2xl text-center rounded-2xl border border-orange-200/55 dark:border-orange-900/20 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#F97316] transition-all"
                 />
                 <button
                   type="button"
@@ -235,7 +235,7 @@ export default function TimePickerModal({
                     num = num <= 0 ? 59 : num - 1;
                     setTempEndMin(String(num).padStart(2, '0'));
                   }}
-                  className="text-gray-400 hover:text-[#FF5522] p-1 transition-colors active:scale-125"
+                  className="text-gray-400 dark:text-zinc-500 hover:text-[#FF5522] dark:hover:text-[#F97316] p-1 transition-colors active:scale-125 cursor-pointer"
                 >
                   <ChevronDown size={18} />
                 </button>
@@ -245,18 +245,18 @@ export default function TimePickerModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 pt-4">
+        <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 dark:border-transparent pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-all"
+            className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-zinc-200 bg-transparent dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white rounded-xl transition-all cursor-pointer"
           >
             Скасувати
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-5 py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95"
+            className="px-5 py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             Підтвердити
           </button>
