@@ -43,6 +43,8 @@ import VolunteerProfile from './components/volunteer/VolunteerProfile';
 import CoordinatorShifts from './components/coordinator/CoordinatorShifts';
 import ShiftCreateForm from './components/coordinator/ShiftCreateForm';
 import CoordinatorProfile from './components/coordinator/CoordinatorProfile';
+import ShiftTemplatesList from './components/coordinator/ShiftTemplatesList';
+import EditTemplateModal from './components/coordinator/EditTemplateModal';
 import Navigation from './components/shared/Navigation';
 import Sidebar from './components/coordinator/Sidebar';
 
@@ -72,6 +74,7 @@ function AppContent() {
     user, setUser, organization, setOrganization, currentRole, setCurrentRole,
     activeB2CTab, setActiveB2CTab, activeB2BTab, setActiveB2BTab,
     shifts, bookedShifts, b2bApplications, b2bShifts, orgMembers,
+    shiftTemplates, createTemplate, deleteTemplate, updateTemplate,
     toast, showToastMsg, logout, loadData, fetchVolunteerReviews, apiCall,
     isOrgRegisterModalOpen, setIsOrgRegisterModalOpen,
     selectedVolunteerProfile, setSelectedVolunteerProfile,
@@ -121,6 +124,10 @@ function AppContent() {
   const [formLocation, setFormLocation] = useState('');
   const [formAddress, setFormAddress] = useState('');
   const [formDescription, setFormDescription] = useState('');
+
+  // Edit Template Modal States
+  const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
+  const [selectedTemplateToEdit, setSelectedTemplateToEdit] = useState(null);
 
   // Map Picker Refs
   const pickerMapRef = useRef(null);
@@ -197,7 +204,7 @@ function AppContent() {
       }
     } else if (path.startsWith('/coordinator/')) {
       const tab = path.split('/').pop();
-      if (['manage', 'create', 'profile'].includes(tab)) {
+      if (['manage', 'create', 'templates', 'profile'].includes(tab)) {
         setActiveB2BTab(tab);
         setCurrentRole('B2B');
       }
@@ -1118,6 +1125,46 @@ function AppContent() {
     }
   };
 
+  const handleLoadFromTemplate = (template) => {
+    setFormTitle(template.title || '');
+    setFormSphere(template.category || '');
+    if (template.time) {
+      const parts = template.time.split(' - ');
+      if (parts.length === 2) {
+        setStartTime(parts[0]);
+        setEndTime(parts[1]);
+      } else {
+        setStartTime('09:00');
+        setEndTime('18:00');
+      }
+    }
+    setFormLocation(template.location || '');
+    setFormAddress(template.address || '');
+    setFormDescription(template.description || '');
+    showToastMsg(`Дані завантажено з шаблону: "${template.name}"`, "success");
+  };
+
+  const handleCreateTemplate = async (templateName) => {
+    try {
+      await createTemplate({
+        name: templateName,
+        title: formTitle,
+        category: formSphere,
+        time: `${startTime} - ${endTime}`,
+        location: formLocation,
+        address: formAddress,
+        description: formDescription
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUseTemplateFromList = (template) => {
+    handleLoadFromTemplate(template);
+    navigate('/coordinator/create');
+  };
+
   const handleCreateShift = async (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -1627,6 +1674,21 @@ function AppContent() {
                             setTempEndHour={setTempEndHour}
                             setTempEndMin={setTempEndMin}
                             setIsTimePickerOpen={setIsTimePickerOpen}
+                            shiftTemplates={shiftTemplates}
+                            onLoadFromTemplate={handleLoadFromTemplate}
+                            onCreateTemplate={handleCreateTemplate}
+                          />
+                        } />
+
+                        <Route path="templates" element={
+                          <ShiftTemplatesList
+                            shiftTemplates={shiftTemplates}
+                            deleteTemplate={deleteTemplate}
+                            onEditTemplate={(template) => {
+                              setSelectedTemplateToEdit(template);
+                              setIsEditTemplateModalOpen(true);
+                            }}
+                            onSelectTemplate={handleUseTemplateFromList}
                           />
                         } />
 
@@ -1749,6 +1811,25 @@ function AppContent() {
         regOrgDesc={regOrgDesc}
         setRegOrgDesc={setRegOrgDesc}
         onSubmit={handleOrgRegisterSubmit}
+      />
+
+      {/* --- EDIT TEMPLATE MODAL --- */}
+      <EditTemplateModal
+        isOpen={isEditTemplateModalOpen}
+        onClose={() => {
+          setIsEditTemplateModalOpen(false);
+          setSelectedTemplateToEdit(null);
+        }}
+        template={selectedTemplateToEdit}
+        onSave={async (id, data) => {
+          try {
+            await updateTemplate(id, data);
+            setIsEditTemplateModalOpen(false);
+            setSelectedTemplateToEdit(null);
+          } catch (err) {
+            console.error(err);
+          }
+        }}
       />
 
     </div>

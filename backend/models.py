@@ -46,6 +46,7 @@ class Organization(Base):
     members = relationship("User", back_populates="organization", foreign_keys="User.company_id")
     
     shifts = relationship("Shift", back_populates="organization", cascade="all, delete-orphan")
+    templates = relationship("ShiftTemplate", back_populates="organization", cascade="all, delete-orphan")
 
 
 class Shift(Base):
@@ -70,6 +71,26 @@ class Shift(Base):
     organization = relationship("Organization", back_populates="shifts")
     creator = relationship("User", foreign_keys=[created_by_id])
     applications = relationship("Application", back_populates="shift", cascade="all, delete-orphan")
+
+
+class ShiftTemplate(Base):
+    __tablename__ = "shift_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    time = Column(String, nullable=False)  # e.g., "09:00 - 18:00"
+    location = Column(String, nullable=False)
+    address = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="templates")
+    creator = relationship("User", foreign_keys=[created_by_id])
+
 
 
 class Application(Base):

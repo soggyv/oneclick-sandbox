@@ -351,7 +351,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
             </div>
 
             {showMap && (
-              <div className="mt-3 bg-white dark:bg-zinc-850 p-2 rounded-2xl border border-gray-155 dark:border-transparent shadow-inner overflow-hidden animate-fadeIn">
+              <div className="mt-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-gray-155 dark:border-transparent shadow-inner overflow-hidden animate-fadeIn">
                 <div
                   id="edit-address-picker-map"
                   className="w-full h-[180px] rounded-xl z-0"

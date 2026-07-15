@@ -21,6 +21,7 @@ export const useStore = create((set, get) => ({
   b2bApplications: [],
   b2bShifts: [],
   orgMembers: [],
+  shiftTemplates: [],
   lastFetchTime: 0,
   lastFetchParams: { date: '', filter: '', search: '' },
 
@@ -135,19 +136,22 @@ export const useStore = create((set, get) => ({
           set({
             b2bApplications: [],
             b2bShifts: [],
-            orgMembers: []
+            orgMembers: [],
+            shiftTemplates: []
           });
           return;
         }
-        const [apps, b2bShiftsData, membersData] = await Promise.all([
+        const [apps, b2bShiftsData, membersData, templatesData] = await Promise.all([
           apiCall('/applications/b2b'),
           apiCall('/shifts/b2b'),
-          apiCall('/organizations/members').catch(() => [])
+          apiCall('/organizations/members').catch(() => []),
+          apiCall('/shift-templates').catch(() => [])
         ]);
         set({
           b2bApplications: apps,
           b2bShifts: b2bShiftsData,
           orgMembers: membersData,
+          shiftTemplates: templatesData,
           lastFetchTime: now
         });
       }
@@ -195,5 +199,42 @@ export const useStore = create((set, get) => ({
       console.error("Помилка оновлення смени:", err);
       throw err;
     }
+  },
+
+  createTemplate: async (templateData) => {
+    const { apiCall, showToastMsg, loadData } = get();
+    try {
+      const newTemplate = await apiCall('/shift-templates', 'POST', templateData);
+      showToastMsg("Шаблон успішно створено!", "success");
+      loadData(undefined, undefined, undefined, true);
+      return newTemplate;
+    } catch (err) {
+      console.error("Помилка створення шаблону:", err);
+      throw err;
+    }
+  },
+
+  deleteTemplate: async (templateId) => {
+    const { apiCall, showToastMsg, loadData } = get();
+    try {
+      const res = await apiCall(`/shift-templates/${templateId}`, 'DELETE');
+      showToastMsg(res.message, "success");
+      loadData(undefined, undefined, undefined, true);
+    } catch (err) {
+      console.error("Помилка видалення шаблону:", err);
+    }
+  },
+
+  updateTemplate: async (templateId, templateData) => {
+    const { apiCall, showToastMsg, loadData } = get();
+    try {
+      await apiCall(`/shift-templates/${templateId}`, 'PUT', templateData);
+      showToastMsg("Шаблон успішно оновлено!", "success");
+      loadData(undefined, undefined, undefined, true);
+    } catch (err) {
+      console.error("Помилка оновлення шаблону:", err);
+      throw err;
+    }
   }
 }));
+

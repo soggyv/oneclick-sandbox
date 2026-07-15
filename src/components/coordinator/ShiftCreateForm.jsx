@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, MapPin, Save, ChevronDown, Search } from 'lucide-react';
 
 export default function ShiftCreateForm({
   formTitle,
@@ -25,16 +25,110 @@ export default function ShiftCreateForm({
   setTempStartMin,
   setTempEndHour,
   setTempEndMin,
-  setIsTimePickerOpen
+  setIsTimePickerOpen,
+  shiftTemplates,
+  onLoadFromTemplate,
+  onCreateTemplate
 }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  const handleSaveAsTemplate = () => {
+    if (!formTitle.trim()) {
+      alert("Будь ласка, введіть назву заходу / завдання, перш ніж зберігати як шаблон.");
+      return;
+    }
+    const name = prompt("Введіть зрозумілу назву шаблону (напр. Чергування в приймальній комісії):");
+    if (name && name.trim()) {
+      onCreateTemplate(name.trim());
+    }
+  };
+
+  // Filter templates based on search string
+  const filteredTemplates = (shiftTemplates || []).filter(t => 
+    t.name.toLowerCase().includes(dropdownSearch.toLowerCase()) ||
+    t.title.toLowerCase().includes(dropdownSearch.toLowerCase())
+  );
+
   return (
     <div className="animate-fadeIn text-left">
       <div className="mb-5">
         <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-200">Новий захід</h1>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Опублікувати завдання для волонтерів</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-555 font-bold uppercase tracking-wider">Опублікувати завдання для волонтерів</p>
       </div>
 
       <form onSubmit={handleCreateShift} className="space-y-4">
+        {/* Templates dropdown if available */}
+        {shiftTemplates && shiftTemplates.length > 0 && (
+          <div className="bg-orange-50/30 dark:bg-zinc-800/40 border border-orange-100/30 dark:border-zinc-700/40 rounded-2xl p-4 mb-4 relative">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
+              Завантажити з шаблону
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full text-left bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm flex justify-between items-center cursor-pointer transition-colors hover:border-[#FF5522]/50"
+              >
+                <span>Оберіть існуючий шаблон...</span>
+                <ChevronDown size={14} className="text-gray-400" />
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  {/* Overlay to catch click outside */}
+                  <div 
+                    className="fixed inset-0 z-40 bg-transparent" 
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setDropdownSearch('');
+                    }}
+                  />
+                  {/* Dropdown panel */}
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-750 rounded-xl shadow-xl z-50 p-2 space-y-2 max-h-64 flex flex-col animate-fadeIn">
+                    <div className="relative flex items-center">
+                      <Search size={12} className="absolute left-3 text-gray-400 dark:text-zinc-550" />
+                      <input
+                        type="text"
+                        placeholder="Пошук шаблону за назвою..."
+                        value={dropdownSearch}
+                        onChange={(e) => setDropdownSearch(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-xs font-semibold text-gray-805 dark:text-gray-200 focus:outline-none focus:border-[#FF5522]"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="overflow-y-auto flex-1 space-y-0.5 pr-1 max-h-48 scrollbar-thin">
+                      {filteredTemplates.length === 0 ? (
+                        <div className="text-center text-[10px] text-gray-400 py-3 font-semibold">
+                          Нічого не знайдено
+                        </div>
+                      ) : (
+                        filteredTemplates.map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              onLoadFromTemplate(t);
+                              setIsDropdownOpen(false);
+                              setDropdownSearch('');
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-zinc-800 rounded-lg transition-colors flex flex-col gap-0.5 cursor-pointer"
+                          >
+                            <span className="text-gray-900 dark:text-zinc-100">{t.name}</span>
+                            <span className="text-[9px] text-gray-400 dark:text-zinc-500 font-semibold truncate">
+                              {t.title} • {t.category}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
             Назва заходу / Завдання
@@ -51,7 +145,7 @@ export default function ShiftCreateForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
               Напрямок
             </label>
             <input
@@ -78,7 +172,7 @@ export default function ShiftCreateForm({
               Години роботи
             </label>
             <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3.5 shadow-sm hover:border-[#FF5522]/50 transition-colors">
-              <Clock size={14} className="text-gray-400 dark:text-gray-500" />
+              <Clock size={14} className="text-gray-400 dark:text-gray-555" />
               <span className="text-xs font-black text-gray-800 dark:text-gray-200">
                 {startTime} — {endTime}
               </span>
@@ -149,13 +243,13 @@ export default function ShiftCreateForm({
           </div>
 
           {showCreateMapPicker && (
-            <div className="mt-3 bg-white dark:bg-zinc-850 p-2 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-inner overflow-hidden animate-fadeIn">
+            <div className="mt-3 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-inner overflow-hidden animate-fadeIn">
               <div
                 id="address-picker-map"
                 className="w-full h-[180px] rounded-xl z-0"
                 style={{ minHeight: '180px' }}
               ></div>
-              <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-2 font-semibold text-center leading-relaxed">
+              <p className="text-[9px] text-gray-400 dark:text-gray-555 mt-2 font-semibold text-center leading-relaxed">
                 Перетягніть маркер або клікніть на карту в Одесі, щоб автоматично обрати адресу
               </p>
             </div>
@@ -163,7 +257,7 @@ export default function ShiftCreateForm({
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 px-1">
+          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
             Опис / Задачі
           </label>
           <textarea
@@ -175,12 +269,23 @@ export default function ShiftCreateForm({
           ></textarea>
         </div>
 
-        <button
-          type="submit"
-          className="w-full py-4 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
-        >
-          + ОПУБЛІКУВАТИ ЗАХІД
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleSaveAsTemplate}
+            className="flex-1 py-4 bg-orange-50 hover:bg-orange-100/80 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-[#FF5522] dark:text-orange-400 border border-orange-200/40 dark:border-zinc-700 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <Save size={14} />
+            <span>Зберегти як шаблон</span>
+          </button>
+
+          <button
+            type="submit"
+            className="flex-[2] py-4 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+          >
+            + ОПУБЛІКУВАТИ ЗАХІД
+          </button>
+        </div>
       </form>
     </div>
   );

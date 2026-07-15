@@ -74,6 +74,26 @@ class ShiftResponse(ShiftBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+# --- SHIFT TEMPLATE SCHEMAS ---
+class ShiftTemplateBase(BaseModel):
+    name: str
+    title: str
+    category: str
+    time: str
+    location: str
+    address: str
+    description: Optional[str] = None
+
+class ShiftTemplateCreate(ShiftTemplateBase):
+    pass
+
+class ShiftTemplateResponse(ShiftTemplateBase):
+    id: int
+    organization_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # --- APPLICATION SCHEMAS ---
 class ApplicationCreate(BaseModel):
     shift_id: int

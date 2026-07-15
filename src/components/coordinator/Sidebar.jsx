@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, PlusCircle, User, LogOut } from 'lucide-react';
+import { Calendar, PlusCircle, User, LogOut, LayoutGrid } from 'lucide-react';
 
 export default function Sidebar({
   activeTab,
@@ -12,8 +12,10 @@ export default function Sidebar({
   const tabs = [
     { id: 'manage', label: 'Керування заходами', icon: Calendar },
     { id: 'create', label: 'Створити новий захід', icon: PlusCircle },
+    { id: 'templates', label: 'Шаблони заходів', icon: LayoutGrid },
     { id: 'profile', label: 'Профіль та команда', icon: User }
   ];
+
 
   return (
     <div className="hidden md:flex flex-col justify-between w-64 bg-white dark:bg-[#18181B] border-r border-gray-200 dark:border-transparent p-6 shrink-0 h-full">

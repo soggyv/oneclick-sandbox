@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Calendar, User, PlusCircle } from 'lucide-react';
+import { Search, Calendar, User, PlusCircle, LayoutGrid } from 'lucide-react';
 
 export default function Navigation({ role, activeTab, setActiveTab }) {
   const tabs = role === 'B2C' ? [
@@ -9,8 +9,10 @@ export default function Navigation({ role, activeTab, setActiveTab }) {
   ] : [
     { id: 'manage', label: 'Зміни', icon: Calendar },
     { id: 'create', label: 'Створити', icon: PlusCircle },
+    { id: 'templates', label: 'Шаблони', icon: LayoutGrid },
     { id: 'profile', label: 'Профіль', icon: User }
   ];
+
 
   return (
     <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white dark:bg-zinc-800 shadow-xl dark:shadow-black/40 rounded-[32px] px-2 py-3 z-[100] flex justify-around items-center ${

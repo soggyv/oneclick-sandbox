@@ -262,7 +262,7 @@ export default function CoordinatorProfile({
             <button
               type="button"
               onClick={startEditingProfile}
-              className="w-full mt-2 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-bold rounded-xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer dark:hover:text-white"
+              className="w-full mt-2 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-900 dark:hover:bg-zinc-950 text-gray-700 dark:text-zinc-200 font-bold rounded-xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer dark:hover:text-white"
             >
               Редагувати профіль
             </button>
@@ -282,7 +282,7 @@ export default function CoordinatorProfile({
               {isMembersListExpanded && (
                 <div className="space-y-3">
                   {/* Довідка про привілеї ролей */}
-                  <div className="bg-orange-50/40 dark:bg-orange-950/10 border border-orange-100/50 dark:border-transparent rounded-xl p-3 text-[10px] space-y-2 text-gray-600 dark:text-zinc-400">
+                  <div className="bg-orange-50 dark:bg-orange-950/40 rounded-xl p-3 text-[10px] space-y-2 text-gray-600 dark:text-zinc-400">
                     <p className="font-extrabold text-[#FF5522] uppercase tracking-wider mb-1">Довідка щодо прав доступу:</p>
                     <div className="leading-relaxed">
                       <span className="font-black text-gray-800 dark:text-zinc-300 uppercase tracking-wide">Менеджер:</span> створює та редагує заходи, змінює опис організації, генерує реферальні посилання для запрошення колег.
