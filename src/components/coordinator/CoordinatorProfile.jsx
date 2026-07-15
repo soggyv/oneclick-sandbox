@@ -58,7 +58,7 @@ export default function CoordinatorProfile({
                 disabled={emailOtpMode}
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-white dark:bg-zinc-900 border border-gray-250 dark:border-transparent rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-205 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-400"
+                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-transparent rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-400"
               />
             </div>
 
@@ -77,7 +77,7 @@ export default function CoordinatorProfile({
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                   placeholder="9-значний номер (напр. 931234567)"
-                  className="w-full bg-white dark:bg-zinc-900 border border-gray-250 dark:border-transparent rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-400"
+                  className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-transparent rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-400"
                 />
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function CoordinatorProfile({
               <button
                 type="button"
                 onClick={cancelEditingProfile}
-                className="flex-1 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-300 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-600 dark:text-zinc-200 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer"
+                className="flex-1 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-300 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-950 dark:hover:text-white text-gray-600 dark:text-zinc-200 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer"
               >
                 Скасувати
               </button>

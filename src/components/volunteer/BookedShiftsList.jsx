@@ -82,7 +82,7 @@ export default function BookedShiftsList({
                       e.stopPropagation();
                       setShowQrCodes(prev => ({ ...prev, [app.id]: !prev[app.id] }));
                     }}
-                    className="w-full py-2 bg-orange-50 hover:bg-orange-100/50 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#FF5522] dark:text-zinc-200 dark:hover:text-white font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2 bg-orange-50 hover:bg-orange-100/50 dark:bg-orange-950/30 dark:hover:bg-orange-950/50 text-[#FF5522] dark:text-orange-400 dark:hover:text-orange-300 font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>{showQrCodes[app.id] ? "Приховати код підтвердження" : "Показати код підтвердження"}</span>
                   </button>

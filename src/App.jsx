@@ -1529,7 +1529,7 @@ function AppContent() {
                       <div className="flex justify-between items-center mb-5">
                         <div>
                           <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-200">Реєстрація організації</h1>
-                          <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">
+                          <p className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase tracking-wider">
                             Вкажіть дані вашої організації для продовження
                           </p>
                         </div>

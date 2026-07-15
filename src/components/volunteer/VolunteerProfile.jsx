@@ -126,7 +126,7 @@ export default function VolunteerProfile({
               <button
                 type="button"
                 onClick={cancelEditingProfile}
-                className="flex-1 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-300 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-655 dark:text-zinc-200 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                className="flex-1 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-300 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-950 dark:hover:text-white text-gray-655 dark:text-zinc-200 font-extrabold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
                 Скасувати
               </button>
@@ -206,7 +206,7 @@ export default function VolunteerProfile({
 
             <button
               onClick={startEditingProfile}
-              className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-bold rounded-xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer dark:hover:text-white"
+              className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-900 dark:hover:bg-zinc-950 text-gray-700 dark:text-zinc-200 font-bold rounded-xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer dark:hover:text-white"
             >
               Редагувати профіль
             </button>
