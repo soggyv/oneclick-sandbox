@@ -161,6 +161,25 @@ def review_candidate(
         if approved_count >= app.shift.max_volunteers:
             raise HTTPException(status_code=400, detail="Досягнуто ліміт волонтерів на цю зміну")
 
+        # If this approval fills the shift, reject all other pending applications
+        if approved_count + 1 >= app.shift.max_volunteers:
+            pending_apps = db.query(models.Application).filter(
+                models.Application.shift_id == app.shift_id,
+                models.Application.id != app.id,
+                models.Application.status == "pending"
+            ).all()
+            for p_app in pending_apps:
+                p_app.status = "rejected"
+                if p_app.volunteer.email:
+                    background_tasks.add_task(
+                        send_candidate_notification_email,
+                        p_app.volunteer.email,
+                        p_app.volunteer.name,
+                        p_app.shift.title,
+                        "rejected",
+                        p_app.check_in_code
+                    )
+
     app.status = status
     db.commit()
     db.refresh(app)
@@ -249,9 +268,10 @@ def rate_volunteer(
     # Update application status
     app.status = "reviewed"
     
-    # Auto-close shift if all applications for this shift are fully processed (reviewed or rejected)
+    # Auto-close shift if all applications for this shift are fully processed (reviewed or rejected),
+    # but only if there is at least one reviewed (completed) application.
     all_apps = db.query(models.Application).filter(models.Application.shift_id == app.shift_id).all()
-    if all_apps and all(a.status in ["reviewed", "rejected"] for a in all_apps):
+    if all_apps and all(a.status in ["reviewed", "rejected"] for a in all_apps) and any(a.status == "reviewed" for a in all_apps):
         app.shift.status = "closed"
         
     db.commit()

@@ -51,6 +51,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
+  const [maxVolunteers, setMaxVolunteers] = useState(1);
   const [showMap, setShowMap] = useState(false);
 
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
@@ -70,6 +71,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
       setAddress(shift.address || '');
       setDescription(shift.description || '');
       setDate(shift.date || '');
+      setMaxVolunteers(shift.max_volunteers || 1);
       const times = (shift.time || '09:00 - 18:00').split(' - ');
       const start = times[0] || '09:00';
       const end = times[1] || '18:00';
@@ -216,7 +218,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
         location,
         address,
         description,
-        max_volunteers: shift.max_volunteers || 5
+        max_volunteers: maxVolunteers
       });
       onClose();
     } catch (err) {
@@ -306,6 +308,21 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 {startTime} — {endTime}
               </span>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
+              Кількість потрібних волонтерів
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={maxVolunteers}
+              onChange={(e) => setMaxVolunteers(Math.max(1, parseInt(e.target.value) || 1))}
+              required
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4">

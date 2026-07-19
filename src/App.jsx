@@ -124,6 +124,7 @@ function AppContent() {
   const [formLocation, setFormLocation] = useState('');
   const [formAddress, setFormAddress] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formMaxVolunteers, setFormMaxVolunteers] = useState(1);
 
   // Edit Template Modal States
   const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
@@ -1141,6 +1142,7 @@ function AppContent() {
     setFormLocation(template.location || '');
     setFormAddress(template.address || '');
     setFormDescription(template.description || '');
+    setFormMaxVolunteers(template.max_volunteers || 1);
     showToastMsg(`Дані завантажено з шаблону: "${template.name}"`, "success");
   };
 
@@ -1180,10 +1182,11 @@ function AppContent() {
         location: formLocation,
         address: formAddress,
         description: formDescription,
-        max_volunteers: 1
+        max_volunteers: formMaxVolunteers
       });
       showToastMsg("Захід успішно створено та опубліковано!", "success");
       setFormTitle('');
+      setFormMaxVolunteers(1);
       navigate('/coordinator/manage');
       setActiveB2BFilter('АКТИВНІ');
       loadData(selectedDateStr, selectedFilter, searchQuery, true);
@@ -1677,6 +1680,8 @@ function AppContent() {
                             shiftTemplates={shiftTemplates}
                             onLoadFromTemplate={handleLoadFromTemplate}
                             onCreateTemplate={handleCreateTemplate}
+                            formMaxVolunteers={formMaxVolunteers}
+                            setFormMaxVolunteers={setFormMaxVolunteers}
                           />
                         } />
 

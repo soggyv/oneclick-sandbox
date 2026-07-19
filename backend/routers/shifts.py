@@ -18,12 +18,14 @@ def auto_close_past_shifts(db: Session):
     for s in past_shifts:
         s.status = "closed"
         
-    # Also close any open shifts where all applications are already reviewed or rejected
+    # Also close any open shifts where all applications are already reviewed or rejected,
+    # but only if there is at least one reviewed (completed) application (so we don't close
+    # shifts where all applicants were simply rejected).
     open_shifts = db.query(models.Shift).filter(models.Shift.status == "open").all()
     closed_any = False
     for s in open_shifts:
         if s.applications:
-            if all(a.status in ["reviewed", "rejected"] for a in s.applications):
+            if all(a.status in ["reviewed", "rejected"] for a in s.applications) and any(a.status == "reviewed" for a in s.applications):
                 s.status = "closed"
                 closed_any = True
                 

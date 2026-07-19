@@ -29,7 +29,9 @@ export default function ShiftCreateForm({
   setIsTimePickerOpen,
   shiftTemplates,
   onLoadFromTemplate,
-  onCreateTemplate
+  onCreateTemplate,
+  formMaxVolunteers,
+  setFormMaxVolunteers
 }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownSearch, setDropdownSearch] = useState('');
@@ -213,6 +215,21 @@ export default function ShiftCreateForm({
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
+            Кількість потрібних волонтерів
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={formMaxVolunteers}
+            onChange={(e) => setFormMaxVolunteers(Math.max(1, parseInt(e.target.value) || 1))}
+            required
+            className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
+          />
         </div>
 
         <div>
