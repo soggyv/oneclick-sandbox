@@ -96,22 +96,21 @@ export default function VolunteerDashboard({
           <span className="text-[10px] font-extrabold text-gray-400 dark:text-zinc-550 uppercase tracking-widest">
             Доступні події ({shifts.length})
           </span>
-          
+
           <div className="flex items-center gap-2.5">
             <span className="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wider hidden sm:inline">
               Одеса
             </span>
-            
+
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#27272A] p-1 rounded-2xl border border-gray-200/40 dark:border-zinc-800/40 shrink-0">
               <button
                 type="button"
                 onClick={() => handleSetViewMode('grid')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'grid'
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'grid'
                     ? 'bg-white dark:bg-zinc-700 text-[#FF5522] shadow-sm'
                     : 'text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
-                }`}
+                  }`}
                 title="Відображення картками"
               >
                 <LayoutGrid size={13} />
@@ -119,11 +118,10 @@ export default function VolunteerDashboard({
               <button
                 type="button"
                 onClick={() => handleSetViewMode('list')}
-                className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'list'
+                className={`p-1.5 rounded-xl transition-all cursor-pointer ${viewMode === 'list'
                     ? 'bg-white dark:bg-zinc-700 text-[#FF5522] shadow-sm'
                     : 'text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200'
-                }`}
+                  }`}
                 title="Відображення списком"
               >
                 <List size={13} />
@@ -146,8 +144,8 @@ export default function VolunteerDashboard({
                       {shift.category}
                     </span>
                     <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${(shift.approved_count || 0) >= shift.max_volunteers
-                        ? 'bg-red-50 text-red-500 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-transparent'
-                        : 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-transparent'
+                      ? 'bg-red-50 text-red-500 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-transparent'
+                      : 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-transparent'
                       }`}>
                       {(shift.approved_count || 0) >= shift.max_volunteers
                         ? 'Місць немає'
@@ -210,8 +208,8 @@ export default function VolunteerDashboard({
                   </div>
                   <div className="shrink-0">
                     <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full uppercase tracking-wider ${(shift.approved_count || 0) >= shift.max_volunteers
-                        ? 'bg-red-50 text-red-500 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-transparent'
-                        : 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-transparent'
+                      ? 'bg-red-50 text-red-500 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-transparent'
+                      : 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-transparent'
                       }`}>
                       {(shift.approved_count || 0) >= shift.max_volunteers
                         ? 'Місць немає'

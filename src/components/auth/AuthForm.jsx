@@ -22,22 +22,20 @@ export default function AuthForm({
         <button
           type="button"
           onClick={() => setRegRole('B2C')}
-          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
-            regRole === 'B2C'
+          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2C'
               ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
               : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
+            }`}
         >
           Волонтер (B2C)
         </button>
         <button
           type="button"
           onClick={() => setRegRole('B2B')}
-          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${
-            regRole === 'B2B'
+          className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2B'
               ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
               : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
+            }`}
         >
           Організатор (B2B)
         </button>

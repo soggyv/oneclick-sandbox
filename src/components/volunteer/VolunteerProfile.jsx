@@ -29,10 +29,10 @@ export default function VolunteerProfile({
   toggleTheme
 }) {
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn max-w-3xl mx-auto px-2 sm:px-4">
       <div className="mb-5 text-left">
-        <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-100">Профіль волонтера</h1>
-        <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">Ваш student-профіль волонтера</p>
+        <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-zinc-100">Профіль волонтера</h1>
+        <p className="text-xs text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">Ваш student-профіль волонтера</p>
       </div>
 
       {!isEditingProfile && !user.email && (
@@ -47,7 +47,7 @@ export default function VolunteerProfile({
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#27272A] rounded-2xl p-6 border border-gray-100 dark:border-transparent shadow-sm text-center mb-6">
+      <div className="bg-white dark:bg-[#27272A] rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-transparent shadow-sm text-center mb-6">
         {isEditingProfile ? (
           <form onSubmit={handleSaveProfile} className="text-left space-y-4">
             <div>
@@ -143,7 +143,7 @@ export default function VolunteerProfile({
             />
             <div
               onClick={() => document.getElementById('avatar-upload-input').click()}
-              className="group relative w-16 h-16 rounded-full overflow-hidden shadow-md mx-auto mb-3 cursor-pointer active:scale-95 transition-all"
+              className="group relative w-20 h-20 rounded-full overflow-hidden shadow-md mx-auto mb-3 cursor-pointer active:scale-95 transition-all border-2 border-orange-500/20"
               title="Змінити фото профілю"
             >
               {user.avatar_url ? (
@@ -153,115 +153,119 @@ export default function VolunteerProfile({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-[#FF5522] dark:bg-[#F97316] text-white text-2xl font-black flex items-center justify-center">
+                <div className="w-full h-full bg-[#FF5522] dark:bg-[#F97316] text-white text-3xl font-black flex items-center justify-center">
                   {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
                 </div>
               )}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                <Camera size={14} className="animate-pulse" />
+                <Camera size={16} className="animate-pulse" />
               </div>
             </div>
 
-            <h2 className="text-lg font-black text-gray-900 dark:text-zinc-200 mb-0.5">{user.name}</h2>
-            <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider mb-3">
+            <h2 className="text-xl font-black text-gray-900 dark:text-zinc-200 mb-0.5">{user.name}</h2>
+            <p className="text-xs text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider mb-4">
               Одеса, Україна
             </p>
 
             {/* Dynamic Rating Stars */}
             <div
               onClick={() => user.rating && fetchVolunteerReviews(user.id, user.name)}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all ${
-                user.rating
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border transition-all ${user.rating
                   ? 'bg-yellow-50/50 border-yellow-200 text-yellow-700 dark:bg-orange-950/20 dark:border-transparent dark:text-[#F97316] cursor-pointer hover:bg-yellow-50 dark:hover:bg-orange-950/30'
                   : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-zinc-800 dark:border-transparent dark:text-zinc-500'
-              }`}
+                }`}
             >
-              <Star size={14} className={user.rating ? "fill-yellow-400 text-yellow-500 dark:fill-orange-500 dark:text-orange-500" : ""} />
+              <Star size={15} className={user.rating ? "fill-yellow-400 text-yellow-500 dark:fill-orange-500 dark:text-orange-500" : ""} />
               <span className="text-xs font-black">
                 {user.rating ? `${user.rating} / 5.0` : 'Без оцінок'}
               </span>
               {user.rating && (
-                <span className="text-[9px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest pl-1">
+                <span className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest pl-1">
                   (Дивитись відгуки)
                 </span>
               )}
             </div>
 
-            <div className="border-t border-gray-100 dark:border-transparent mt-5 pt-4 text-left space-y-2 text-[11px] font-semibold text-gray-600 dark:text-zinc-400">
-              <div className="flex justify-between">
-                <span>Телефон:</span>
-                <span className="text-gray-955 dark:text-zinc-200 font-bold">{user.phone}</span>
+            <div className="border-t border-gray-100 dark:border-zinc-800/80 mt-6 pt-5 text-left space-y-3 text-xs font-semibold text-gray-600 dark:text-zinc-400">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 dark:text-zinc-500 font-bold uppercase text-[10px]">Телефон:</span>
+                <span className="text-gray-900 dark:text-zinc-200 font-black">{user.phone}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Email для сповіщень:</span>
-                <span className="text-gray-955 dark:text-zinc-200 font-bold">
+              <div className="flex justify-between items-center py-1 border-t border-gray-50 dark:border-zinc-800/50">
+                <span className="text-gray-400 dark:text-zinc-500 font-bold uppercase text-[10px]">Email для сповіщень:</span>
+                <span className="text-gray-900 dark:text-zinc-200 font-black">
                   {user.email || <span className="text-gray-400 dark:text-zinc-600 italic font-medium">Не прив'язано</span>}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span>Статус:</span>
-                <span className="text-green-605 dark:text-green-400 font-bold">Готовий допомогти</span>
+              <div className="flex justify-between items-center py-1 border-t border-gray-50 dark:border-zinc-800/50">
+                <span className="text-gray-400 dark:text-zinc-500 font-bold uppercase text-[10px]">Статус:</span>
+                <span className="text-green-600 dark:text-green-400 font-black flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  <span>Готовий допомогти</span>
+                </span>
               </div>
             </div>
 
-            <button
-              onClick={startEditingProfile}
-              className="w-full mt-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-900 dark:hover:bg-zinc-950 text-gray-700 dark:text-zinc-200 font-bold rounded-xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer dark:hover:text-white"
-            >
-              Редагувати профіль
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+              <button
+                onClick={startEditingProfile}
+                className="w-full py-3 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-gray-800 dark:text-zinc-200 font-extrabold rounded-2xl border border-gray-200 dark:border-transparent transition-all active:scale-[0.98] text-xs uppercase tracking-wider cursor-pointer"
+              >
+                Редагувати профіль
+              </button>
 
-
-            {/* Leave Feedback Button */}
-            <a
-              href="https://forms.gle/kcDLFPYfXmGP183h6"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
-            >
-              <MessageSquare size={13} />
-              <span>Залишити відгук про платформу</span>
-            </a>
+              <a
+                href="https://forms.gle/kcDLFPYfXmGP183h6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer shadow-sm flex items-center justify-center gap-2"
+              >
+                <MessageSquare size={15} />
+                <span>Залишити відгук</span>
+              </a>
+            </div>
           </>
         )}
       </div>
 
-      {organization ? (
-        <div className="space-y-2">
-          <button
-            onClick={toggleRole}
-            className="w-full py-4 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-800 dark:text-zinc-200 font-extrabold rounded-full border border-gray-200 dark:border-transparent shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-          >
-            <Building2 size={15} className="text-[#FF5522] dark:text-[#F97316]" />
-            <span>Перейти в кабінет Організатора (B2B)</span>
-          </button>
-          {user.company_role !== 'owner' && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {organization ? (
+          <>
             <button
-              onClick={handleLeaveOrganization}
-              className="w-full py-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-655 dark:text-red-400 font-bold rounded-xl border border-red-200 dark:border-transparent transition-all active:scale-[0.98] text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+              onClick={toggleRole}
+              className="w-full py-4 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 font-extrabold rounded-2xl border border-gray-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
             >
-              <LogOut size={13} />
-              <span>Вийти з організації</span>
+              <Building2 size={16} className="text-[#FF5522]" />
+              <span>Кабінет Організатора (B2B)</span>
             </button>
-          )}
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsOrgRegisterModalOpen(true)}
-          className="w-full py-4 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-800 dark:text-zinc-200 font-extrabold rounded-full border border-gray-200 dark:border-transparent shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-        >
-          <PlusCircle size={15} className="text-[#FF5522]" />
-          <span>Зареєструвати компанію / Організацію</span>
-        </button>
-      )}
+            {user.company_role !== 'owner' && (
+              <button
+                onClick={handleLeaveOrganization}
+                className="w-full py-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-extrabold rounded-2xl border border-red-200 dark:border-transparent transition-all active:scale-[0.98] text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2"
+              >
+                <LogOut size={15} />
+                <span>Вийти з організації</span>
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            onClick={() => setIsOrgRegisterModalOpen(true)}
+            className="w-full py-4 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 font-extrabold rounded-2xl border border-gray-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+          >
+            <PlusCircle size={16} className="text-[#FF5522]" />
+            <span>Зареєструвати компанію</span>
+          </button>
+        )}
 
-      <button
-        onClick={handleSignOut}
-        className="w-full mt-3 py-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-655 dark:text-red-400 font-extrabold rounded-full border border-red-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
-      >
-        <LogOut size={15} className="text-red-550 dark:text-red-400" />
-        <span>Вийти з акаунту</span>
-      </button>
+        <button
+          onClick={handleSignOut}
+          className="w-full py-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-extrabold rounded-2xl border border-red-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+        >
+          <LogOut size={16} />
+          <span>Вийти з акаунту</span>
+        </button>
+      </div>
     </div>
   );
 }

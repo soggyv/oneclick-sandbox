@@ -221,15 +221,48 @@ export default function ShiftCreateForm({
           <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-1.5 px-1">
             Кількість потрібних волонтерів
           </label>
-          <input
-            type="number"
-            min="1"
-            max="100"
-            value={formMaxVolunteers}
-            onChange={(e) => setFormMaxVolunteers(Math.max(1, parseInt(e.target.value) || 1))}
-            required
-            className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFormMaxVolunteers(prev => Math.max(1, (parseInt(prev) || 1) - 1))}
+              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-black text-lg flex items-center justify-center transition-all active:scale-90 border border-gray-200 dark:border-zinc-700 shrink-0 cursor-pointer"
+              title="Зменшити"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="1"
+              max="999"
+              value={formMaxVolunteers}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') {
+                  setFormMaxVolunteers('');
+                } else {
+                  const parsed = parseInt(val, 10);
+                  if (!isNaN(parsed)) {
+                    setFormMaxVolunteers(Math.max(1, Math.min(999, parsed)));
+                  }
+                }
+              }}
+              onBlur={() => {
+                if (!formMaxVolunteers || parseInt(formMaxVolunteers, 10) < 1) {
+                  setFormMaxVolunteers(1);
+                }
+              }}
+              required
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-center text-sm font-black text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setFormMaxVolunteers(prev => Math.min(999, (parseInt(prev) || 0) + 1))}
+              className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-black text-lg flex items-center justify-center transition-all active:scale-90 border border-gray-200 dark:border-zinc-700 shrink-0 cursor-pointer"
+              title="Збільшити"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         <div>

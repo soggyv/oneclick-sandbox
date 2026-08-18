@@ -32,7 +32,7 @@ import Toast from './components/Toast';
 import TimePickerModal from './components/TimePickerModal';
 import ReviewsModal from './components/ReviewsModal';
 import OrgRegisterModal from './components/OrgRegisterModal';
-import ShiftDetailsModal from './components/ShiftDetailsModal';
+import ShiftDetailsModal, { ShiftActionButton } from './components/ShiftDetailsModal';
 
 import AuthForm from './components/auth/AuthForm';
 import ResetPasswordForm from './components/auth/ResetPasswordForm';
@@ -40,6 +40,7 @@ import OtpVerifyForm from './components/auth/OtpVerifyForm';
 import VolunteerDashboard from './components/volunteer/VolunteerDashboard';
 import BookedShiftsList from './components/volunteer/BookedShiftsList';
 import VolunteerProfile from './components/volunteer/VolunteerProfile';
+import VolunteerSidebar from './components/volunteer/VolunteerSidebar';
 import CoordinatorShifts from './components/coordinator/CoordinatorShifts';
 import ShiftCreateForm from './components/coordinator/ShiftCreateForm';
 import CoordinatorProfile from './components/coordinator/CoordinatorProfile';
@@ -161,12 +162,12 @@ function AppContent() {
   const [showCreateMapPicker, setShowCreateMapPicker] = useState(false);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
 
-  // 14-day rolling calendar YYYY-MM-DD
+  // 30-day rolling calendar YYYY-MM-DD
   const calendarDays = useMemo(() => {
     const days = [];
     const weekdaysShort = ['НД', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
 
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 30; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
       const weekday = weekdaysShort[d.getDay()];
@@ -218,10 +219,10 @@ function AppContent() {
       sessionStorage.setItem('pending_invite_token', token);
       return;
     }
-    
+
     // Remove immediately to prevent duplicate parallel runs during re-renders/state updates
     sessionStorage.removeItem('pending_invite_token');
-    
+
     // Clear token from URL query string if present
     try {
       const url = new URL(window.location.href);
@@ -232,7 +233,7 @@ function AppContent() {
     } catch (e) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
+
     try {
       const valRes = await fetch(`${API_URL}/organizations/invitations/validate/${token}`);
       if (!valRes.ok) {
@@ -242,16 +243,16 @@ function AppContent() {
         sessionStorage.removeItem('pending_invite_token');
         return;
       }
-      
+
       const valData = await valRes.json();
       const orgName = valData.organization_name;
-      
+
       const headers = {};
       const tokenLocal = localStorage.getItem('oneclick_user_token') || currentUser.token;
       if (tokenLocal) {
         headers['Authorization'] = `Bearer ${tokenLocal}`;
       }
-      
+
       if (currentUser.company_id) {
         if (currentUser.company_role === 'owner') {
           const confirmDeleteAndJoin = window.confirm(`Ви є власником іншої організації. Приєднання до нової автоматично видалить вашу поточну організацію та всі її дані. Ви впевнені, що хочете видалити її та приєднатися до "${orgName}"?`);
@@ -292,12 +293,12 @@ function AppContent() {
           return;
         }
       }
-      
+
       const acceptRes = await fetch(`${API_URL}/organizations/accept-invitation/${token}`, {
         method: 'POST',
         headers: headers
       });
-      
+
       if (!acceptRes.ok) {
         const errData = await acceptRes.json().catch(() => ({}));
         showToastMsg(errData.detail || "Помилка при прийнятті запрошення", "error");
@@ -306,15 +307,15 @@ function AppContent() {
         setUser(updatedUser);
         setCurrentRole('B2B');
         localStorage.setItem('oneclick_user_role', 'B2B');
-        
+
         const orgRes = await fetch(`${API_URL}/auth/my-org`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
         if (orgRes) {
           setOrganization(orgRes);
         }
-        
+
         showToastMsg(`Ви успішно приєдналися до "${orgName}"!`, "success");
       }
-      
+
       window.history.replaceState({}, document.title, window.location.pathname);
       sessionStorage.removeItem('pending_invite_token');
       loadData(selectedDateStr, selectedFilter, searchQuery);
@@ -373,7 +374,7 @@ function AppContent() {
 
         if (!pickerMapRef.current) {
           const map = window.L.map('address-picker-map').setView([defaultLat, defaultLng], 12);
-          
+
           window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
           }).addTo(map);
@@ -539,7 +540,7 @@ function AppContent() {
         role: 'member'
       });
       const inviteUrl = `${window.location.origin}/?invite=${data.token}`;
-      
+
       let copied = false;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         try {
@@ -549,7 +550,7 @@ function AppContent() {
           console.warn("Failed navigator.clipboard, trying fallback", clipErr);
         }
       }
-      
+
       if (!copied) {
         try {
           const textArea = document.createElement("textarea");
@@ -567,7 +568,7 @@ function AppContent() {
           console.error("Fallback copy failed", fallbackErr);
         }
       }
-      
+
       if (copied) {
         showToastMsg("Посилання для запрошення згенеровано та скопійовано в буфер обміну!", "success");
       } else {
@@ -819,7 +820,7 @@ function AppContent() {
       }
 
       const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-      
+
       try {
         await apiCall('/auth/send-verification-sms', 'POST', {
           phone: '+380' + regPhone,
@@ -884,7 +885,7 @@ function AppContent() {
       setOtpMode(false);
       setOtpCode('');
       setEnteredOtp('');
-      
+
       if (initialRole === 'B2C') {
         navigate('/volunteer/search');
       } else {
@@ -988,7 +989,7 @@ function AppContent() {
                 localStorage.setItem('oneclick_user_token', userData.token);
               }
               showToastMsg(`Вітаємо, ${userData.name}! Вхід через Google успішний.`, 'success');
-              
+
               if (initialRole === 'B2C') {
                 navigate('/volunteer/search');
               } else {
@@ -1408,103 +1409,129 @@ function AppContent() {
     );
   }
 
-  // Details overlay
-  if (currentDetailsShift) {
-    return (
-      <ShiftDetailsModal
-        shift={currentDetailsShift}
-        onClose={() => setCurrentDetailsShift(null)}
-        currentRole={currentRole}
-        bookedShifts={bookedShifts}
-        handleApplyShift={handleApplyShift}
-      />
-    );
-  }
+
 
   return (
-    <div className={(user && currentRole === 'B2B' && organization) ? "w-full h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative overflow-hidden" : "w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative"}>
+    <div className="w-full h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative overflow-hidden">
 
       {/* Toast Notification */}
       <Toast toast={toast} />
 
       {/* Main frame */}
-      <div className={
-        (user && currentRole === 'B2B' && organization)
-          ? "w-full h-full bg-[#f5f5f7] dark:bg-[#18181B] relative text-[#111111] dark:text-gray-200 flex pb-0 overflow-hidden"
-          : "w-full bg-[#f5f5f7] dark:bg-[#18181B] relative text-[#111111] dark:text-gray-200 max-w-[450px] mx-auto min-h-screen pb-[110px] overflow-x-hidden"
-      }>
+      <div className="w-full h-full bg-[#f5f5f7] dark:bg-[#18181B] relative text-[#111111] dark:text-gray-200 flex pb-0 overflow-hidden">
 
         <Routes>
           {/* Volunteer Routes */}
           <Route path="/volunteer/*" element={
             currentRole === 'B2C' ? (
-              <div className="w-full px-4 pt-6">
-                <Routes>
-                  <Route path="search" element={
-                    <VolunteerDashboard
-                      shifts={shifts}
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      b2cFilters={b2cFilters}
-                      selectedFilter={selectedFilter}
-                      setSelectedFilter={setSelectedFilter}
-                      calendarDays={calendarDays}
-                      selectedDateStr={selectedDateStr}
-                      setSelectedDateStr={setSelectedDateStr}
-                      setCurrentDetailsShift={setCurrentDetailsShift}
-                      toggleRole={toggleRole}
-                      organization={organization}
-                      isDark={isDark}
-                      toggleTheme={toggleTheme}
-                    />
-                  } />
-                  <Route path="myshifts" element={
-                    <BookedShiftsList
-                      filteredB2CBookedShifts={filteredB2CBookedShifts}
-                      activeB2CShiftsFilter={activeB2CShiftsFilter}
-                      setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
-                      setCurrentDetailsShift={setCurrentDetailsShift}
-                      showQrCodes={showQrCodes}
-                      setShowQrCodes={setShowQrCodes}
-                    />
-                  } />
-                  <Route path="profile" element={
-                    <VolunteerProfile
-                      user={user}
-                      organization={organization}
-                      isEditingProfile={isEditingProfile}
-                      setIsEditingProfile={setIsEditingProfile}
-                      editName={editName}
-                      setEditName={setEditName}
-                      editPhone={editPhone}
-                      setEditPhone={setEditPhone}
-                      editEmail={editEmail}
-                      setEditEmail={setEditEmail}
-                      editEmailOtpCode={editEmailOtpCode}
-                      setEditEmailOtpCode={setEditEmailOtpCode}
-                      emailOtpMode={emailOtpMode}
-                      cancelEditingProfile={cancelEditingProfile}
-                      handleSaveProfile={handleSaveProfile}
-                      handleAvatarUpload={handleAvatarUpload}
-                      fetchVolunteerReviews={fetchVolunteerReviews}
-                      startEditingProfile={startEditingProfile}
-                      toggleRole={toggleRole}
-                      setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
-                      handleLeaveOrganization={handleLeaveOrganization}
-                      handleSignOut={handleSignOut}
-                      API_URL={API_URL}
-                      isDark={isDark}
-                      toggleTheme={toggleTheme}
-                    />
-                  } />
-                  <Route path="*" element={<Navigate to="search" replace />} />
-                </Routes>
-                
-                <Navigation
-                  role="B2C"
+              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
+                <VolunteerSidebar
                   activeTab={activeB2CTab}
-                  setActiveTab={(tab) => navigate(`/volunteer/${tab}`)}
+                  setActiveTab={(tab) => {
+                    setCurrentDetailsShift(null);
+                    navigate(`/volunteer/${tab}`);
+                  }}
+                  user={user}
+                  organization={organization}
+                  toggleRole={toggleRole}
+                  handleSignOut={handleSignOut}
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  API_URL={API_URL}
                 />
+
+                <div className="w-full max-w-[450px] md:max-w-none mx-auto md:mx-0 px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
+                  {currentDetailsShift ? (
+                    <ShiftDetailsModal
+                      shift={currentDetailsShift}
+                      onClose={() => setCurrentDetailsShift(null)}
+                      currentRole={currentRole}
+                      bookedShifts={bookedShifts}
+                      handleApplyShift={handleApplyShift}
+                    />
+                  ) : (
+                    <Routes>
+                      <Route path="search" element={
+                        <VolunteerDashboard
+                          shifts={shifts}
+                          searchQuery={searchQuery}
+                          setSearchQuery={setSearchQuery}
+                          b2cFilters={b2cFilters}
+                          selectedFilter={selectedFilter}
+                          setSelectedFilter={setSelectedFilter}
+                          calendarDays={calendarDays}
+                          selectedDateStr={selectedDateStr}
+                          setSelectedDateStr={setSelectedDateStr}
+                          setCurrentDetailsShift={setCurrentDetailsShift}
+                          toggleRole={toggleRole}
+                          organization={organization}
+                          isDark={isDark}
+                          toggleTheme={toggleTheme}
+                        />
+                      } />
+                      <Route path="myshifts" element={
+                        <BookedShiftsList
+                          filteredB2CBookedShifts={filteredB2CBookedShifts}
+                          activeB2CShiftsFilter={activeB2CShiftsFilter}
+                          setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
+                          setCurrentDetailsShift={setCurrentDetailsShift}
+                          showQrCodes={showQrCodes}
+                          setShowQrCodes={setShowQrCodes}
+                        />
+                      } />
+                      <Route path="profile" element={
+                        <VolunteerProfile
+                          user={user}
+                          organization={organization}
+                          isEditingProfile={isEditingProfile}
+                          setIsEditingProfile={setIsEditingProfile}
+                          editName={editName}
+                          setEditName={setEditName}
+                          editPhone={editPhone}
+                          setEditPhone={setEditPhone}
+                          editEmail={editEmail}
+                          setEditEmail={setEditEmail}
+                          editEmailOtpCode={editEmailOtpCode}
+                          setEditEmailOtpCode={setEditEmailOtpCode}
+                          emailOtpMode={emailOtpMode}
+                          cancelEditingProfile={cancelEditingProfile}
+                          handleSaveProfile={handleSaveProfile}
+                          handleAvatarUpload={handleAvatarUpload}
+                          fetchVolunteerReviews={fetchVolunteerReviews}
+                          startEditingProfile={startEditingProfile}
+                          toggleRole={toggleRole}
+                          setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
+                          handleLeaveOrganization={handleLeaveOrganization}
+                          handleSignOut={handleSignOut}
+                          API_URL={API_URL}
+                          isDark={isDark}
+                          toggleTheme={toggleTheme}
+                        />
+                      } />
+                      <Route path="*" element={<Navigate to="search" replace />} />
+                    </Routes>
+                  )}
+
+                  {currentDetailsShift ? (
+                    <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white dark:bg-zinc-800 shadow-xl dark:shadow-black/40 rounded-3xl p-2 z-[999] border border-gray-100 dark:border-zinc-700/60">
+                      <ShiftActionButton
+                        shift={currentDetailsShift}
+                        currentRole={currentRole}
+                        bookedShifts={bookedShifts}
+                        handleApplyShift={handleApplyShift}
+                      />
+                    </div>
+                  ) : (
+                    <Navigation
+                      role="B2C"
+                      activeTab={activeB2CTab}
+                      setActiveTab={(tab) => {
+                        setCurrentDetailsShift(null);
+                        navigate(`/volunteer/${tab}`);
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             ) : (
               <Navigate to="/coordinator/manage" replace />
@@ -1523,9 +1550,11 @@ function AppContent() {
                     toggleRole={toggleRole}
                     handleSignOut={handleSignOut}
                     user={user}
+                    isDark={isDark}
+                    toggleTheme={toggleTheme}
                   />
                 )}
-                
+
                 <div className="w-full px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
                   {!organization ? (
                     <div className="animate-fadeIn py-6 text-left">
@@ -1738,7 +1767,7 @@ function AppContent() {
                         } />
                         <Route path="*" element={<Navigate to="manage" replace />} />
                       </Routes>
-                      
+
                       <Navigation
                         role="B2B"
                         activeTab={activeB2BTab}
@@ -1761,7 +1790,7 @@ function AppContent() {
               <Navigate to="/coordinator/manage" replace />
             )
           } />
-          
+
           <Route path="*" element={
             currentRole === 'B2C' ? (
               <Navigate to="/volunteer/search" replace />
