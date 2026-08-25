@@ -174,3 +174,17 @@ class ResetPasswordRequest(BaseModel):
     otp_code: str
 
 
+class NotificationResponse(BaseModel):
+    id: int
+    organization_id: Optional[int] = None
+    user_id: Optional[int] = None
+    title: str
+    message: str
+    type: str
+    created_at: datetime
+    is_read: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+

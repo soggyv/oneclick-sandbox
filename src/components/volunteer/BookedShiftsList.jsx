@@ -7,7 +7,8 @@ export default function BookedShiftsList({
   setActiveB2CShiftsFilter,
   setCurrentDetailsShift,
   showQrCodes,
-  setShowQrCodes
+  setShowQrCodes,
+  handleCancelShift
 }) {
   return (
     <div className="animate-fadeIn text-left">
@@ -24,8 +25,8 @@ export default function BookedShiftsList({
             type="button"
             onClick={() => setActiveB2CShiftsFilter(tab)}
             className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-full transition-all duration-150 cursor-pointer text-center ${activeB2CShiftsFilter === tab
-                ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
-                : 'text-gray-400 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-white'
+              ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
+              : 'text-gray-400 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-white'
               }`}
           >
             {tab}
@@ -42,10 +43,10 @@ export default function BookedShiftsList({
             >
               <div className="flex justify-between items-start gap-2 mb-2">
                 <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1 ${app.status === 'attended' || app.status === 'reviewed'
-                    ? 'bg-green-50 text-green-600 dark:bg-green-950/20 dark:text-green-400'
-                    : app.status === 'rejected'
-                      ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400'
-                      : 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-[#F97316]'
+                  ? 'bg-green-50 text-green-600 dark:bg-green-950/20 dark:text-green-400'
+                  : app.status === 'rejected'
+                    ? 'bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400'
+                    : 'bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-[#F97316]'
                   }`}>
                   {app.status === 'pending' && 'Очікує підтвердження'}
                   {app.status === 'approved' && 'Схвалено'}
@@ -99,6 +100,21 @@ export default function BookedShiftsList({
                     </div>
                   )}
                 </div>
+              )}
+
+              {(app.status === 'pending' || app.status === 'approved') && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Ви дійсно бажаєте скасувати запис на зміну "${app.shift.title}"?`)) {
+                      handleCancelShift(app.id);
+                    }
+                  }}
+                  className="w-full mt-3 py-2 bg-red-50 hover:bg-red-100/60 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 font-bold text-[10px] rounded-full uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer border border-red-100 dark:border-transparent"
+                >
+                  <span>Скасувати запис</span>
+                </button>
               )}
             </div>
           ))

@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, MapPin, Save, ChevronDown, Search } from 'lucide-react';
+import { Clock, MapPin, Save, ChevronDown, Search, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+
+const monthsUkFull = [
+  'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+  'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
+];
+
+const monthsUkGen = [
+  'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+  'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
+];
 
 export default function ShiftCreateForm({
   formTitle,
@@ -39,6 +49,22 @@ export default function ShiftCreateForm({
   const [templateName, setTemplateName] = useState('');
   const [titleAlertMessage, setTitleAlertMessage] = useState('');
 
+  // Custom B2B DatePicker state
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  // Parse currently selected date
+  const [selY, selM, selD] = (selectedDateStr || '').split('-').map(Number);
+  const selectedDateObj = (selY && selM && selD) ? new Date(selY, selM - 1, selD) : new Date();
+  const selectedMonthIdx = selectedDateObj.getMonth();
+  const selectedYear = selectedDateObj.getFullYear();
+  const selectedDayNum = selectedDateObj.getDate();
+
+  const formattedDateTitle = `${selectedDayNum} ${monthsUkGen[selectedMonthIdx]} ${selectedYear}`;
+
+  // DatePicker view month/year
+  const [pickerMonth, setPickerMonth] = useState(selectedMonthIdx);
+  const [pickerYear, setPickerYear] = useState(selectedYear);
+
   const handleSaveAsTemplate = () => {
     if (!formTitle.trim()) {
       setTitleAlertMessage("Будь ласка, введіть назву заходу / завдання, перш ніж зберігати як шаблон.");
@@ -53,6 +79,17 @@ export default function ShiftCreateForm({
     t.name.toLowerCase().includes(dropdownSearch.toLowerCase()) ||
     t.title.toLowerCase().includes(dropdownSearch.toLowerCase())
   );
+
+  // DatePicker grid generation
+  const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfWeek = (m, y) => (new Date(y, m, 1).getDay() + 6) % 7;
+
+  const totalDays = getDaysInMonth(pickerMonth, pickerYear);
+  const startOffset = getFirstDayOfWeek(pickerMonth, pickerYear);
+  const pickerGrid = [...Array(startOffset).fill(null), ...Array.from({ length: totalDays }, (_, i) => i + 1)];
+
+  const now = new Date();
+  const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
     <div className="animate-fadeIn text-left">
@@ -203,17 +240,21 @@ export default function ShiftCreateForm({
             <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
               Дата заходу
             </label>
-            <select
-              value={selectedDateStr}
-              onChange={(e) => setSelectedDateStr(e.target.value)}
-              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm cursor-pointer"
+            <button
+              type="button"
+              onClick={() => {
+                setPickerMonth(selectedMonthIdx);
+                setPickerYear(selectedYear);
+                setIsDatePickerOpen(true);
+              }}
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm cursor-pointer flex items-center justify-between hover:border-[#FF5522]/50 transition-colors"
             >
-              {calendarDays.map(day => (
-                <option key={day.dateStr} value={day.dateStr}>
-                  {day.dayNum} ({day.weekday})
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-[#FF5522]" />
+                <span>{formattedDateTitle}</span>
+              </div>
+              <ChevronDown size={14} className="text-gray-400" />
+            </button>
           </div>
         </div>
 
@@ -339,6 +380,125 @@ export default function ShiftCreateForm({
           </button>
         </div>
       </form>
+
+      {/* Custom B2B DatePicker Modal via React Portal */}
+      {isDatePickerOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 animate-scaleUp text-left">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
+              <h3 className="font-black text-base flex items-center gap-2">
+                <Calendar size={16} className="text-[#FF5522]" />
+                <span>Оберіть дату заходу</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-100 dark:bg-zinc-800 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (pickerMonth === 0) {
+                    setPickerMonth(11);
+                    setPickerYear(prev => prev - 1);
+                  } else {
+                    setPickerMonth(prev => prev - 1);
+                  }
+                }}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-gray-600 dark:text-zinc-300"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="font-black text-sm text-gray-900 dark:text-zinc-100 uppercase tracking-wide">
+                {monthsUkFull[pickerMonth]} {pickerYear}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pickerMonth === 11) {
+                    setPickerMonth(0);
+                    setPickerYear(prev => prev + 1);
+                  } else {
+                    setPickerMonth(prev => prev + 1);
+                  }
+                }}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-gray-600 dark:text-zinc-300"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+              {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((d) => (
+                <span key={d} className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-wider py-1">
+                  {d}
+                </span>
+              ))}
+            </div>
+
+            {/* Month Days Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {pickerGrid.map((dayNum, index) => {
+                if (!dayNum) {
+                  return <div key={`empty-${index}`} className="h-9" />;
+                }
+
+                const dateStr = `${pickerYear}-${String(pickerMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const isAvailable = (calendarDays || []).some(d => d.dateStr === dateStr);
+                const isSelected = dateStr === selectedDateStr;
+                const isToday = dateStr === nowStr;
+
+                return (
+                  <button
+                    key={dateStr}
+                    type="button"
+                    disabled={!isAvailable}
+                    onClick={() => {
+                      if (!isAvailable) return;
+                      setSelectedDateStr(dateStr);
+                      setIsDatePickerOpen(false);
+                    }}
+                    className={`relative h-9 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
+                      !isAvailable
+                        ? 'opacity-20 cursor-not-allowed text-gray-400 dark:text-zinc-650 pointer-events-none'
+                        : isSelected
+                        ? 'bg-[#FF5522] text-white shadow-md shadow-orange-500/30 scale-105 z-10 cursor-pointer'
+                        : isToday
+                        ? 'bg-orange-50 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200 dark:border-transparent cursor-pointer'
+                        : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-200 cursor-pointer'
+                    }`}
+                  >
+                    <span>{dayNum}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800 flex justify-between items-center text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDateStr(nowStr);
+                  setIsDatePickerOpen(false);
+                }}
+                className="font-bold text-[#FF5522] dark:text-orange-400 hover:underline cursor-pointer"
+              >
+                Обрати сьогодні
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {isNamingTemplate && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn">

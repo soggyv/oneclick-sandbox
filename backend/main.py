@@ -47,7 +47,7 @@ os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # 4. Import and register routers
-from backend.routers import auth, users, shifts, applications, organizations, shift_templates
+from backend.routers import auth, users, shifts, applications, organizations, shift_templates, notifications
 
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -55,6 +55,7 @@ app.include_router(shifts.router)
 app.include_router(applications.router)
 app.include_router(organizations.router)
 app.include_router(shift_templates.router)
+app.include_router(notifications.router)
 
 
 

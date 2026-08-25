@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Building2, Clock, MapPin, Info, User, Phone, Check } from 'lucide-react';
 
-export function ShiftActionButton({ shift, currentRole, bookedShifts = [], handleApplyShift }) {
+export function ShiftActionButton({ shift, currentRole, bookedShifts = [], handleApplyShift, handleCancelShift }) {
   if (currentRole !== 'B2C' || !shift) return null;
 
   const existingApp = (bookedShifts || []).find(
@@ -26,13 +26,29 @@ export function ShiftActionButton({ shift, currentRole, bookedShifts = [], handl
       btnClass = "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-transparent cursor-not-allowed font-black";
     }
 
+    const isCancellable = existingApp.status === 'pending' || existingApp.status === 'approved';
+
     return (
-      <button
-        disabled
-        className={`w-full py-3.5 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 ${btnClass}`}
-      >
-        <span>{btnText}</span>
-      </button>
+      <div className="w-full space-y-2">
+        <button
+          disabled
+          className={`w-full py-3.5 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 ${btnClass}`}
+        >
+          <span>{btnText}</span>
+        </button>
+        {isCancellable && handleCancelShift && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Ви дійсно бажаєте скасувати запис на цю зміну?`)) {
+                handleCancelShift(existingApp.id);
+              }
+            }}
+            className="w-full py-2.5 bg-red-50 hover:bg-red-100/60 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-transparent font-extrabold uppercase tracking-wider rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>Скасувати запис на зміну</span>
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -62,7 +78,8 @@ export default function ShiftDetailsModal({
   onClose,
   currentRole,
   bookedShifts = [],
-  handleApplyShift
+  handleApplyShift,
+  handleCancelShift
 }) {
   const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -255,6 +272,7 @@ export default function ShiftDetailsModal({
                   currentRole={currentRole}
                   bookedShifts={bookedShifts}
                   handleApplyShift={handleApplyShift}
+                  handleCancelShift={handleCancelShift}
                 />
               </div>
             </div>

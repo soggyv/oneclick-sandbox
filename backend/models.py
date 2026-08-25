@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -149,4 +150,21 @@ class OTPCode(Base):
     code = Column(String, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, default=False, nullable=False)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    type = Column(String, default="info")  # 'cancellation' | 'new_application' | 'info'
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False, nullable=False)
+
+    organization = relationship("Organization")
+    user = relationship("User")
+
 

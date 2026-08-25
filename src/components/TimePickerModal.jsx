@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function TimePickerModal({
@@ -16,9 +17,9 @@ export default function TimePickerModal({
 }) {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#27272A] rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
         <div className="flex items-center gap-2 mb-4 text-[#FF5522] dark:text-[#F97316]">
           <Clock size={16} />
           <h3 className="text-xs font-black uppercase tracking-wider">
@@ -29,7 +30,7 @@ export default function TimePickerModal({
         <div className="space-y-6">
           {/* Start Time block */}
           <div>
-            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-2 px-1">
+            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-2 px-1">
               Час початку зміни
             </span>
             <div className="flex items-center justify-center gap-3">
@@ -137,7 +138,7 @@ export default function TimePickerModal({
 
           {/* End Time block */}
           <div>
-            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-550 uppercase tracking-widest mb-2 px-1">
+            <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-2 px-1">
               Час закінчення зміни
             </span>
             <div className="flex items-center justify-center gap-3">
@@ -245,11 +246,11 @@ export default function TimePickerModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 dark:border-transparent pt-4">
+        <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 dark:border-zinc-800 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-zinc-200 bg-transparent dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white rounded-xl transition-all cursor-pointer"
+            className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-zinc-300 bg-transparent dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white rounded-xl transition-all cursor-pointer"
           >
             Скасувати
           </button>
@@ -262,6 +263,7 @@ export default function TimePickerModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

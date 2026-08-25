@@ -75,7 +75,7 @@ function AppContent() {
     user, setUser, organization, setOrganization, currentRole, setCurrentRole,
     activeB2CTab, setActiveB2CTab, activeB2BTab, setActiveB2BTab,
     shifts, bookedShifts, b2bApplications, b2bShifts, orgMembers,
-    shiftTemplates, createTemplate, deleteTemplate, updateTemplate,
+    shiftTemplates, createTemplate, deleteTemplate, updateTemplate, cancelApplication,
     toast, showToastMsg, logout, loadData, fetchVolunteerReviews, apiCall,
     isOrgRegisterModalOpen, setIsOrgRegisterModalOpen,
     selectedVolunteerProfile, setSelectedVolunteerProfile,
@@ -1083,6 +1083,10 @@ function AppContent() {
     }
   };
 
+  const handleCancelShift = async (appId) => {
+    await cancelApplication(appId);
+  };
+
   const handleReviewCandidate = async (appId, status) => {
     try {
       await apiCall(`/applications/${appId}/review-candidate?status=${status}`, 'POST');
@@ -1448,6 +1452,7 @@ function AppContent() {
                       currentRole={currentRole}
                       bookedShifts={bookedShifts}
                       handleApplyShift={handleApplyShift}
+                      handleCancelShift={handleCancelShift}
                     />
                   ) : (
                     <Routes>
@@ -1477,6 +1482,7 @@ function AppContent() {
                           setCurrentDetailsShift={setCurrentDetailsShift}
                           showQrCodes={showQrCodes}
                           setShowQrCodes={setShowQrCodes}
+                          handleCancelShift={handleCancelShift}
                         />
                       } />
                       <Route path="profile" element={
@@ -1519,6 +1525,7 @@ function AppContent() {
                         currentRole={currentRole}
                         bookedShifts={bookedShifts}
                         handleApplyShift={handleApplyShift}
+                        handleCancelShift={handleCancelShift}
                       />
                     </div>
                   ) : (

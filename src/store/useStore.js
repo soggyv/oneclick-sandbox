@@ -22,6 +22,18 @@ export const useStore = create((set, get) => ({
   b2bShifts: [],
   orgMembers: [],
   shiftTemplates: [],
+  // Notification state
+  notifications: [],
+  emailNotificationsEnabled: localStorage.getItem('email_notifications_enabled') !== 'false',
+
+  toggleEmailNotifications: () => {
+    set((state) => {
+      const next = !state.emailNotificationsEnabled;
+      localStorage.setItem('email_notifications_enabled', String(next));
+      return { emailNotificationsEnabled: next };
+    });
+  },
+
   lastFetchTime: 0,
   lastFetchParams: { date: '', filter: '', search: '' },
 
@@ -124,13 +136,20 @@ export const useStore = create((set, get) => ({
 
     try {
       if (currentRole === 'B2C') {
-        const fetchedShifts = await apiCall(`/shifts?date=${selectedDateStr}&category=${encodeURIComponent(selectedFilter)}&search=${encodeURIComponent(searchQuery)}`);
+        const [fetchedShifts, allShiftsData, booked, notifsData] = await Promise.all([
+          apiCall(`/shifts?date=${selectedDateStr}&category=${encodeURIComponent(selectedFilter)}&search=${encodeURIComponent(searchQuery)}`),
+          apiCall('/shifts').catch(() => []),
+          apiCall('/applications/my').catch(() => []),
+          apiCall('/notifications?role=B2C').catch(() => [])
+        ]);
         set({ 
           shifts: fetchedShifts,
-          lastFetchParams: { date: selectedDateStr, filter: selectedFilter, search: searchQuery }
+          allShifts: allShiftsData || [],
+          bookedShifts: booked,
+          notifications: notifsData || [],
+          lastFetchParams: { date: selectedDateStr, filter: selectedFilter, search: searchQuery },
+          lastFetchTime: now
         });
-        const booked = await apiCall('/applications/my');
-        set({ bookedShifts: booked, lastFetchTime: now });
       } else {
         if (!organization) {
           set({
@@ -141,17 +160,19 @@ export const useStore = create((set, get) => ({
           });
           return;
         }
-        const [apps, b2bShiftsData, membersData, templatesData] = await Promise.all([
+        const [apps, b2bShiftsData, membersData, templatesData, notifsData] = await Promise.all([
           apiCall('/applications/b2b'),
           apiCall('/shifts/b2b'),
           apiCall('/organizations/members').catch(() => []),
-          apiCall('/shift-templates').catch(() => [])
+          apiCall('/shift-templates').catch(() => []),
+          apiCall('/notifications?role=B2B').catch(() => [])
         ]);
         set({
           b2bApplications: apps,
           b2bShifts: b2bShiftsData,
           orgMembers: membersData,
           shiftTemplates: templatesData,
+          notifications: notifsData || [],
           lastFetchTime: now
         });
       }
@@ -235,6 +256,53 @@ export const useStore = create((set, get) => ({
       console.error("Помилка оновлення шаблону:", err);
       throw err;
     }
+  },
+
+  cancelApplication: async (appId) => {
+    const { apiCall, showToastMsg, loadData } = get();
+    try {
+      const res = await apiCall(`/applications/${appId}`, 'DELETE');
+      showToastMsg(res.message || "Заявку успішно скасовано!", "success");
+      loadData(undefined, undefined, undefined, true);
+      return true;
+    } catch (err) {
+      console.error("Помилка скасування заявки:", err);
+      return false;
+    }
+  },
+
+  fetchNotifications: async () => {
+    const { apiCall, currentRole } = get();
+    const role = currentRole || 'B2C';
+    try {
+      const data = await apiCall(`/notifications?role=${role}`);
+      set({ notifications: data || [] });
+    } catch (err) {
+      console.error("Помилка завантаження сповіщень:", err);
+    }
+  },
+
+  markNotificationsRead: async () => {
+    const { apiCall, fetchNotifications, currentRole } = get();
+    const role = currentRole || 'B2C';
+    try {
+      await apiCall(`/notifications/read-all?role=${role}`, 'POST');
+      fetchNotifications();
+    } catch (err) {
+      console.error("Помилка позначення сповіщень прочитаними:", err);
+    }
+  },
+
+  clearNotifications: async () => {
+    const { apiCall, fetchNotifications, currentRole } = get();
+    const role = currentRole || 'B2C';
+    try {
+      await apiCall(`/notifications/clear?role=${role}`, 'DELETE');
+      fetchNotifications();
+    } catch (err) {
+      console.error("Помилка очищення сповіщень:", err);
+    }
   }
 }));
+
 

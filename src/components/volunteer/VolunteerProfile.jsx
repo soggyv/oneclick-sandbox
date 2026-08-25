@@ -1,5 +1,6 @@
 import React from 'react';
-import { Camera, Star, MessageSquare, Building2, LogOut, PlusCircle } from 'lucide-react';
+import { Camera, Star, MessageSquare, Building2, LogOut, PlusCircle, Mail } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 export default function VolunteerProfile({
   user,
@@ -28,6 +29,9 @@ export default function VolunteerProfile({
   isDark,
   toggleTheme
 }) {
+  const emailNotificationsEnabled = useStore((state) => state.emailNotificationsEnabled);
+  const toggleEmailNotifications = useStore((state) => state.toggleEmailNotifications);
+
   return (
     <div className="animate-fadeIn max-w-3xl mx-auto px-2 sm:px-4">
       <div className="mb-5 text-left">
@@ -171,8 +175,8 @@ export default function VolunteerProfile({
             <div
               onClick={() => user.rating && fetchVolunteerReviews(user.id, user.name)}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border transition-all ${user.rating
-                  ? 'bg-yellow-50/50 border-yellow-200 text-yellow-700 dark:bg-orange-950/20 dark:border-transparent dark:text-[#F97316] cursor-pointer hover:bg-yellow-50 dark:hover:bg-orange-950/30'
-                  : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-zinc-800 dark:border-transparent dark:text-zinc-500'
+                ? 'bg-yellow-50/50 border-yellow-200 text-yellow-700 dark:bg-orange-950/20 dark:border-transparent dark:text-[#F97316] cursor-pointer hover:bg-yellow-50 dark:hover:bg-orange-950/30'
+                : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-zinc-800 dark:border-transparent dark:text-zinc-500'
                 }`}
             >
               <Star size={15} className={user.rating ? "fill-yellow-400 text-yellow-500 dark:fill-orange-500 dark:text-orange-500" : ""} />
@@ -203,6 +207,29 @@ export default function VolunteerProfile({
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                   <span>Готовий допомогти</span>
                 </span>
+              </div>
+
+              {/* Email Notifications Toggle Switch */}
+              <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800/90 rounded-2xl shadow-md hover:shadow-lg dark:shadow-black/40 transition-all border-0 mt-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl transition-all ${emailNotificationsEnabled ? 'bg-orange-500/10 text-[#FF5522] dark:bg-orange-500/20 dark:text-orange-400' : 'bg-gray-100 text-gray-400 dark:bg-zinc-700/60 dark:text-zinc-400'}`}>
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-gray-900 dark:text-zinc-100">Сповіщення на пошту</p>
+                    <p className="text-[11px] text-gray-500 dark:text-zinc-400 font-medium">Листи про оновлення ваших заявок</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleEmailNotifications}
+                  className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm border-0 ${emailNotificationsEnabled
+                      ? 'bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white'
+                      : 'bg-rose-500 text-white dark:bg-rose-600 dark:text-white'
+                    }`}
+                >
+                  {emailNotificationsEnabled ? 'Увімкнено' : 'Вимкнено'}
+                </button>
               </div>
             </div>
 

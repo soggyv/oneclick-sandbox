@@ -49,6 +49,46 @@ def send_candidate_notification_email(email: str, volunteer_name: str, shift_tit
         print(f"\n[LOCAL DEV EMAIL SIMULATION] To: {email}\nSubject: {subject}\nBody: {html}\n")
 
 
+def send_b2b_notification_email(to_email: str, coordinator_name: str, volunteer_name: str, shift_title: str, event_type: str):
+    from backend.core.utils import send_smtp_email
+    
+    if event_type == "cancellation":
+        subject = f"OneClick: Волонтер скасував запис на зміну '{shift_title}'"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
+          <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid #e5e5e7;">
+            <h2 style="color: #FF5522; margin-top: 0;">OneClick</h2>
+            <p>Вітаємо, <b>{coordinator_name}</b>!</p>
+            <p>Волонтер <b>{volunteer_name}</b> скасував(-ла) свій запис на зміну <b>{shift_title}</b>.</p>
+            <div style="font-size: 14px; padding: 15px; background-color: #fff0eb; border-left: 4px solid #FF5522; border-radius: 8px; margin: 20px 0;">
+              Місце на зміну знову звільнилося у вашому кабінеті B2B.
+            </div>
+            <p style="font-size: 13px; color: #555555;">Ви можете переглянути оновлений список учасників у кабінеті OneClick.</p>
+          </div>
+        </body>
+        </html>
+        """
+    else:
+        subject = f"OneClick: Новий відгук на зміну '{shift_title}'"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
+          <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 20px; border: 1px solid #e5e5e7;">
+            <h2 style="color: #FF5522; margin-top: 0;">OneClick</h2>
+            <p>Вітаємо, <b>{coordinator_name}</b>!</p>
+            <p>Волонтер <b>{volunteer_name}</b> подав(-ла) нову заявку на зміну <b>{shift_title}</b>.</p>
+            <p style="font-size: 13px; color: #555555;">Перевірте та розгляньте кандидатів у вашому кабінеті OneClick.</p>
+          </div>
+        </body>
+        </html>
+        """
+        
+    success = send_smtp_email(to_email, subject, html)
+    if not success:
+        print(f"\n[LOCAL DEV EMAIL SIMULATION] To: {to_email}\nSubject: {subject}\nBody: {html}\n")
+
+
 @router.post("/apply", response_model=schemas.ApplicationResponse)
 def apply_to_shift(
     app_data: schemas.ApplicationCreate,
@@ -170,6 +210,12 @@ def review_candidate(
             ).all()
             for p_app in pending_apps:
                 p_app.status = "rejected"
+                db.add(models.Notification(
+                    user_id=p_app.volunteer_id,
+                    title="Заявку відхилено",
+                    message=f"На жаль, всі місця на зміну \"{p_app.shift.title}\" вже зайняті.",
+                    type="rejection"
+                ))
                 if p_app.volunteer.email:
                     background_tasks.add_task(
                         send_candidate_notification_email,
@@ -181,6 +227,23 @@ def review_candidate(
                     )
 
     app.status = status
+
+    # Create notification for volunteer
+    notif_title = "Заявку схвалено!" if status == "approved" else "Заявку відхилено"
+    notif_msg = (
+        f"Вашу заявку на зміну \"{app.shift.title}\" схвалено. Ваш код відвідування: {app.check_in_code}."
+        if status == "approved"
+        else f"На жаль, вашу заявку на зміну \"{app.shift.title}\" відхилено."
+    )
+    notif_type = "approval" if status == "approved" else "rejection"
+
+    db.add(models.Notification(
+        user_id=app.volunteer_id,
+        title=notif_title,
+        message=notif_msg,
+        type=notif_type
+    ))
+
     db.commit()
     db.refresh(app)
     
@@ -264,6 +327,14 @@ def rate_volunteer(
         comment=review_data.comment
     )
     db.add(review)
+
+    # Create notification for volunteer
+    db.add(models.Notification(
+        user_id=app.volunteer_id,
+        title="Новий відгук від організації",
+        message=f"Організація \"{app.shift.organization.name}\" залишила вам оцінку ({review_data.rating}/5) за зміну \"{app.shift.title}\".",
+        type="review"
+    ))
     
     # Update application status
     app.status = "reviewed"
@@ -280,3 +351,59 @@ def rate_volunteer(
     res = schemas.ReviewResponse.model_validate(review)
     res.author_name = app.shift.organization.name
     return res
+
+
+@router.delete("/{app_id}")
+def cancel_application(
+    app_id: int,
+    background_tasks: BackgroundTasks,
+    x_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    app = db.query(models.Application).filter(
+        models.Application.id == app_id,
+        models.Application.volunteer_id == x_user_id
+    ).first()
+    
+    if not app:
+        raise HTTPException(status_code=404, detail="Заявку не знайдено")
+        
+    if app.status in ["attended", "reviewed"]:
+        raise HTTPException(status_code=400, detail="Неможливо скасувати запис на вже відвідану або завершену зміну")
+
+    vol_name = app.volunteer.name if app.volunteer else "Волонтер"
+    shift_title = app.shift.title if app.shift else "Зміна"
+    org_id = app.shift.organization_id if app.shift else None
+    
+    # Notification for B2C volunteer addressing them directly as 'Ви'
+    db.add(models.Notification(
+        user_id=x_user_id,
+        title="Скасування запису",
+        message=f"Ви успішно скасували свій запис на зміну \"{shift_title}\".",
+        type="cancellation"
+    ))
+
+    # Notification for B2B organization
+    if org_id:
+        notif = models.Notification(
+            organization_id=org_id,
+            title="Скасування запису",
+            message=f"Волонтер {vol_name} скасував(-ла) запис на зміну \"{shift_title}\".",
+            type="cancellation"
+        )
+        db.add(notif)
+
+    if app.shift and app.shift.organization and app.shift.organization.coordinator and app.shift.organization.coordinator.email:
+        background_tasks.add_task(
+            send_b2b_notification_email,
+            app.shift.organization.coordinator.email,
+            app.shift.organization.coordinator.name,
+            vol_name,
+            shift_title,
+            "cancellation"
+        )
+
+    db.delete(app)
+    db.commit()
+    return {"message": "Ви успішно скасували запис на зміну"}
+

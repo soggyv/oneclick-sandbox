@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChevronUp, ChevronDown, X, User, LogOut, Camera } from 'lucide-react';
+import { ChevronUp, ChevronDown, X, User, LogOut, Camera, Mail } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 export default function CoordinatorProfile({
   user,
@@ -38,6 +39,9 @@ export default function CoordinatorProfile({
   isDark,
   toggleTheme
 }) {
+  const emailNotificationsEnabled = useStore((state) => state.emailNotificationsEnabled);
+  const toggleEmailNotifications = useStore((state) => state.toggleEmailNotifications);
+
   return (
     <div className="animate-fadeIn text-left">
       <div className="mb-5">
@@ -230,6 +234,29 @@ export default function CoordinatorProfile({
                 <span className="text-gray-955 dark:text-zinc-200 font-bold">
                   {user.email || <span className="text-gray-400 dark:text-zinc-650 italic font-medium">Не прив'язано</span>}
                 </span>
+              </div>
+
+              {/* Email Notifications Toggle Switch */}
+              <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800/90 rounded-2xl shadow-md hover:shadow-lg dark:shadow-black/40 transition-all border-0 mt-4">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-2.5 rounded-xl transition-all ${emailNotificationsEnabled ? 'bg-orange-500/10 text-[#FF5522] dark:bg-orange-500/20 dark:text-orange-400' : 'bg-gray-100 text-gray-400 dark:bg-zinc-700/60 dark:text-zinc-400'}`}>
+                    <Mail size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-gray-900 dark:text-zinc-100">Email-сповіщення</p>
+                    <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold">Отримувати листи про нові заявки та відгуки</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleEmailNotifications}
+                  className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm border-0 ${emailNotificationsEnabled
+                      ? 'bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white'
+                      : 'bg-rose-500 text-white dark:bg-rose-600 dark:text-white'
+                    }`}
+                >
+                  {emailNotificationsEnabled ? 'Увімкнено' : 'Вимкнено'}
+                </button>
               </div>
             </div>
 
