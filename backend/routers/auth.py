@@ -94,6 +94,7 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
     else:
         raise HTTPException(status_code=400, detail="Необхідно вказати код підтвердження з пошти")
 
+    is_new = False
     if user:
         if user_data.faculty:
             user.faculty = user_data.faculty
@@ -106,6 +107,7 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         db.commit()
         db.refresh(user)
     else:
+        is_new = True
         user = models.User(
             name=user_data.name or "Користувач",
             phone=normalize_phone(user_data.phone) if user_data.phone else None,
@@ -132,6 +134,8 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
     response.completed_shifts_count = completed_count
+    response.token = create_access_token(user.id)
+    response.is_new_user = is_new
     return response
 
 @router.get("/check-email")

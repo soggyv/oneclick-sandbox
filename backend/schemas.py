@@ -34,6 +34,7 @@ class UserResponse(UserBase):
     rating: Optional[float] = None  # average rating calculated dynamically
     token: Optional[str] = None  # JWT token if newly logged in
     completed_shifts_count: Optional[int] = 0
+    is_new_user: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -822,29 +822,38 @@ function AppContent() {
       };
 
       const userData = await apiCall('/auth/login-or-register', 'POST', payload);
+
+      const initialRole = regRole;
+      localStorage.setItem('oneclick_user_id', String(userData.id));
+      localStorage.setItem('oneclick_user_role', initialRole);
+      if (userData.token) {
+        localStorage.setItem('oneclick_user_token', userData.token);
+      }
+
       setUser(userData);
+      setCurrentRole(initialRole);
 
       const org = await apiCall('/auth/my-org').catch(() => null);
-
       if (org) {
         setOrganization(org);
       } else {
         setOrganization(null);
       }
 
-      const initialRole = regRole;
-      setCurrentRole(initialRole);
-
-      localStorage.setItem('oneclick_user_id', String(userData.id));
-      localStorage.setItem('oneclick_user_role', initialRole);
-      if (userData.token) {
-        localStorage.setItem('oneclick_user_token', userData.token);
-      }
       setEmailNotificationsEnabled(emailNotifPref);
       showToastMsg(`Вітаємо, ${userData.name || 'користувачу'}! Вхід успішний.`, 'success');
       setOtpMode(false);
-      setPendingAuthTargetRole(initialRole);
-      setShowEmailNotifModal(true);
+
+      if (userData.is_new_user) {
+        setPendingAuthTargetRole(initialRole);
+        setShowEmailNotifModal(true);
+      } else {
+        if (initialRole === 'B2C') {
+          navigate('/volunteer/search');
+        } else {
+          navigate('/coordinator/manage');
+        }
+      }
     } catch (err) {
       if (err && err.message) {
         showToastMsg(err.message, 'error');

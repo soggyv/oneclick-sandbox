@@ -13,11 +13,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import backend.core.config
 
 # 2. Setup database and migrations
-from backend.database import engine, Base, SessionLocal
+from backend.database import engine, Base, SessionLocal, auto_migrate_db
 from backend import models
 
 # Create tables (fallback for rapid local setup, Alembic handles migrations)
 Base.metadata.create_all(bind=engine)
+auto_migrate_db(engine)
 
 # 3. Initialize FastAPI App
 app = FastAPI(title="OneClick Volunteering API")
