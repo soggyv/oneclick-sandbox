@@ -3,6 +3,7 @@ import { Building2, Search, Clock, MapPin, RotateCw, Sun, Moon, LayoutGrid, List
 import { useStore } from '../../store/useStore';
 import CalendarSelector from './CalendarSelector';
 import SphereFilters from './SphereFilters';
+import FacultyFilters from './FacultyFilters';
 
 export default function VolunteerDashboard({
   shifts,
@@ -26,8 +27,14 @@ export default function VolunteerDashboard({
   const clearNotifications = useStore((state) => state.clearNotifications);
   const emailNotificationsEnabled = useStore((state) => state.emailNotificationsEnabled);
   const toggleEmailNotifications = useStore((state) => state.toggleEmailNotifications);
+  const activeFacultyFilter = useStore((state) => state.activeFacultyFilter);
   const allShifts = useStore((state) => state.allShifts);
   const b2bShifts = useStore((state) => state.b2bShifts);
+
+  const displayShifts = (shifts || []).filter((shift) => {
+    if (!activeFacultyFilter || activeFacultyFilter === 'ALL') return true;
+    return !shift.target_faculty || shift.target_faculty === 'ALL' || shift.target_faculty === activeFacultyFilter;
+  });
 
   const shiftsForDots = (allShifts && allShifts.length > 0)
     ? allShifts
@@ -233,18 +240,14 @@ export default function VolunteerDashboard({
         />
       </div>
 
-      {/* Filters */}
-      <SphereFilters
-        b2cFilters={b2cFilters}
-        selectedFilter={selectedFilter}
-        setSelectedFilter={setSelectedFilter}
-      />
+      {/* Faculty Filters */}
+      <FacultyFilters />
 
       {/* Shift Feed */}
       <div className="space-y-4 mt-1">
         <div className="flex justify-between items-center px-1">
           <span className="text-[10px] font-extrabold text-gray-400 dark:text-zinc-550 uppercase tracking-widest">
-            Доступні події ({shifts.length})
+            Доступні події ({displayShifts.length})
           </span>
 
           <div className="flex items-center gap-2.5">
@@ -280,20 +283,22 @@ export default function VolunteerDashboard({
           </div>
         </div>
 
-        {shifts.length > 0 ? (
+        {displayShifts.length > 0 ? (
           viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {shifts.map((shift) => (
+              {displayShifts.map((shift) => (
                 <div
                   key={shift.id}
                   onClick={() => setCurrentDetailsShift(shift)}
                   className="bg-white dark:bg-[#27272A] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-transparent shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 active:scale-[0.98] text-left flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex justify-between items-center gap-2 mb-2.5">
-                      <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-zinc-800 text-[10px] font-black text-gray-600 dark:text-zinc-300 rounded-full tracking-wide uppercase">
-                        {shift.category}
-                      </span>
+                    <div className="flex justify-between items-center gap-2 mb-2.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 bg-orange-50 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 text-[10px] font-black rounded-full tracking-wide uppercase border border-orange-200 dark:border-transparent">
+                          {!shift.target_faculty || shift.target_faculty === 'ALL' ? 'Усі факультети' : shift.target_faculty}
+                        </span>
+                      </div>
                       <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full uppercase tracking-wide ${(shift.approved_count || 0) >= shift.max_volunteers
                         ? 'bg-red-50 text-red-500 dark:bg-red-950/30 dark:text-red-400'
                         : 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400'
@@ -326,7 +331,7 @@ export default function VolunteerDashboard({
             </div>
           ) : (
             <div className="bg-white dark:bg-[#27272A] rounded-2xl border border-gray-100 dark:border-zinc-800 p-2 shadow-sm space-y-2">
-              {shifts.map((shift) => (
+              {displayShifts.map((shift) => (
                 <div
                   key={shift.id}
                   onClick={() => setCurrentDetailsShift(shift)}
@@ -334,8 +339,8 @@ export default function VolunteerDashboard({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-zinc-800 text-[10px] font-black text-gray-600 dark:text-zinc-300 rounded uppercase tracking-wide">
-                        {shift.category}
+                      <span className="px-2 py-0.5 bg-orange-50 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 text-[10px] font-black rounded uppercase tracking-wide border border-orange-200 dark:border-transparent">
+                        {!shift.target_faculty || shift.target_faculty === 'ALL' ? 'Усі факультети' : shift.target_faculty}
                       </span>
                       <h3 className="font-extrabold text-gray-900 dark:text-zinc-100 text-sm sm:text-base leading-snug">
                         {shift.title}

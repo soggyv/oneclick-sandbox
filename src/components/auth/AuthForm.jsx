@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import { FACULTIES } from '../../constants/faculties';
 
 export default function AuthForm({
   regRole,
@@ -11,10 +13,14 @@ export default function AuthForm({
   setRegEmail,
   regPassword,
   setRegPassword,
+  regFaculty,
+  setRegFaculty,
   handleLoginSubmit,
   handleGoogleLogin,
   setForgotPasswordMode
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <form onSubmit={handleLoginSubmit} className="space-y-4 w-full max-w-[320px]">
       {/* Role Toggle Tabs */}
@@ -54,71 +60,100 @@ export default function AuthForm({
         />
       </div>
 
-      {regRole === 'B2B' ? (
+      <div>
+        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
+          Електронна пошта
+        </label>
+        <input
+          type="email"
+          placeholder="email@example.com"
+          value={regEmail}
+          onChange={(e) => setRegEmail(e.target.value)}
+          required
+          className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+        />
+      </div>
+
+      {regRole === 'B2C' && (
         <>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
-              Електронна пошта
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+              Факультет
             </label>
-            <input
-              type="email"
-              placeholder="email@example.com"
-              value={regEmail}
-              onChange={(e) => setRegEmail(e.target.value)}
-              required
-              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
-            />
+            <select
+              value={regFaculty || 'ФКІТ'}
+              onChange={(e) => setRegFaculty(e.target.value)}
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all cursor-pointer mb-3"
+            >
+              {FACULTIES.map((fac) => (
+                <option key={fac.id} value={fac.id}>
+                  {fac.name} — {fac.fullName}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
-              Пароль
+              Телефон (для зв'язку)
             </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
-            />
-            <span className="text-[9px] text-gray-400 dark:text-gray-555 mt-1 block px-1">
-              Мінімум 6 символів
+            <div className="flex gap-2 items-center">
+              <span className="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-gray-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
+                +380
+              </span>
+              <input
+                type="text"
+                placeholder="931234567"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+              />
+            </div>
+            <span className="text-[9px] text-gray-400 dark:text-gray-550 mt-1 block px-1">
+              Введіть 9 цифр (наприклад, 931234567)
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                setForgotPasswordMode(true);
-              }}
-              className="text-[10px] text-[#FF5522] dark:text-[#F97316] hover:underline font-bold mt-1.5 block px-1 cursor-pointer"
-            >
-              Забули пароль?
-            </button>
           </div>
         </>
-      ) : (
-        <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
-            Телефон
-          </label>
-          <div className="flex gap-2 items-center">
-            <span className="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-gray-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
-              +380
-            </span>
-            <input
-              type="text"
-              placeholder="931234567"
-              value={regPhone}
-              onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-              required
-              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
-            />
-          </div>
-          <span className="text-[9px] text-gray-400 dark:text-gray-550 mt-1 block px-1">
-            Введіть 9 цифр (наприклад, 931234567)
-          </span>
-        </div>
       )}
+
+      {/* Password Field with Show/Hide Eye Toggle */}
+      <div>
+        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+          Пароль
+        </label>
+        <div className="relative flex items-center">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 pr-11 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+            title={showPassword ? "Приховати пароль" : "Показати пароль"}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+        <div className="flex justify-between items-center mt-1 px-1">
+          <span className="text-[9px] text-gray-400 dark:text-gray-555">
+            Мінімум 6 символів
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setForgotPasswordMode(true);
+            }}
+            className="text-[10px] text-[#FF5522] dark:text-[#F97316] hover:underline font-bold cursor-pointer"
+          >
+            Забули пароль?
+          </button>
+        </div>
+      </div>
 
       <button
         type="submit"

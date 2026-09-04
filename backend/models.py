@@ -13,6 +13,7 @@ class User(Base):
     role = Column(String, nullable=False)  # 'B2C' (volunteer) or 'B2B' (coordinator/member)
     password = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
+    faculty = Column(String, default="ФКІТ", nullable=True)
     
     # NEW fields for multi-member Company support
     company_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
@@ -55,7 +56,8 @@ class Shift(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    category = Column(String, nullable=False)
+    category = Column(String, nullable=False, default="Захід")
+    target_faculty = Column(String, default="ALL", nullable=True)
     date = Column(String, nullable=False)  # ISO string or YYYY-MM-DD
     time = Column(String, nullable=False)  # e.g., "09:00 - 18:00"
     location = Column(String, nullable=False)  # e.g., "Актова зала"

@@ -291,8 +291,8 @@ export default function CoordinatorShifts({
                   >
                     <div className="flex justify-between items-start mb-2.5 gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 uppercase tracking-wide">
-                          {shift.category}
+                        <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-orange-50 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 uppercase tracking-wide border border-orange-200 dark:border-transparent">
+                          {!shift.target_faculty || shift.target_faculty === 'ALL' ? 'Усі факультети' : `Факультет ${shift.target_faculty}`}
                         </span>
                         {pendingApps.length > 0 && (
                           <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wide block w-fit animate-pulse">
@@ -392,10 +392,13 @@ export default function CoordinatorShifts({
                                   )}
                                   <span
                                     onClick={() => fetchVolunteerReviews(app.volunteer_id, app.volunteer_name)}
-                                    className="group text-xs font-black text-gray-800 dark:text-zinc-200 hover:text-[#FF5522] dark:hover:text-[#FF5522] cursor-pointer flex items-center gap-1.5 transition-colors duration-150"
+                                    className="group text-xs font-black text-gray-800 dark:text-zinc-200 hover:text-[#FF5522] dark:hover:text-[#FF5522] cursor-pointer flex items-center gap-1.5 transition-colors duration-150 flex-wrap"
                                     title="Переглянути профіль волонтера"
                                   >
                                     <span>{app.volunteer_name}</span>
+                                    <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-orange-50 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400 border border-orange-200/60 dark:border-transparent uppercase">
+                                      {app.volunteer_faculty || 'ФКІТ'}
+                                    </span>
                                     <Eye size={12} className="text-gray-450 dark:text-zinc-550 group-hover:text-[#FF5522] shrink-0 transition-colors duration-150" />
                                   </span>
                                 </div>
@@ -522,8 +525,8 @@ export default function CoordinatorShifts({
                         title="Натисніть для перегляду заявок та деталей"
                       >
                         <div className="flex items-center flex-wrap gap-2">
-                          <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                            {shift.category}
+                          <span className="text-[10px] bg-orange-50 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide border border-orange-200 dark:border-transparent">
+                            {!shift.target_faculty || shift.target_faculty === 'ALL' ? 'Усі факультети' : `Факультет ${shift.target_faculty}`}
                           </span>
                           <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-zinc-100 leading-snug">
                             {shift.title}
@@ -634,6 +637,9 @@ export default function CoordinatorShifts({
                                       title="Переглянути профіль волонтера"
                                     >
                                       <span>{app.volunteer_name}</span>
+                                       <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-orange-50 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400 border border-orange-200/60 dark:border-transparent uppercase">
+                                         {app.volunteer_faculty || 'ФКІТ'}
+                                       </span>
                                       <Eye size={12} className="text-gray-450 dark:text-zinc-550 group-hover:text-[#FF5522] shrink-0 transition-colors duration-150" />
                                     </span>
                                   </div>

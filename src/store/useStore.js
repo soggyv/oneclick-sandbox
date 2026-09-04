@@ -10,6 +10,7 @@ export const useStore = create((set, get) => ({
   activeB2BTab: 'manage',
   activeB2BFilter: 'АКТИВНІ',
   activeB2CShiftsFilter: 'АКТИВНІ',
+  activeFacultyFilter: 'ALL',
 
   // Forms and settings
   isOrgRegisterModalOpen: false,
@@ -62,6 +63,7 @@ export const useStore = create((set, get) => ({
   setActiveB2BTab: (tab) => set({ activeB2BTab: tab }),
   setActiveB2BFilter: (filter) => set({ activeB2BFilter: filter }),
   setActiveB2CShiftsFilter: (filter) => set({ activeB2CShiftsFilter: filter }),
+  setActiveFacultyFilter: (filter) => set({ activeFacultyFilter: filter }),
   setIsOrgRegisterModalOpen: (open) => set({ isOrgRegisterModalOpen: open }),
   setShowSettingsPanel: (show) => set({ showSettingsPanel: show }),
   setSelectedVolunteerProfile: (profile) => set({ selectedVolunteerProfile: profile }),
@@ -100,8 +102,20 @@ export const useStore = create((set, get) => ({
           get().logout();
           throw new Error('UNAUTHORIZED');
         }
+        if (response.status === 429) {
+          const errorData = await response.json().catch(() => ({}));
+          const rawDetail = typeof errorData.detail === 'string' ? errorData.detail : '';
+          const friendlyMsg = rawDetail ? `⏱️ ${rawDetail}` : "⏱️ Занадто багато запитів. Зачекайте кілька секунд.";
+          throw new Error(friendlyMsg);
+        }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Помилка запиту');
+        let msg = 'Помилка запиту';
+        if (typeof errorData.detail === 'string') {
+          msg = errorData.detail;
+        } else if (Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+          msg = errorData.detail[0]?.msg || 'Помилка валідації даних';
+        }
+        throw new Error(msg);
       }
       return await response.json();
     } catch (err) {
@@ -124,13 +138,13 @@ export const useStore = create((set, get) => ({
     if (!user) return;
 
     const now = Date.now();
-    const paramsChanged = 
+    const paramsChanged =
       lastFetchParams.date !== selectedDateStr ||
       lastFetchParams.filter !== selectedFilter ||
       lastFetchParams.search !== searchQuery;
 
-    // Cache/throttle requests for 10 seconds to optimize server/DB performance on weak VPS
-    if (!force && !paramsChanged && (now - lastFetchTime < 10000)) {
+    // Cache/throttle requests for 60 seconds to ensure instant tab switching & optimize performance
+    if (!force && !paramsChanged && (now - lastFetchTime < 60000)) {
       return;
     }
 
@@ -142,7 +156,7 @@ export const useStore = create((set, get) => ({
           apiCall('/applications/my').catch(() => []),
           apiCall('/notifications?role=B2C').catch(() => [])
         ]);
-        set({ 
+        set({
           shifts: fetchedShifts,
           allShifts: allShiftsData || [],
           bookedShifts: booked,
@@ -214,7 +228,11 @@ export const useStore = create((set, get) => ({
     const { apiCall, showToastMsg, loadData } = get();
     try {
       await apiCall(`/shifts/${shiftId}`, 'PUT', shiftData);
-      showToastMsg("Зміну успішно оновлено!", "success");
+      set((state) => ({
+        b2bShifts: state.b2bShifts.map((s) => (s.id === shiftId ? { ...s, ...shiftData } : s)),
+        shifts: state.shifts.map((s) => (s.id === shiftId ? { ...s, ...shiftData } : s)),
+      }));
+      showToastMsg("Захід успішно оновлено!", "success");
       loadData(undefined, undefined, undefined, true);
     } catch (err) {
       console.error("Помилка оновлення смени:", err);

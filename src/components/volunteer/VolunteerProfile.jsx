@@ -1,6 +1,7 @@
 import React from 'react';
-import { Camera, Star, MessageSquare, Building2, LogOut, PlusCircle, Mail } from 'lucide-react';
+import { Camera, Star, MessageSquare, Building2, LogOut, PlusCircle, Mail, GraduationCap } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { FACULTIES } from '../../constants/faculties';
 
 export default function VolunteerProfile({
   user,
@@ -13,6 +14,8 @@ export default function VolunteerProfile({
   setEditPhone,
   editEmail,
   setEditEmail,
+  editFaculty,
+  setEditFaculty,
   editEmailOtpCode,
   setEditEmailOtpCode,
   emailOtpMode,
@@ -85,6 +88,23 @@ export default function VolunteerProfile({
                   className="w-full bg-white dark:bg-zinc-900 border border-gray-250 dark:border-transparent rounded-xl pl-12 pr-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 disabled:text-gray-400"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-0.5">
+                Факультет
+              </label>
+              <select
+                disabled={emailOtpMode}
+                value={editFaculty}
+                onChange={(e) => setEditFaculty(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-900 border border-gray-250 dark:border-transparent rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm disabled:bg-gray-50 dark:disabled:bg-zinc-800 cursor-pointer"
+              >
+                {FACULTIES.map((fac) => (
+                  <option key={fac.id} value={fac.id}>
+                    {fac.name} — {fac.fullName}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-0.5">
@@ -192,6 +212,13 @@ export default function VolunteerProfile({
 
             <div className="border-t border-gray-100 dark:border-zinc-800/80 mt-6 pt-5 text-left space-y-3 text-xs font-semibold text-gray-600 dark:text-zinc-400">
               <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 dark:text-zinc-500 font-bold uppercase text-[10px]">Факультет:</span>
+                <span className="bg-orange-100 text-[#FF5522] dark:bg-orange-950/70 dark:text-orange-400 font-extrabold px-2.5 py-0.5 rounded-lg text-xs border border-orange-200 dark:border-orange-900/60 flex items-center gap-1">
+                  <GraduationCap size={13} />
+                  <span>{user.faculty || 'ФКІТ'}</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-t border-gray-50 dark:border-zinc-800/50">
                 <span className="text-gray-400 dark:text-zinc-500 font-bold uppercase text-[10px]">Телефон:</span>
                 <span className="text-gray-900 dark:text-zinc-200 font-black">{user.phone}</span>
               </div>

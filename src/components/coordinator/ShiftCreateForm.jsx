@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, MapPin, Save, ChevronDown, Search, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Clock, MapPin, Save, ChevronDown, Search, Calendar, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
+import { TARGET_FACULTIES_OPTIONS } from '../../constants/faculties';
 
 const monthsUkFull = [
   'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
@@ -31,6 +32,8 @@ export default function ShiftCreateForm({
   setShowCreateMapPicker,
   formDescription,
   setFormDescription,
+  formTargetFaculty,
+  setFormTargetFaculty,
   handleCreateShift,
   setTempStartHour,
   setTempStartMin,
@@ -94,8 +97,8 @@ export default function ShiftCreateForm({
   return (
     <div className="animate-fadeIn text-left">
       <div className="mb-5">
-        <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-200">Новий захід</h1>
-        <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Опублікувати завдання для волонтерів</p>
+        <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-200">Новий захід / подія</h1>
+        <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Опублікувати завдання для студентів-волонтерів</p>
       </div>
 
       <form onSubmit={handleCreateShift} className="space-y-4">
@@ -157,7 +160,7 @@ export default function ShiftCreateForm({
                           >
                             <span className="text-gray-900 dark:text-zinc-100">{t.name}</span>
                             <span className="text-[9px] text-gray-400 dark:text-zinc-500 font-semibold truncate">
-                              {t.title} • {t.category}
+                              {t.title}
                             </span>
                           </button>
                         ))
@@ -176,7 +179,7 @@ export default function ShiftCreateForm({
           </label>
           <input
             type="text"
-            placeholder="напр. Волонтер на кавовий лекторій"
+            placeholder="напр. Помічник на день відкритих дверей ФКІТ"
             value={formTitle}
             onChange={(e) => setFormTitle(e.target.value)}
             required
@@ -184,20 +187,22 @@ export default function ShiftCreateForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
-              Напрямок
-            </label>
-            <input
-              type="text"
-              placeholder="напр. IT-відділ"
-              value={formSphere}
-              onChange={(e) => setFormSphere(e.target.value)}
-              required
-              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
-            />
-          </div>
+        <div>
+          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+            Цільовий факультет
+          </label>
+          <select
+            value={formTargetFaculty || 'ALL'}
+            onChange={(e) => setFormTargetFaculty(e.target.value)}
+            className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm cursor-pointer"
+          >
+            {TARGET_FACULTIES_OPTIONS.map((fac) => (
+              <option key={fac.id} value={fac.id}>
+                {fac.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
           <div
             onClick={() => {
@@ -219,7 +224,6 @@ export default function ShiftCreateForm({
               </span>
             </div>
           </div>
-        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -355,7 +359,7 @@ export default function ShiftCreateForm({
           </label>
           <textarea
             rows="3"
-            placeholder="Ключові обов'язки волонтера..."
+            placeholder="Ключові обов'язки студента-волонтера..."
             value={formDescription}
             onChange={(e) => setFormDescription(e.target.value)}
             className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm resize-none"

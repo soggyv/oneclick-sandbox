@@ -57,6 +57,13 @@ export default function ReviewsModal({
         <div className="space-y-2.5 mb-4 text-xs">
           <div className="bg-gray-50/70 dark:bg-zinc-900/60 p-3 rounded-2xl border border-gray-100 dark:border-transparent space-y-2 text-[11px] font-semibold text-gray-600 dark:text-zinc-400">
             <div className="flex justify-between items-center">
+              <span>Факультет:</span>
+              <span className="font-extrabold text-[#FF5522] dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-0.5 rounded-full text-[10px] border border-orange-200/50 dark:border-transparent">
+                {selectedVolunteerProfile?.faculty || 'ФКІТ'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
               <span>Виконано змін:</span>
               <span className="font-extrabold text-gray-900 dark:text-zinc-200 bg-gray-200/65 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-[10px]">
                 {selectedVolunteerProfile?.completed_shifts_count || 0}
@@ -126,7 +133,7 @@ export default function ReviewsModal({
 
         <button
           onClick={onClose}
-          className="w-full py-3.5 mt-4 bg-black hover:bg-black/95 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 dark:hover:text-white font-extrabold rounded-full text-xs transition-all active:scale-95 cursor-pointer"
+          className="w-full py-3.5 mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 font-extrabold rounded-full text-xs transition-all active:scale-95 cursor-pointer border border-gray-200/60 dark:border-zinc-700/80 shadow-xs"
         >
           Закрити
         </button>

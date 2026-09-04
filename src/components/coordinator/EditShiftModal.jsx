@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Clock, MapPin, X, Calendar, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import TimePickerModal from '../TimePickerModal';
+import { TARGET_FACULTIES_OPTIONS } from '../../constants/faculties';
 
 const monthsUkGen = [
   'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
@@ -55,6 +56,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
+  const [targetFaculty, setTargetFaculty] = useState('ALL');
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
   const [location, setLocation] = useState('');
@@ -90,6 +92,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
     if (shift) {
       setTitle(shift.title || '');
       setCategory(shift.category || '');
+      setTargetFaculty(shift.target_faculty || 'ALL');
       setLocation(shift.location || '');
       setAddress(shift.address || '');
       setDescription(shift.description || '');
@@ -252,7 +255,8 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
         location,
         address,
         description,
-        max_volunteers: maxVolunteers
+        max_volunteers: maxVolunteers,
+        target_faculty: targetFaculty || 'ALL'
       });
       onClose();
     } catch (err) {
@@ -305,19 +309,22 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
-                Напрямок
-              </label>
-              <input
-                type="text"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-                className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm"
-              />
-            </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+              Цільовий факультет
+            </label>
+            <select
+              value={targetFaculty || 'ALL'}
+              onChange={(e) => setTargetFaculty(e.target.value)}
+              className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-xs font-bold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm cursor-pointer"
+            >
+              {TARGET_FACULTIES_OPTIONS.map((fac) => (
+                <option key={fac.id} value={fac.id}>
+                  {fac.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
             <div>
               <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
@@ -339,7 +346,6 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 <ChevronDown size={14} className="text-gray-400" />
               </button>
             </div>
-          </div>
 
           <div
             onClick={() => {

@@ -129,9 +129,11 @@ export default function ShiftDetailsModal({
           <span>Назад до списку заходів</span>
         </button>
 
-        <span className="px-3.5 py-1.5 bg-yellow-100 dark:bg-[#F97316]/20 text-yellow-800 dark:text-[#F97316] text-[10px] font-extrabold rounded-full tracking-wider uppercase">
-          {shift.category}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="px-3.5 py-1.5 bg-orange-100 text-[#FF5522] dark:bg-orange-950/40 dark:text-orange-400 text-[10px] font-black rounded-full tracking-wider uppercase border border-orange-200 dark:border-transparent">
+            {!shift.target_faculty || shift.target_faculty === 'ALL' ? 'Усі факультети' : `Факультет: ${shift.target_faculty}`}
+          </span>
+        </div>
       </div>
 
       {/* Grid Layout */}

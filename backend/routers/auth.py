@@ -34,11 +34,11 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         normalized_phone = normalize_phone(user_data.phone)
         user = db.query(models.User).filter(models.User.phone == normalized_phone).first()
         
-    # 1. OTP Verification Check if registering or B2C phone login
     is_new_user = user is None
-    is_b2c = user_data.role == "B2C"
+    # Require OTP verification for new users OR when logging in without a password
+    requires_otp = is_new_user or (not user_data.password and not (user and user.password))
     
-    if is_new_user or is_b2c:
+    if requires_otp:
         target = user_data.email if user_data.email else (normalize_phone(user_data.phone) if user_data.phone else None)
         if not target:
             raise HTTPException(status_code=400, detail="Необхідно вказати телефон або email")
@@ -63,8 +63,12 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         db.commit()
 
     if user:
-        # Check password if B2B user and password is provided or expected
-        if user_data.role == "B2B":
+        if user_data.faculty:
+            user.faculty = user_data.faculty
+            db.commit()
+            db.refresh(user)
+        # Check password if provided or if user has a password set
+        if user_data.password or user.password:
             if user_data.password:
                 if not user.password:
                     if len(user_data.password) < 6:
@@ -73,12 +77,10 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
                     db.commit()
                     db.refresh(user)
                 else:
-                    # Check if the stored password is in plain text (backward compatibility)
+                    # Check if stored password is plain text
                     is_hash = user.password.startswith("$")
                     if not is_hash:
-                        # Plain text comparison
                         if user.password == user_data.password:
-                            # Upgrade plaintext password to hash
                             user.password = pwd_context.hash(user_data.password)
                             db.commit()
                             db.refresh(user)
@@ -88,24 +90,23 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
                                 detail="Невірний пароль для цього облікового запису"
                             )
                     else:
-                        # Hashed comparison
                         if not pwd_context.verify(user_data.password, user.password):
                             raise HTTPException(
                                 status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail="Невірний пароль для цього облікового запису"
                             )
-            else:
+            elif user.password and not is_new_user:
                 raise HTTPException(status_code=400, detail="Необхідно ввести пароль")
     else:
-        if user_data.role == "B2B":
-            if not user_data.password or len(user_data.password) < 6:
-                raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
+        if user_data.password and len(user_data.password) < 6:
+            raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
         hashed_password = pwd_context.hash(user_data.password) if user_data.password else None
         user = models.User(
             name=user_data.name,
             phone=normalize_phone(user_data.phone) if user_data.phone else None,
             email=user_data.email,
             role=user_data.role,
+            faculty=user_data.faculty if user_data.faculty else "ФКІТ",
             password=hashed_password
         )
         db.add(user)
@@ -142,11 +143,14 @@ def send_verification_email(
     # Rate limiting check (60 seconds)
     now = datetime.datetime.utcnow()
     last_sent = otp_timestamps.get(payload.email)
-    if last_sent and (now - last_sent).total_seconds() < 60:
-        raise HTTPException(
-            status_code=429,
-            detail="Занадто багато запитів. Спробуйте через 60 секунд."
-        )
+    if last_sent:
+        elapsed = (now - last_sent).total_seconds()
+        if elapsed < 60:
+            remaining = int(60 - elapsed) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Занадто багато запитів. Зачекайте {remaining} сек. перед наступною спробою."
+            )
     
     html_content = f"""
     <html>
@@ -195,11 +199,14 @@ def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session =
     # Rate limiting check (60 seconds)
     now = datetime.datetime.utcnow()
     last_sent = otp_timestamps.get(phone_normalized)
-    if last_sent and (now - last_sent).total_seconds() < 60:
-        raise HTTPException(
-            status_code=429,
-            detail="Занадто багато запитів. Спробуйте через 60 секунд."
-        )
+    if last_sent:
+        elapsed = (now - last_sent).total_seconds()
+        if elapsed < 60:
+            remaining = int(60 - elapsed) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Занадто багато запитів. Зачекайте {remaining} сек. перед наступною спробою."
+            )
 
     # Save B2C OTP code to DB
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)

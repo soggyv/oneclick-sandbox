@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from backend import models, schemas
 from backend.database import get_db
 from backend.core.security import get_current_user_id
@@ -142,13 +142,18 @@ def apply_to_shift(
 
 @router.get("/my", response_model=List[schemas.ApplicationResponse])
 def get_my_applications(x_user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
-    apps = db.query(models.Application).filter(models.Application.volunteer_id == x_user_id).all()
+    apps = db.query(models.Application).options(
+        joinedload(models.Application.volunteer),
+        joinedload(models.Application.shift).joinedload(models.Shift.organization)
+    ).filter(models.Application.volunteer_id == x_user_id).all()
     response_list = []
     for app in apps:
         res = schemas.ApplicationResponse.model_validate(app)
-        res.volunteer_name = app.volunteer.name
-        res.volunteer_avatar_url = app.volunteer.avatar_url
-        res.shift.organization_name = app.shift.organization.name
+        res.volunteer_name = app.volunteer.name if app.volunteer else ""
+        res.volunteer_avatar_url = app.volunteer.avatar_url if app.volunteer else None
+        res.volunteer_faculty = getattr(app.volunteer, 'faculty', 'ФКІТ') if app.volunteer else 'ФКІТ'
+        if app.shift and app.shift.organization:
+            res.shift.organization_name = app.shift.organization.name
         response_list.append(res)
     return response_list
 
@@ -159,13 +164,18 @@ def get_b2b_applications(x_user_id: int = Depends(get_current_user_id), db: Sess
         return []
     
     # Filter applications belonging to the user's company shifts (data isolation)
-    apps = db.query(models.Application).join(models.Shift).filter(models.Shift.organization_id == user.company_id).all()
+    apps = db.query(models.Application).options(
+        joinedload(models.Application.volunteer),
+        joinedload(models.Application.shift).joinedload(models.Shift.organization)
+    ).join(models.Shift).filter(models.Shift.organization_id == user.company_id).all()
     response_list = []
     for app in apps:
         res = schemas.ApplicationResponse.model_validate(app)
-        res.volunteer_name = app.volunteer.name
-        res.volunteer_avatar_url = app.volunteer.avatar_url
-        res.shift.organization_name = app.shift.organization.name
+        res.volunteer_name = app.volunteer.name if app.volunteer else ""
+        res.volunteer_avatar_url = app.volunteer.avatar_url if app.volunteer else None
+        res.volunteer_faculty = getattr(app.volunteer, 'faculty', 'ФКІТ') if app.volunteer else 'ФКІТ'
+        if app.shift and app.shift.organization:
+            res.shift.organization_name = app.shift.organization.name
         response_list.append(res)
     return response_list
 

@@ -72,6 +72,8 @@ def update_profile(
     user.name = profile_data.name
     if profile_data.phone:
         user.phone = profile_data.phone
+    if profile_data.faculty:
+        user.faculty = profile_data.faculty
         
     if profile_data.email is not None:
         email_clean = profile_data.email.strip().lower()

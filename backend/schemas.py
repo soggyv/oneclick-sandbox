@@ -4,11 +4,12 @@ from datetime import datetime
 
 # --- USER SCHEMAS ---
 class UserBase(BaseModel):
-    name: str
+    name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     role: str  # 'B2C' or 'B2B'
     avatar_url: Optional[str] = None
+    faculty: Optional[str] = "ФКІТ"
 
 class UserCreate(UserBase):
     org_name: Optional[str] = None
@@ -21,6 +22,7 @@ class UserCreate(UserBase):
 class GoogleLoginRequest(BaseModel):
     access_token: str
     role: Optional[str] = "B2C"
+    faculty: Optional[str] = None
     org_name: Optional[str] = None
     org_address: Optional[str] = None
     org_description: Optional[str] = None
@@ -53,7 +55,8 @@ class OrganizationResponse(OrganizationBase):
 # --- SHIFT SCHEMAS ---
 class ShiftBase(BaseModel):
     title: str
-    category: str
+    category: Optional[str] = "Захід"
+    target_faculty: Optional[str] = "ALL"
     date: str
     time: str
     location: str
@@ -107,6 +110,7 @@ class ApplicationResponse(BaseModel):
     shift: ShiftResponse
     volunteer_name: Optional[str] = None
     volunteer_avatar_url: Optional[str] = None
+    volunteer_faculty: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -135,6 +139,7 @@ class ProfileUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     email_otp_code: Optional[str] = None
+    faculty: Optional[str] = None
     org_name: Optional[str] = None
     org_address: Optional[str] = None
     org_description: Optional[str] = None

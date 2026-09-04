@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from backend import models, schemas
 from backend.database import get_db
 from backend.core.security import get_current_user_id
@@ -19,9 +19,10 @@ def auto_close_past_shifts(db: Session):
         s.status = "closed"
         
     # Also close any open shifts where all applications are already reviewed or rejected,
-    # but only if there is at least one reviewed (completed) application (so we don't close
-    # shifts where all applicants were simply rejected).
-    open_shifts = db.query(models.Shift).filter(models.Shift.status == "open").all()
+    # but only if there is at least one reviewed (completed) application
+    open_shifts = db.query(models.Shift).options(
+        joinedload(models.Shift.applications)
+    ).filter(models.Shift.status == "open").all()
     closed_any = False
     for s in open_shifts:
         if s.applications:
@@ -40,7 +41,11 @@ def get_shifts(
     db: Session = Depends(get_db)
 ):
     auto_close_past_shifts(db)
-    query = db.query(models.Shift).filter(models.Shift.status == "open")
+    query = db.query(models.Shift).options(
+        joinedload(models.Shift.organization),
+        joinedload(models.Shift.applications),
+        joinedload(models.Shift.creator)
+    ).filter(models.Shift.status == "open")
     if date:
         query = query.filter(models.Shift.date == date)
     if category and category != "Всі сфери":
@@ -58,9 +63,9 @@ def get_shifts(
     response_list = []
     for shift in shifts:
         res = schemas.ShiftResponse.model_validate(shift)
-        res.organization_name = shift.organization.name
+        res.organization_name = shift.organization.name if shift.organization else ""
         res.approved_count = len([a for a in shift.applications if a.status in ['approved', 'attended', 'reviewed']])
-        res.contact_phone = shift.creator.phone if shift.creator else (shift.organization.coordinator.phone if shift.organization.coordinator else None)
+        res.contact_phone = shift.creator.phone if shift.creator else (shift.organization.coordinator.phone if (shift.organization and shift.organization.coordinator) else None)
         response_list.append(res)
     return response_list
 
@@ -80,7 +85,8 @@ def create_shift(
     
     new_shift = models.Shift(
         title=shift_data.title,
-        category=shift_data.category,
+        category=shift_data.category or "Захід",
+        target_faculty=shift_data.target_faculty or "ALL",
         date=shift_data.date,
         time=shift_data.time,
         location=shift_data.location,
@@ -113,7 +119,10 @@ def get_b2b_shifts(x_user_id: int = Depends(get_current_user_id), db: Session = 
         return []
     
     # Filter shifts belonging to the user's company (data isolation)
-    shifts = db.query(models.Shift).filter(models.Shift.organization_id == org.id).all()
+    shifts = db.query(models.Shift).options(
+        joinedload(models.Shift.applications),
+        joinedload(models.Shift.creator)
+    ).filter(models.Shift.organization_id == org.id).all()
     response_list = []
     for shift in shifts:
         res = schemas.ShiftResponse.model_validate(shift)
@@ -143,7 +152,8 @@ def update_shift(
         raise HTTPException(status_code=403, detail="Ви не маєте доступу до цієї смени")
 
     shift.title = shift_data.title
-    shift.category = shift_data.category
+    shift.category = shift_data.category or "Захід"
+    shift.target_faculty = shift_data.target_faculty or "ALL"
     shift.date = shift_data.date
     shift.time = shift_data.time
     shift.location = shift_data.location

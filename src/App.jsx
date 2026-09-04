@@ -73,7 +73,7 @@ function AppContent() {
 
   const {
     user, setUser, organization, setOrganization, currentRole, setCurrentRole,
-    activeB2CTab, setActiveB2CTab, activeB2BTab, setActiveB2BTab,
+    setActiveB2CTab, setActiveB2BTab,
     shifts, bookedShifts, b2bApplications, b2bShifts, orgMembers,
     shiftTemplates, createTemplate, deleteTemplate, updateTemplate, cancelApplication,
     toast, showToastMsg, logout, loadData, fetchVolunteerReviews, apiCall,
@@ -126,6 +126,14 @@ function AppContent() {
   const [formAddress, setFormAddress] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formMaxVolunteers, setFormMaxVolunteers] = useState(1);
+  const [formTargetFaculty, setFormTargetFacultyState] = useState(() => {
+    return localStorage.getItem('oneclick_last_target_faculty') || 'ALL';
+  });
+
+  const setFormTargetFaculty = (fac) => {
+    setFormTargetFacultyState(fac);
+    localStorage.setItem('oneclick_last_target_faculty', fac);
+  };
 
   // Edit Template Modal States
   const [isEditTemplateModalOpen, setIsEditTemplateModalOpen] = useState(false);
@@ -149,6 +157,8 @@ function AppContent() {
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editFaculty, setEditFaculty] = useState('ФКІТ');
+  const [regFaculty, setRegFaculty] = useState('ФКІТ');
   const [editEmailOtpCode, setEditEmailOtpCode] = useState('');
   const [emailOtpMode, setEmailOtpMode] = useState(false);
   const [sentEmailOtp, setSentEmailOtp] = useState('');
@@ -195,23 +205,31 @@ function AppContent() {
     return base;
   }, [shifts]);
 
-  // Sync route path changes to active tab state
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.startsWith('/volunteer/')) {
-      const tab = path.split('/').pop();
-      if (['search', 'myshifts', 'profile'].includes(tab)) {
-        setActiveB2CTab(tab);
-        setCurrentRole('B2C');
-      }
-    } else if (path.startsWith('/coordinator/')) {
-      const tab = path.split('/').pop();
-      if (['manage', 'create', 'templates', 'profile'].includes(tab)) {
-        setActiveB2BTab(tab);
-        setCurrentRole('B2B');
-      }
+  // Derive active tab directly from URL path (single source of truth, 0ms latency)
+  const activeB2CTab = useMemo(() => {
+    if (location.pathname.startsWith('/volunteer/')) {
+      const tab = location.pathname.split('/').pop();
+      if (['search', 'myshifts', 'profile'].includes(tab)) return tab;
     }
-  }, [location.pathname, setActiveB2CTab, setActiveB2BTab, setCurrentRole]);
+    return 'search';
+  }, [location.pathname]);
+
+  const activeB2BTab = useMemo(() => {
+    if (location.pathname.startsWith('/coordinator/')) {
+      const tab = location.pathname.split('/').pop();
+      if (['manage', 'create', 'templates', 'profile'].includes(tab)) return tab;
+    }
+    return 'manage';
+  }, [location.pathname]);
+
+  // Sync role if accessing directly via URL
+  useEffect(() => {
+    if (location.pathname.startsWith('/volunteer/') && currentRole !== 'B2C') {
+      setCurrentRole('B2C');
+    } else if (location.pathname.startsWith('/coordinator/') && currentRole !== 'B2B') {
+      setCurrentRole('B2B');
+    }
+  }, [location.pathname, currentRole, setCurrentRole]);
 
   // Handle invitation links
   const handleInviteToken = useCallback(async (token, currentUser) => {
@@ -455,6 +473,7 @@ function AppContent() {
     setEditName(user.name || '');
     setEditPhone(user.phone ? user.phone.replace('+380', '') : '');
     setEditEmail(user.email || '');
+    setEditFaculty(user.faculty || 'ФКІТ');
     setEmailOtpMode(false);
     setEditEmailOtpCode('');
     if (organization) {
@@ -508,6 +527,7 @@ function AppContent() {
         name: editName,
         phone: editPhone ? `+380${editPhone}` : null,
         email: editEmail || null,
+        faculty: editFaculty,
         email_otp_code: emailOtpMode ? editEmailOtpCode : null,
         org_name: currentRole === 'B2B' ? editOrgName : null,
         org_address: currentRole === 'B2B' ? editOrgAddr : null,
@@ -745,97 +765,77 @@ function AppContent() {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (regRole === 'B2B') {
-      try {
-        const checkRes = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(regEmail)}`).then(r => r.json());
 
-        if (checkRes.exists) {
-          const userData = await apiCall('/auth/login-or-register', 'POST', {
-            name: regName || "",
-            email: regEmail,
-            password: regPassword,
-            role: 'B2B'
-          });
-          setUser(userData);
-          setCurrentRole(userData.role);
+    if (!regEmail || !regEmail.includes('@')) {
+      showToastMsg("Будь ласка, введіть коректну електронну пошту", "error");
+      return;
+    }
+    if (!regPassword || regPassword.length < 6) {
+      showToastMsg("Пароль має містити щонайменше 6 символів", "error");
+      return;
+    }
 
-          localStorage.setItem('oneclick_user_id', String(userData.id));
-          localStorage.setItem('oneclick_user_role', userData.role);
-          if (userData.token) {
-            localStorage.setItem('oneclick_user_token', userData.token);
-          }
+    try {
+      const checkRes = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(regEmail)}`).then(r => r.json());
 
-          const org = await fetch(`${API_URL}/auth/my-org`, {
-            headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-          }).then(r => r.ok ? r.json() : null).catch(() => null);
+      if (checkRes.exists) {
+        // User exists -> Direct Login with Email + Password
+        const userData = await apiCall('/auth/login-or-register', 'POST', {
+          email: regEmail,
+          password: regPassword,
+          role: regRole,
+          name: regName || '',
+          faculty: regFaculty,
+          phone: regPhone ? `+380${regPhone}` : null
+        });
 
-          if (org) {
-            setOrganization(org);
-            setCurrentRole('B2B');
-            localStorage.setItem('oneclick_user_role', 'B2B');
-            navigate('/coordinator/manage');
-          } else {
-            navigate('/coordinator/manage');
-          }
-          showToastMsg(`Вітаємо, ${userData.name}! Вхід успішний.`, 'success');
-        } else {
-          if (!regName || !regName.trim()) {
-            showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
-            return;
-          }
-          if (!regPassword || regPassword.length < 6) {
-            showToastMsg("Пароль має містити щонайменше 6 символів", "error");
-            return;
-          }
-          const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-
-          await apiCall('/auth/send-verification-email', 'POST', {
-            email: regEmail,
-            code: generatedCode
-          });
-
-          setOtpCode(generatedCode);
-          setOtpMode(true);
-          setEnteredOtp('');
-          showToastMsg(`Код підтвердження надіслано на пошту ${regEmail}`, 'success');
+        setUser(userData);
+        localStorage.setItem('oneclick_user_id', String(userData.id));
+        if (userData.token) {
+          localStorage.setItem('oneclick_user_token', userData.token);
         }
-      } catch (err) {
-        console.error(err);
-        showToastMsg(err.message || "Невірний пароль або помилка авторизації", "error");
-      }
-    } else {
-      if (regPhone.length !== 9) {
-        showToastMsg("Введіть коректний 9-значний номер телефону (без першого нуля)", "error");
-        return;
-      }
 
-      try {
-        const checkRes = await fetch(`${API_URL}/auth/check-phone?phone=${encodeURIComponent('+380' + regPhone)}`).then(r => r.json());
-        if (!checkRes.exists && (!regName || !regName.trim())) {
+        const org = await fetch(`${API_URL}/auth/my-org`, {
+          headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
+        }).then(r => r.ok ? r.json() : null).catch(() => null);
+
+        if (org) {
+          setOrganization(org);
+        } else {
+          setOrganization(null);
+        }
+
+        const roleToSet = regRole;
+        setCurrentRole(roleToSet);
+        localStorage.setItem('oneclick_user_role', roleToSet);
+
+        showToastMsg(`Вітаємо, ${userData.name}! Вхід успішний.`, 'success');
+        if (roleToSet === 'B2C') {
+          navigate('/volunteer/search');
+        } else {
+          navigate('/coordinator/manage');
+        }
+      } else {
+        // New User -> Registration flow with free Email OTP verification
+        if (!regName || !regName.trim()) {
           showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
           return;
         }
-      } catch (err) {
-        console.error(err);
-      }
 
-      const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
+        const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
 
-      try {
-        await apiCall('/auth/send-verification-sms', 'POST', {
-          phone: '+380' + regPhone,
+        await apiCall('/auth/send-verification-email', 'POST', {
+          email: regEmail,
           code: generatedCode
         });
-      } catch (err) {
-        console.error("SMS simulation send failed:", err);
+
+        setOtpCode(generatedCode);
+        setOtpMode(true);
+        setEnteredOtp('');
+        showToastMsg(`Код підтвердження надіслано на пошту ${regEmail}`, 'success');
       }
-
-      setOtpCode(generatedCode);
-      setOtpMode(true);
-      setEnteredOtp('');
-
-      // Code is visible on the screen in OtpVerifyForm
-      console.log(`[SMS Simulation] Verification code: ${generatedCode}`);
+    } catch (err) {
+      // Toast error is automatically shown by apiCall
     }
   };
 
@@ -847,15 +847,12 @@ function AppContent() {
     }
 
     try {
-      const payload = regRole === 'B2B' ? {
+      const payload = {
         name: regName,
         email: regEmail,
+        phone: regPhone ? `+380${regPhone}` : null,
+        faculty: regRole === 'B2C' ? (regFaculty || 'ФКІТ') : null,
         password: regPassword,
-        otp_code: enteredOtp,
-        role: 'B2B'
-      } : {
-        name: regName,
-        phone: `+380${regPhone}`,
         otp_code: enteredOtp,
         role: regRole
       };
@@ -964,6 +961,7 @@ function AppContent() {
               const userData = await apiCall('/auth/google', 'POST', {
                 access_token: tokenResponse.access_token,
                 role: regRole,
+                faculty: regRole === 'B2C' ? regFaculty : null,
                 org_name: regRole === 'B2B' ? regOrgName : null,
                 org_address: regRole === 'B2B' ? regOrgAddr : null,
                 org_description: regRole === 'B2B' ? regOrgDesc : null
@@ -1187,7 +1185,8 @@ function AppContent() {
         location: formLocation,
         address: formAddress,
         description: formDescription,
-        max_volunteers: formMaxVolunteers
+        max_volunteers: formMaxVolunteers,
+        target_faculty: formTargetFaculty || 'ALL'
       });
       showToastMsg("Захід успішно створено та опубліковано!", "success");
       setFormTitle('');
@@ -1327,93 +1326,96 @@ function AppContent() {
   // Auth Flow Route
   if (!user) {
     return (
-      <Routes>
-        <Route path="/login" element={
-          <div className="w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181b] flex items-center justify-center">
-            <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] dark:bg-[#18181b] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111] dark:text-gray-200">
-              <div className="absolute top-6 right-6">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="p-2.5 bg-gray-50 border border-transparent hover:bg-gray-100 dark:bg-[#27272A] dark:border-transparent dark:hover:bg-zinc-700 text-gray-500 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100 rounded-full shadow-sm transition-all active:scale-90 cursor-pointer flex items-center justify-center"
-                  title={isDark ? "Світла тема" : "Темна тема"}
-                >
-                  {isDark ? <Sun size={14} className="text-[#FF5522]" /> : <Moon size={14} className="text-[#FF5522]" />}
-                </button>
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center my-auto">
-                <h1 className="text-4xl font-black tracking-tight mb-2">
-                  <span className="text-[#FF5522]">One</span><span className="text-gray-950 dark:text-gray-200">Click</span>
-                </h1>
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
+      <div className="w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181b] relative">
+        <Toast toast={toast} />
+        <Routes>
+          <Route path="/login" element={
+            <div className="w-full min-h-screen bg-[#f5f5f7] dark:bg-[#18181b] flex items-center justify-center">
+              <div className="w-full max-w-[450px] min-h-screen md:min-h-[680px] bg-[#f5f5f7] dark:bg-[#18181b] md:rounded-[40px] md:shadow-2xl overflow-hidden relative flex flex-col justify-between p-6 text-[#111111] dark:text-gray-200">
+                <div className="absolute top-6 right-6">
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="p-2.5 bg-gray-50 border border-transparent hover:bg-gray-100 dark:bg-[#27272A] dark:border-transparent dark:hover:bg-zinc-700 text-gray-500 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100 rounded-full shadow-sm transition-all active:scale-90 cursor-pointer flex items-center justify-center"
+                    title={isDark ? "Світла тема" : "Темна тема"}
+                  >
+                    {isDark ? <Sun size={14} className="text-[#FF5522]" /> : <Moon size={14} className="text-[#FF5522]" />}
+                  </button>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center my-auto">
+                  <h1 className="text-4xl font-black tracking-tight mb-2">
+                    <span className="text-[#FF5522]">One</span><span className="text-gray-950 dark:text-gray-200">Click</span>
+                  </h1>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-8">Платформа волонтерства</p>
 
-                {inviteOrgName && (
-                  <div className="w-full max-w-[320px] mb-6 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
-                    <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
-                    <div className="text-[10px] text-gray-700 dark:text-gray-300 font-semibold leading-relaxed">
-                      <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 dark:text-gray-100 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                  {inviteOrgName && (
+                    <div className="w-full max-w-[320px] mb-6 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-4 text-left animate-fadeIn shadow-sm flex items-start gap-2.5">
+                      <Info size={16} className="text-[#FF5522] shrink-0 mt-0.5" />
+                      <div className="text-[10px] text-gray-700 dark:text-gray-300 font-semibold leading-relaxed">
+                        <span className="font-extrabold text-[#FF5522]">Запрошення!</span> Вас запросили приєднатися до команди організації <span className="font-black text-gray-900 dark:text-gray-100 select-all">"{inviteOrgName}"</span>. Увійдіть або зареєструйтеся, щоб автоматично прийняти запрошення та отримати доступ до кабінету.
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {otpMode ? (
-                  <OtpVerifyForm
-                    enteredOtp={enteredOtp}
-                    setEnteredOtp={setEnteredOtp}
-                    otpCode={otpCode}
-                    regEmail={regEmail}
-                    regPhone={regPhone}
-                    regRole={regRole}
-                    setOtpMode={setOtpMode}
-                    setOtpCode={setOtpCode}
-                    handleVerifyOtp={handleVerifyOtp}
-                  />
-                ) : forgotPasswordMode ? (
-                  <ResetPasswordForm
-                    resetEmail={resetEmail}
-                    setResetEmail={setResetEmail}
-                    newPassword={newPassword}
-                    setNewPassword={setNewPassword}
-                    resetOtpCode={resetOtpCode}
-                    resetEnteredOtp={resetEnteredOtp}
-                    setResetEnteredOtp={setResetEnteredOtp}
-                    resetOtpMode={resetOtpMode}
-                    setResetOtpMode={setResetOtpMode}
-                    handleResetPasswordSubmit={handleResetPasswordSubmit}
-                    handleRequestResetOtp={handleRequestResetOtp}
-                    setForgotPasswordMode={setForgotPasswordMode}
-                  />
-                ) : (
-                  <AuthForm
-                    regRole={regRole}
-                    setRegRole={setRegRole}
-                    regName={regName}
-                    setRegName={setRegName}
-                    regPhone={regPhone}
-                    setRegPhone={setRegPhone}
-                    regEmail={regEmail}
-                    setRegEmail={setRegEmail}
-                    regPassword={regPassword}
-                    setRegPassword={setRegPassword}
-                    handleLoginSubmit={handleLoginSubmit}
-                    handleGoogleLogin={handleGoogleLogin}
-                    setForgotPasswordMode={setForgotPasswordMode}
-                  />
-                )}
-              </div>
+                  {otpMode ? (
+                    <OtpVerifyForm
+                      enteredOtp={enteredOtp}
+                      setEnteredOtp={setEnteredOtp}
+                      otpCode={otpCode}
+                      regEmail={regEmail}
+                      regPhone={regPhone}
+                      regRole={regRole}
+                      setOtpMode={setOtpMode}
+                      setOtpCode={setOtpCode}
+                      handleVerifyOtp={handleVerifyOtp}
+                    />
+                  ) : forgotPasswordMode ? (
+                    <ResetPasswordForm
+                      resetEmail={resetEmail}
+                      setResetEmail={setResetEmail}
+                      newPassword={newPassword}
+                      setNewPassword={setNewPassword}
+                      resetOtpCode={resetOtpCode}
+                      resetEnteredOtp={resetEnteredOtp}
+                      setResetEnteredOtp={setResetEnteredOtp}
+                      resetOtpMode={resetOtpMode}
+                      setResetOtpMode={setResetOtpMode}
+                      handleResetPasswordSubmit={handleResetPasswordSubmit}
+                      handleRequestResetOtp={handleRequestResetOtp}
+                      setForgotPasswordMode={setForgotPasswordMode}
+                    />
+                  ) : (
+                    <AuthForm
+                      regRole={regRole}
+                      setRegRole={setRegRole}
+                      regName={regName}
+                      setRegName={setRegName}
+                      regPhone={regPhone}
+                      setRegPhone={setRegPhone}
+                      regEmail={regEmail}
+                      setRegEmail={setRegEmail}
+                      regPassword={regPassword}
+                      setRegPassword={setRegPassword}
+                      regFaculty={regFaculty}
+                      setRegFaculty={setRegFaculty}
+                      handleLoginSubmit={handleLoginSubmit}
+                      handleGoogleLogin={handleGoogleLogin}
+                      setForgotPasswordMode={setForgotPasswordMode}
+                    />
+                  )}
+                </div>
 
-              <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
-                © 2026 OneClick
+                <div className="text-center text-[10px] text-gray-400 mt-6 font-bold uppercase tracking-wider">
+                  © 2026 OneClick
+                </div>
               </div>
             </div>
-          </div>
-        } />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          } />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
     );
   }
-
-
 
   return (
     <div className="w-full h-screen bg-[#f5f5f7] dark:bg-[#18181B] relative overflow-hidden">
@@ -1427,66 +1429,322 @@ function AppContent() {
         <Routes>
           {/* Volunteer Routes */}
           <Route path="/volunteer/*" element={
-            currentRole === 'B2C' ? (
-              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
-                <VolunteerSidebar
-                  activeTab={activeB2CTab}
-                  setActiveTab={(tab) => {
-                    setCurrentDetailsShift(null);
-                    navigate(`/volunteer/${tab}`);
-                  }}
-                  user={user}
-                  organization={organization}
-                  toggleRole={toggleRole}
-                  handleSignOut={handleSignOut}
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  API_URL={API_URL}
-                />
+            <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
+              <VolunteerSidebar
+                activeTab={activeB2CTab}
+                setActiveTab={(tab) => {
+                  setCurrentDetailsShift(null);
+                  navigate(`/volunteer/${tab}`);
+                }}
+                user={user}
+                organization={organization}
+                toggleRole={toggleRole}
+                handleSignOut={handleSignOut}
+                isDark={isDark}
+                toggleTheme={toggleTheme}
+                API_URL={API_URL}
+              />
 
-                <div className="w-full max-w-[450px] md:max-w-none mx-auto md:mx-0 px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
-                  {currentDetailsShift ? (
-                    <ShiftDetailsModal
+              <div className="w-full max-w-[450px] md:max-w-none mx-auto md:mx-0 px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
+                {currentDetailsShift ? (
+                  <ShiftDetailsModal
+                    shift={currentDetailsShift}
+                    onClose={() => setCurrentDetailsShift(null)}
+                    currentRole={currentRole}
+                    bookedShifts={bookedShifts}
+                    handleApplyShift={handleApplyShift}
+                    handleCancelShift={handleCancelShift}
+                  />
+                ) : (
+                  <Routes>
+                    <Route path="search" element={
+                      <VolunteerDashboard
+                        shifts={shifts}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        b2cFilters={b2cFilters}
+                        selectedFilter={selectedFilter}
+                        setSelectedFilter={setSelectedFilter}
+                        calendarDays={calendarDays}
+                        selectedDateStr={selectedDateStr}
+                        setSelectedDateStr={setSelectedDateStr}
+                        setCurrentDetailsShift={setCurrentDetailsShift}
+                        toggleRole={toggleRole}
+                        organization={organization}
+                        isDark={isDark}
+                        toggleTheme={toggleTheme}
+                      />
+                    } />
+                    <Route path="myshifts" element={
+                      <BookedShiftsList
+                        filteredB2CBookedShifts={filteredB2CBookedShifts}
+                        activeB2CShiftsFilter={activeB2CShiftsFilter}
+                        setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
+                        setCurrentDetailsShift={setCurrentDetailsShift}
+                        showQrCodes={showQrCodes}
+                        setShowQrCodes={setShowQrCodes}
+                        handleCancelShift={handleCancelShift}
+                      />
+                    } />
+                    <Route path="profile" element={
+                      <VolunteerProfile
+                        user={user}
+                        organization={organization}
+                        isEditingProfile={isEditingProfile}
+                        setIsEditingProfile={setIsEditingProfile}
+                        editName={editName}
+                        setEditName={setEditName}
+                        editPhone={editPhone}
+                        setEditPhone={setEditPhone}
+                        editEmail={editEmail}
+                        setEditEmail={setEditEmail}
+                        editFaculty={editFaculty}
+                        setEditFaculty={setEditFaculty}
+                        editEmailOtpCode={editEmailOtpCode}
+                        setEditEmailOtpCode={setEditEmailOtpCode}
+                        emailOtpMode={emailOtpMode}
+                        cancelEditingProfile={cancelEditingProfile}
+                        handleSaveProfile={handleSaveProfile}
+                        handleAvatarUpload={handleAvatarUpload}
+                        fetchVolunteerReviews={fetchVolunteerReviews}
+                        startEditingProfile={startEditingProfile}
+                        toggleRole={toggleRole}
+                        setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
+                        handleLeaveOrganization={handleLeaveOrganization}
+                        handleSignOut={handleSignOut}
+                        API_URL={API_URL}
+                        isDark={isDark}
+                        toggleTheme={toggleTheme}
+                      />
+                    } />
+                    <Route path="*" element={<Navigate to="search" replace />} />
+                  </Routes>
+                )}
+
+                {currentDetailsShift ? (
+                  <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white dark:bg-zinc-800 shadow-xl dark:shadow-black/40 rounded-3xl p-2 z-[999] border border-gray-100 dark:border-zinc-700/60">
+                    <ShiftActionButton
                       shift={currentDetailsShift}
-                      onClose={() => setCurrentDetailsShift(null)}
                       currentRole={currentRole}
                       bookedShifts={bookedShifts}
                       handleApplyShift={handleApplyShift}
                       handleCancelShift={handleCancelShift}
                     />
-                  ) : (
+                  </div>
+                ) : (
+                  <Navigation
+                    role="B2C"
+                    activeTab={activeB2CTab}
+                    setActiveTab={(tab) => {
+                      setCurrentDetailsShift(null);
+                      navigate(`/volunteer/${tab}`);
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          } />
+
+          {/* Coordinator Routes */}
+          <Route path="/coordinator/*" element={
+            <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
+              {organization && (
+                <Sidebar
+                  activeTab={activeB2BTab}
+                  setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
+                  organization={organization}
+                  toggleRole={toggleRole}
+                  handleSignOut={handleSignOut}
+                  user={user}
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                />
+              )}
+
+              <div className="w-full px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
+                {!organization ? (
+                  <div className="animate-fadeIn min-h-[75vh] flex flex-col items-center justify-center py-6 px-2 sm:px-4">
+                    <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-6 sm:p-10 shadow-xl shadow-gray-200/50 dark:shadow-black/40 text-center relative overflow-hidden">
+                      
+                      {/* Icon Badge */}
+                      <div className="w-14 h-14 mx-auto mb-4 bg-orange-500/10 dark:bg-orange-500/20 text-[#FF5522] dark:text-orange-400 rounded-2xl flex items-center justify-center border border-orange-500/20 shadow-inner">
+                        <Building2 size={28} />
+                      </div>
+
+                      <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-zinc-100 mb-1">
+                        Реєстрація факультету / підрозділу
+                      </h1>
+                      <p className="text-xs text-gray-400 dark:text-zinc-400 font-medium mb-6 max-w-xs mx-auto">
+                        Вкажіть дані вашого факультету або підрозділу для продовження
+                      </p>
+
+                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 text-left">
+                        {user && !user.phone && (
+                          <div>
+                            <label className="block text-[10px] font-extrabold text-[#FF5522] dark:text-orange-400 uppercase tracking-wider mb-1.5 px-1">
+                              Номер мобільного телефону
+                            </label>
+                            <div className="flex gap-2 items-center">
+                              <span className="bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 font-extrabold rounded-2xl px-3.5 py-3.5 text-xs shrink-0">
+                                +380
+                              </span>
+                              <input
+                                type="text"
+                                placeholder="931234567"
+                                value={googlePhone}
+                                onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                required
+                                className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700/80 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#FF5522] focus:ring-2 focus:ring-[#FF5522]/20 transition-all"
+                              />
+                            </div>
+                            <span className="text-[9px] text-gray-400 dark:text-zinc-500 mt-1 block px-1">
+                              Потрібен для зв'язку волонтерів з представником факультету
+                            </span>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[10px] font-extrabold text-gray-400 dark:text-zinc-400 uppercase tracking-wider mb-1.5 px-1">
+                            Назва факультету / підрозділу
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={regOrgName}
+                            onChange={(e) => setRegOrgName(e.target.value)}
+                            placeholder="напр. Факультет кібербезпеки та інформаційних технологій"
+                            className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700/80 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#FF5522] focus:ring-2 focus:ring-[#FF5522]/20 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-extrabold text-gray-400 dark:text-zinc-400 uppercase tracking-wider mb-1.5 px-1">
+                            Локація / Кабінет
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={regOrgAddr}
+                            onChange={(e) => setRegOrgAddr(e.target.value)}
+                            placeholder="напр. вул. Канатна, 112 (Деканат)"
+                            className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700/80 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#FF5522] focus:ring-2 focus:ring-[#FF5522]/20 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-extrabold text-gray-400 dark:text-zinc-400 uppercase tracking-wider mb-1.5 px-1">
+                            Опис діяльності
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={regOrgDesc}
+                            onChange={(e) => setRegOrgDesc(e.target.value)}
+                            placeholder="Короткий опис напрямку роботи волонтерського осередку..."
+                            className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700/80 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#FF5522] focus:ring-2 focus:ring-[#FF5522]/20 transition-all resize-none"
+                          />
+                        </div>
+
+                        <div className="pt-2 space-y-3">
+                          <button
+                            type="submit"
+                            className="w-full py-4 bg-[#FF5522] hover:bg-[#e04411] text-white font-extrabold rounded-2xl shadow-lg shadow-orange-500/25 text-xs tracking-wider uppercase transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                          >
+                            <Building2 size={16} />
+                            Зареєструвати факультет
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleSignOut}
+                            className="w-full py-3 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 font-bold rounded-2xl text-xs tracking-wider uppercase transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                          >
+                            <LogOut size={15} />
+                            Вийти з акаунту
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                     <Routes>
-                      <Route path="search" element={
-                        <VolunteerDashboard
-                          shifts={shifts}
-                          searchQuery={searchQuery}
-                          setSearchQuery={setSearchQuery}
-                          b2cFilters={b2cFilters}
-                          selectedFilter={selectedFilter}
-                          setSelectedFilter={setSelectedFilter}
-                          calendarDays={calendarDays}
-                          selectedDateStr={selectedDateStr}
-                          setSelectedDateStr={setSelectedDateStr}
-                          setCurrentDetailsShift={setCurrentDetailsShift}
-                          toggleRole={toggleRole}
+                      <Route path="manage" element={
+                        <CoordinatorShifts
                           organization={organization}
+                          toggleRole={toggleRole}
+                          activeB2BFilter={activeB2BFilter}
+                          setActiveB2BFilter={setActiveB2BFilter}
+                          filteredB2BShifts={filteredB2BShifts}
+                          b2bApplications={b2bApplications}
+                          setCurrentDetailsShift={setCurrentDetailsShift}
+                          fetchVolunteerReviews={fetchVolunteerReviews}
+                          handleReviewCandidate={handleReviewCandidate}
+                          attendanceCodes={attendanceCodes}
+                          setAttendanceCodes={setAttendanceCodes}
+                          handleConfirmAttendance={handleConfirmAttendance}
+                          ratings={ratings}
+                          setRatings={setRatings}
+                          reviews={reviews}
+                          setReviews={setReviews}
+                          handleRateVolunteer={handleRateVolunteer}
+                          API_URL={API_URL}
                           isDark={isDark}
                           toggleTheme={toggleTheme}
                         />
                       } />
-                      <Route path="myshifts" element={
-                        <BookedShiftsList
-                          filteredB2CBookedShifts={filteredB2CBookedShifts}
-                          activeB2CShiftsFilter={activeB2CShiftsFilter}
-                          setActiveB2CShiftsFilter={setActiveB2CShiftsFilter}
-                          setCurrentDetailsShift={setCurrentDetailsShift}
-                          showQrCodes={showQrCodes}
-                          setShowQrCodes={setShowQrCodes}
-                          handleCancelShift={handleCancelShift}
+
+                      <Route path="create" element={
+                        <ShiftCreateForm
+                          formTitle={formTitle}
+                          setFormTitle={setFormTitle}
+                          formSphere={formSphere}
+                          setFormSphere={setFormSphere}
+                          startTime={startTime}
+                          setStartTime={setStartTime}
+                          endTime={endTime}
+                          setEndTime={setEndTime}
+                          formLocation={formLocation}
+                          setFormLocation={setFormLocation}
+                          selectedDateStr={selectedDateStr}
+                          setSelectedDateStr={setSelectedDateStr}
+                          calendarDays={calendarDays}
+                          formAddress={formAddress}
+                          setFormAddress={setFormAddress}
+                          handleAddressBlur={handleAddressBlur}
+                          showCreateMapPicker={showCreateMapPicker}
+                          setShowCreateMapPicker={setShowCreateMapPicker}
+                          formDescription={formDescription}
+                          setFormDescription={setFormDescription}
+                          formTargetFaculty={formTargetFaculty}
+                          setFormTargetFaculty={setFormTargetFaculty}
+                          handleCreateShift={handleCreateShift}
+                          setTempStartHour={setTempStartHour}
+                          setTempStartMin={setTempStartMin}
+                          setTempEndHour={setTempEndHour}
+                          setTempEndMin={setTempEndMin}
+                          setIsTimePickerOpen={setIsTimePickerOpen}
+                          shiftTemplates={shiftTemplates}
+                          onLoadFromTemplate={handleLoadFromTemplate}
+                          onCreateTemplate={handleCreateTemplate}
+                          formMaxVolunteers={formMaxVolunteers}
+                          setFormMaxVolunteers={setFormMaxVolunteers}
                         />
                       } />
+
+                      <Route path="templates" element={
+                        <ShiftTemplatesList
+                          shiftTemplates={shiftTemplates}
+                          deleteTemplate={deleteTemplate}
+                          onEditTemplate={(template) => {
+                            setSelectedTemplateToEdit(template);
+                            setIsEditTemplateModalOpen(true);
+                          }}
+                          onSelectTemplate={handleUseTemplateFromList}
+                        />
+                      } />
+
                       <Route path="profile" element={
-                        <VolunteerProfile
+                        <CoordinatorProfile
                           user={user}
                           organization={organization}
                           isEditingProfile={isEditingProfile}
@@ -1500,13 +1758,23 @@ function AppContent() {
                           editEmailOtpCode={editEmailOtpCode}
                           setEditEmailOtpCode={setEditEmailOtpCode}
                           emailOtpMode={emailOtpMode}
-                          cancelEditingProfile={cancelEditingProfile}
+                          editOrgName={editOrgName}
+                          setEditOrgName={setEditOrgName}
+                          editOrgAddr={editOrgAddr}
+                          setEditOrgAddr={setEditOrgAddr}
+                          editOrgDesc={editOrgDesc}
+                          setEditOrgDesc={setEditOrgDesc}
                           handleSaveProfile={handleSaveProfile}
-                          handleAvatarUpload={handleAvatarUpload}
-                          fetchVolunteerReviews={fetchVolunteerReviews}
                           startEditingProfile={startEditingProfile}
+                          cancelEditingProfile={cancelEditingProfile}
+                          handleAvatarUpload={handleAvatarUpload}
+                          handleGenerateInvite={handleGenerateInvite}
+                          isMembersListExpanded={isMembersListExpanded}
+                          setIsMembersListExpanded={setIsMembersListExpanded}
+                          orgMembers={orgMembers}
+                          handleRemoveMember={handleRemoveMember}
+                          handleUpdateMemberRole={handleUpdateMemberRole}
                           toggleRole={toggleRole}
-                          setIsOrgRegisterModalOpen={setIsOrgRegisterModalOpen}
                           handleLeaveOrganization={handleLeaveOrganization}
                           handleSignOut={handleSignOut}
                           API_URL={API_URL}
@@ -1514,279 +1782,18 @@ function AppContent() {
                           toggleTheme={toggleTheme}
                         />
                       } />
-                      <Route path="*" element={<Navigate to="search" replace />} />
+                      <Route path="*" element={<Navigate to="manage" replace />} />
                     </Routes>
-                  )}
 
-                  {currentDetailsShift ? (
-                    <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[418px] bg-white dark:bg-zinc-800 shadow-xl dark:shadow-black/40 rounded-3xl p-2 z-[999] border border-gray-100 dark:border-zinc-700/60">
-                      <ShiftActionButton
-                        shift={currentDetailsShift}
-                        currentRole={currentRole}
-                        bookedShifts={bookedShifts}
-                        handleApplyShift={handleApplyShift}
-                        handleCancelShift={handleCancelShift}
-                      />
-                    </div>
-                  ) : (
                     <Navigation
-                      role="B2C"
-                      activeTab={activeB2CTab}
-                      setActiveTab={(tab) => {
-                        setCurrentDetailsShift(null);
-                        navigate(`/volunteer/${tab}`);
-                      }}
+                      role="B2B"
+                      activeTab={activeB2BTab}
+                      setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
                     />
-                  )}
-                </div>
-              </div>
-            ) : (
-              <Navigate to="/coordinator/manage" replace />
-            )
-          } />
-
-          {/* Coordinator Routes */}
-          <Route path="/coordinator/*" element={
-            currentRole === 'B2B' ? (
-              <div className="w-full flex flex-col md:flex-row md:w-full min-h-screen md:min-h-0 md:h-full">
-                {organization && (
-                  <Sidebar
-                    activeTab={activeB2BTab}
-                    setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
-                    organization={organization}
-                    toggleRole={toggleRole}
-                    handleSignOut={handleSignOut}
-                    user={user}
-                    isDark={isDark}
-                    toggleTheme={toggleTheme}
-                  />
+                  </>
                 )}
-
-                <div className="w-full px-4 pt-6 flex-1 overflow-y-auto md:p-8 md:pb-24 pb-[110px]">
-                  {!organization ? (
-                    <div className="animate-fadeIn py-6 text-left">
-                      <div className="flex justify-between items-center mb-5">
-                        <div>
-                          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-200">Реєстрація організації</h1>
-                          <p className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase tracking-wider">
-                            Вкажіть дані вашої організації для продовження
-                          </p>
-                        </div>
-                      </div>
-
-                      <form onSubmit={handleOrgRegisterSubmit} className="space-y-4 bg-white dark:bg-zinc-800 p-5 rounded-3xl border border-gray-100 dark:border-transparent shadow-sm">
-                        {user && !user.phone && (
-                          <div>
-                            <label className="block text-[10px] font-bold text-[#FF5522] uppercase tracking-widest mb-1.5 px-1">
-                              Номер мобільного телефону
-                            </label>
-                            <div className="flex gap-2 items-center">
-                              <span className="bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400 font-extrabold rounded-2xl px-3 py-3.5 text-xs shrink-0">
-                                +380
-                              </span>
-                              <input
-                                type="text"
-                                placeholder="931234567"
-                                value={googlePhone}
-                                onChange={(e) => setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                                required
-                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
-                              />
-                            </div>
-                            <span className="text-[9px] text-gray-400 dark:text-zinc-500 mt-1 block px-1">
-                              Потрібен для зв'язку волонтерів з вами як організатором
-                            </span>
-                          </div>
-                        )}
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
-                            Назва організації
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="напр. Foundation Coffee"
-                            value={regOrgName}
-                            onChange={(e) => setRegOrgName(e.target.value)}
-                            required
-                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
-                            Адреса / Локація офісу
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="напр. вул. Канатна, 15"
-                            value={regOrgAddr}
-                            onChange={(e) => setRegOrgAddr(e.target.value)}
-                            required
-                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
-                            Опис організації
-                          </label>
-                          <textarea
-                            rows="3"
-                            placeholder="Короткий опис діяльності організації..."
-                            value={regOrgDesc}
-                            onChange={(e) => setRegOrgDesc(e.target.value)}
-                            required
-                            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF5522] shadow-sm transition-all resize-none"
-                          />
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
-                        >
-                          Зареєструвати компанію
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleSignOut}
-                          className="w-full py-3.5 bg-gray-55 dark:bg-zinc-900 border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-700 dark:text-zinc-200 font-extrabold rounded-full shadow-sm text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                        >
-                          Вийти з акаунту
-                        </button>
-                      </form>
-                    </div>
-                  ) : (
-                    <>
-                      <Routes>
-                        <Route path="manage" element={
-                          <CoordinatorShifts
-                            organization={organization}
-                            toggleRole={toggleRole}
-                            activeB2BFilter={activeB2BFilter}
-                            setActiveB2BFilter={setActiveB2BFilter}
-                            filteredB2BShifts={filteredB2BShifts}
-                            b2bApplications={b2bApplications}
-                            setCurrentDetailsShift={setCurrentDetailsShift}
-                            fetchVolunteerReviews={fetchVolunteerReviews}
-                            handleReviewCandidate={handleReviewCandidate}
-                            attendanceCodes={attendanceCodes}
-                            setAttendanceCodes={setAttendanceCodes}
-                            handleConfirmAttendance={handleConfirmAttendance}
-                            ratings={ratings}
-                            setRatings={setRatings}
-                            reviews={reviews}
-                            setReviews={setReviews}
-                            handleRateVolunteer={handleRateVolunteer}
-                            API_URL={API_URL}
-                            isDark={isDark}
-                            toggleTheme={toggleTheme}
-                          />
-                        } />
-
-                        <Route path="create" element={
-                          <ShiftCreateForm
-                            formTitle={formTitle}
-                            setFormTitle={setFormTitle}
-                            formSphere={formSphere}
-                            setFormSphere={setFormSphere}
-                            startTime={startTime}
-                            setStartTime={setStartTime}
-                            endTime={endTime}
-                            setEndTime={setEndTime}
-                            formLocation={formLocation}
-                            setFormLocation={setFormLocation}
-                            selectedDateStr={selectedDateStr}
-                            setSelectedDateStr={setSelectedDateStr}
-                            calendarDays={calendarDays}
-                            formAddress={formAddress}
-                            setFormAddress={setFormAddress}
-                            handleAddressBlur={handleAddressBlur}
-                            showCreateMapPicker={showCreateMapPicker}
-                            setShowCreateMapPicker={setShowCreateMapPicker}
-                            formDescription={formDescription}
-                            setFormDescription={setFormDescription}
-                            handleCreateShift={handleCreateShift}
-                            setTempStartHour={setTempStartHour}
-                            setTempStartMin={setTempStartMin}
-                            setTempEndHour={setTempEndHour}
-                            setTempEndMin={setTempEndMin}
-                            setIsTimePickerOpen={setIsTimePickerOpen}
-                            shiftTemplates={shiftTemplates}
-                            onLoadFromTemplate={handleLoadFromTemplate}
-                            onCreateTemplate={handleCreateTemplate}
-                            formMaxVolunteers={formMaxVolunteers}
-                            setFormMaxVolunteers={setFormMaxVolunteers}
-                          />
-                        } />
-
-                        <Route path="templates" element={
-                          <ShiftTemplatesList
-                            shiftTemplates={shiftTemplates}
-                            deleteTemplate={deleteTemplate}
-                            onEditTemplate={(template) => {
-                              setSelectedTemplateToEdit(template);
-                              setIsEditTemplateModalOpen(true);
-                            }}
-                            onSelectTemplate={handleUseTemplateFromList}
-                          />
-                        } />
-
-                        <Route path="profile" element={
-                          <CoordinatorProfile
-                            user={user}
-                            organization={organization}
-                            isEditingProfile={isEditingProfile}
-                            setIsEditingProfile={setIsEditingProfile}
-                            editName={editName}
-                            setEditName={setEditName}
-                            editPhone={editPhone}
-                            setEditPhone={setEditPhone}
-                            editEmail={editEmail}
-                            setEditEmail={setEditEmail}
-                            editEmailOtpCode={editEmailOtpCode}
-                            setEditEmailOtpCode={setEditEmailOtpCode}
-                            emailOtpMode={emailOtpMode}
-                            editOrgName={editOrgName}
-                            setEditOrgName={setEditOrgName}
-                            editOrgAddr={editOrgAddr}
-                            setEditOrgAddr={setEditOrgAddr}
-                            editOrgDesc={editOrgDesc}
-                            setEditOrgDesc={setEditOrgDesc}
-                            handleSaveProfile={handleSaveProfile}
-                            startEditingProfile={startEditingProfile}
-                            cancelEditingProfile={cancelEditingProfile}
-                            handleAvatarUpload={handleAvatarUpload}
-                            handleGenerateInvite={handleGenerateInvite}
-                            isMembersListExpanded={isMembersListExpanded}
-                            setIsMembersListExpanded={setIsMembersListExpanded}
-                            orgMembers={orgMembers}
-                            handleRemoveMember={handleRemoveMember}
-                            handleUpdateMemberRole={handleUpdateMemberRole}
-                            toggleRole={toggleRole}
-                            handleLeaveOrganization={handleLeaveOrganization}
-                            handleSignOut={handleSignOut}
-                            API_URL={API_URL}
-                            isDark={isDark}
-                            toggleTheme={toggleTheme}
-                          />
-                        } />
-                        <Route path="*" element={<Navigate to="manage" replace />} />
-                      </Routes>
-
-                      <Navigation
-                        role="B2B"
-                        activeTab={activeB2BTab}
-                        setActiveTab={(tab) => navigate(`/coordinator/${tab}`)}
-                      />
-                    </>
-                  )}
-                </div>
               </div>
-            ) : (
-              <Navigate to="/volunteer/search" replace />
-            )
+            </div>
           } />
 
           {/* Root Redirects */}
