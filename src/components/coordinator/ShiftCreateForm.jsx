@@ -52,8 +52,40 @@ export default function ShiftCreateForm({
   const [templateName, setTemplateName] = useState('');
   const [titleAlertMessage, setTitleAlertMessage] = useState('');
 
-  // Custom B2B DatePicker state
+  // Custom B2B DatePicker state & animation trackers
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isPickerClosing, setIsPickerClosing] = useState(false);
+  const [isNamingClosing, setIsNamingClosing] = useState(false);
+  const [isAlertClosing, setIsAlertClosing] = useState(false);
+
+  const handleClosePicker = (callback) => {
+    if (isPickerClosing) return;
+    setIsPickerClosing(true);
+    setTimeout(() => {
+      setIsDatePickerOpen(false);
+      setIsPickerClosing(false);
+      if (callback) callback();
+    }, 210);
+  };
+
+  const handleCloseNaming = (callback) => {
+    if (isNamingClosing) return;
+    setIsNamingClosing(true);
+    setTimeout(() => {
+      setIsNamingTemplate(false);
+      setIsNamingClosing(false);
+      if (callback) callback();
+    }, 210);
+  };
+
+  const handleCloseAlert = () => {
+    if (isAlertClosing) return;
+    setIsAlertClosing(true);
+    setTimeout(() => {
+      setTitleAlertMessage('');
+      setIsAlertClosing(false);
+    }, 210);
+  };
 
   // Parse currently selected date
   const [selY, selM, selD] = (selectedDateStr || '').split('-').map(Number);
@@ -387,8 +419,14 @@ export default function ShiftCreateForm({
 
       {/* Custom B2B DatePicker Modal via React Portal */}
       {isDatePickerOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 animate-scaleUp text-left">
+        <div
+          className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md ${isPickerClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={() => handleClosePicker()}
+        >
+          <div
+            className={`bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 text-left ${isPickerClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
               <h3 className="font-black text-base flex items-center gap-2">
@@ -397,7 +435,7 @@ export default function ShiftCreateForm({
               </h3>
               <button
                 type="button"
-                onClick={() => setIsDatePickerOpen(false)}
+                onClick={() => handleClosePicker()}
                 className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-100 dark:bg-zinc-800 rounded-full transition-colors cursor-pointer"
               >
                 <X size={16} />
@@ -468,7 +506,7 @@ export default function ShiftCreateForm({
                     onClick={() => {
                       if (!isAvailable) return;
                       setSelectedDateStr(dateStr);
-                      setIsDatePickerOpen(false);
+                      handleClosePicker();
                     }}
                     className={`relative h-9 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
                       !isAvailable
@@ -492,7 +530,7 @@ export default function ShiftCreateForm({
                 type="button"
                 onClick={() => {
                   setSelectedDateStr(nowStr);
-                  setIsDatePickerOpen(false);
+                  handleClosePicker();
                 }}
                 className="font-bold text-[#FF5522] dark:text-orange-400 hover:underline cursor-pointer"
               >
@@ -505,8 +543,14 @@ export default function ShiftCreateForm({
       )}
 
       {isNamingTemplate && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 max-w-md w-full border border-gray-200 dark:border-zinc-800 shadow-2xl relative text-left">
+        <div
+          className={`fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4 ${isNamingClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={() => handleCloseNaming()}
+        >
+          <div
+            className={`bg-white dark:bg-zinc-900 rounded-xl p-6 max-w-md w-full border border-gray-200 dark:border-zinc-800 shadow-2xl relative text-left ${isNamingClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-base font-black text-gray-950 dark:text-zinc-200 mb-2">
               Зберегти як шаблон
             </h3>
@@ -526,7 +570,7 @@ export default function ShiftCreateForm({
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setIsNamingTemplate(false)}
+                onClick={() => handleCloseNaming()}
                 className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-extrabold text-[10px] rounded-xl uppercase tracking-wider transition-all active:scale-95 cursor-pointer text-center"
               >
                 Скасувати
@@ -535,8 +579,7 @@ export default function ShiftCreateForm({
                 type="button"
                 onClick={() => {
                   if (templateName.trim()) {
-                    onCreateTemplate(templateName.trim());
-                    setIsNamingTemplate(false);
+                    handleCloseNaming(() => onCreateTemplate(templateName.trim()));
                   }
                 }}
                 disabled={!templateName.trim()}
@@ -551,8 +594,14 @@ export default function ShiftCreateForm({
       )}
 
       {titleAlertMessage && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 max-w-md w-full border border-gray-200 dark:border-zinc-800 shadow-2xl relative text-left">
+        <div
+          className={`fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4 ${isAlertClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={handleCloseAlert}
+        >
+          <div
+            className={`bg-white dark:bg-zinc-900 rounded-xl p-6 max-w-md w-full border border-gray-200 dark:border-zinc-800 shadow-2xl relative text-left ${isAlertClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-base font-black text-gray-950 dark:text-zinc-200 mb-2">
               Увага
             </h3>
@@ -562,7 +611,7 @@ export default function ShiftCreateForm({
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setTitleAlertMessage('')}
+                onClick={handleCloseAlert}
                 className="px-6 py-3 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-extrabold text-[10px] rounded-xl uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
               >
                 Зрозуміло

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Star } from 'lucide-react';
 
 export default function ReviewsModal({
@@ -9,13 +9,30 @@ export default function ReviewsModal({
   volunteerReviews,
   apiUrl
 }) {
+  const [isClosing, setIsClosing] = useState(false);
+
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 210);
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#27272A] rounded-3xl w-full max-w-[390px] p-6 shadow-2xl animate-scaleUp text-left relative flex flex-col max-h-[90vh]">
+    <div
+      className={`fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 ${isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+      onClick={handleClose}
+    >
+      <div
+        className={`bg-white dark:bg-[#27272A] rounded-3xl w-full max-w-[390px] p-6 shadow-2xl text-left relative flex flex-col max-h-[90vh] ${isClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-black dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:hover:text-white rounded-full transition-all active:scale-95 cursor-pointer"
         >
           <X size={18} />
@@ -132,7 +149,7 @@ export default function ReviewsModal({
         </div>
 
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="w-full py-3.5 mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 font-extrabold rounded-full text-xs transition-all active:scale-95 cursor-pointer border border-gray-200/60 dark:border-zinc-700/80 shadow-xs"
         >
           Закрити

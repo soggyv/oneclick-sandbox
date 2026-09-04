@@ -18,16 +18,19 @@ export default function ResetPasswordForm({
     return (
       <form onSubmit={handleResetPasswordSubmit} className="space-y-4 w-full max-w-[320px] animate-fadeIn">
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1 px-1">
+          <label htmlFor="reset-otp-input" className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1 px-1">
             Код відновлення
           </label>
           <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold mb-3 px-1 leading-relaxed">
-            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 dark:text-white font-black">{resetEmail}</span> (Код доступу: <span className="text-[#FF5522] font-black">{resetOtpCode}</span>)
+            Ми надіслали код для зміни паролю на пошту <span className="text-gray-900 dark:text-white font-black">{resetEmail}</span>
             <span className="block mt-1 text-[#FF5522] font-bold text-[9px] uppercase tracking-wide">
               * Якщо лист не надходить, перевірте папку "Спам"
             </span>
           </p>
           <input
+            id="reset-otp-input"
+            name="reset-otp"
+            autoComplete="one-time-code"
             type="text"
             placeholder="0 0 0 0"
             value={resetEnteredOtp}
@@ -38,10 +41,13 @@ export default function ResetPasswordForm({
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
+          <label htmlFor="reset-new-password" className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
             Новий пароль
           </label>
           <input
+            id="reset-new-password"
+            name="new-password"
+            autoComplete="new-password"
             type="password"
             placeholder="••••••••"
             value={newPassword}
@@ -83,10 +89,13 @@ export default function ResetPasswordForm({
         Відновлення паролю
       </h2>
       <div>
-        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+        <label htmlFor="reset-email" className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
           Електронна пошта
         </label>
         <input
+          id="reset-email"
+          name="email"
+          autoComplete="email"
           type="email"
           placeholder="email@example.com"
           value={resetEmail}

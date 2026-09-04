@@ -2,15 +2,21 @@ import os
 import datetime
 import jwt
 import bcrypt
+import secrets
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend import models
 from backend.database import get_db
 
-JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-12345")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    # Generate secure random secret per instance if not provided in environment
+    JWT_SECRET = secrets.token_hex(32)
+
 JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 security = HTTPBearer(auto_error=False)
 
@@ -31,16 +37,24 @@ pwd_context = PasswordContext()
 def create_access_token(user_id: int) -> str:
     payload = {
         "user_id": user_id,
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=30)
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def get_current_user_id(
+    request: Request,
     authorization: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> int:
-    if authorization and authorization.credentials:
+    token = None
+    # 1. Try extracting token from httpOnly cookie
+    if request and request.cookies and "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+    # 2. Try extracting token from Bearer Authorization header
+    elif authorization and authorization.credentials:
         token = authorization.credentials
+
+    if token:
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("user_id")
@@ -53,7 +67,7 @@ def get_current_user_id(
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Необхідна авторизація (недійсний або відсутній токен)"
+        detail="Необхідна авторизація (недійсний або прострочений токен)"
     )
 
 def normalize_phone(phone: str) -> str:

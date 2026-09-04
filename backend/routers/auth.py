@@ -1,6 +1,7 @@
 import datetime
 import urllib.request
 import json
+import secrets
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -13,6 +14,30 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # In-memory dictionary to track OTP timestamps for rate limiting: {target: last_sent_datetime}
 otp_timestamps = {}
+# In-memory tracking for failed login attempts to prevent password brute-force: {identifier: [timestamps]}
+failed_login_attempts = {}
+
+def check_brute_force_limit(identifier: str):
+    if not identifier:
+        return
+    now = datetime.datetime.utcnow()
+    attempts = failed_login_attempts.get(identifier, [])
+    # Keep attempts from last 15 minutes (900 seconds)
+    valid_attempts = [t for t in attempts if (now - t).total_seconds() < 900]
+    failed_login_attempts[identifier] = valid_attempts
+    if len(valid_attempts) >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Занадто багато невдалих спроб входу. Спробуйте через 15 хвилин."
+        )
+
+def record_failed_login(identifier: str):
+    if not identifier:
+        return
+    now = datetime.datetime.utcnow()
+    attempts = failed_login_attempts.get(identifier, [])
+    attempts.append(now)
+    failed_login_attempts[identifier] = attempts
 
 def get_google_user_info(access_token: str):
     url = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -34,19 +59,12 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         normalized_phone = normalize_phone(user_data.phone)
         user = db.query(models.User).filter(models.User.phone == normalized_phone).first()
         
-    is_new_user = user is None
-    # Require OTP verification for new users OR when logging in without a password
-    requires_otp = is_new_user or (not user_data.password and not (user and user.password))
-    
-    if requires_otp:
-        target = user_data.email if user_data.email else (normalize_phone(user_data.phone) if user_data.phone else None)
-        if not target:
-            raise HTTPException(status_code=400, detail="Необхідно вказати телефон або email")
-            
-        if not user_data.otp_code:
-            raise HTTPException(status_code=400, detail="Необхідно вказати код підтвердження")
-            
-        # Verify code in db
+    target = user_data.email if user_data.email else (normalize_phone(user_data.phone) if user_data.phone else None)
+    if not target:
+        raise HTTPException(status_code=400, detail="Необхідно вказати телефон або email")
+
+    # In Passwordless mode or when OTP code is provided, verify OTP
+    if user_data.otp_code:
         now = datetime.datetime.utcnow()
         otp_entry = db.query(models.OTPCode).filter(
             models.OTPCode.target == target,
@@ -61,67 +79,59 @@ def login_or_register(user_data: schemas.UserCreate, db: Session = Depends(get_d
         # Mark OTP as used
         otp_entry.is_used = True
         db.commit()
+    elif user and user.password and user_data.password:
+        # Legacy password verification fallback
+        check_brute_force_limit(target)
+        is_hash = user.password.startswith("$")
+        if not is_hash:
+            if user.password != user_data.password:
+                record_failed_login(target)
+                raise HTTPException(status_code=401, detail="Невірний пароль для цього облікового запису")
+        else:
+            if not pwd_context.verify(user_data.password, user.password):
+                record_failed_login(target)
+                raise HTTPException(status_code=401, detail="Невірний пароль для цього облікового запису")
+    else:
+        raise HTTPException(status_code=400, detail="Необхідно вказати код підтвердження з пошти")
 
     if user:
         if user_data.faculty:
             user.faculty = user_data.faculty
-            db.commit()
-            db.refresh(user)
-        # Check password if provided or if user has a password set
-        if user_data.password or user.password:
-            if user_data.password:
-                if not user.password:
-                    if len(user_data.password) < 6:
-                        raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
-                    user.password = pwd_context.hash(user_data.password)
-                    db.commit()
-                    db.refresh(user)
-                else:
-                    # Check if stored password is plain text
-                    is_hash = user.password.startswith("$")
-                    if not is_hash:
-                        if user.password == user_data.password:
-                            user.password = pwd_context.hash(user_data.password)
-                            db.commit()
-                            db.refresh(user)
-                        else:
-                            raise HTTPException(
-                                status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Невірний пароль для цього облікового запису"
-                            )
-                    else:
-                        if not pwd_context.verify(user_data.password, user.password):
-                            raise HTTPException(
-                                status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Невірний пароль для цього облікового запису"
-                            )
-            elif user.password and not is_new_user:
-                raise HTTPException(status_code=400, detail="Необхідно ввести пароль")
+        if user_data.phone:
+            normalized_p = normalize_phone(user_data.phone)
+            if normalized_p:
+                user.phone = normalized_p
+        if user_data.name and (not user.name or user.name == "Користувач"):
+            user.name = user_data.name
+        db.commit()
+        db.refresh(user)
     else:
-        if user_data.password and len(user_data.password) < 6:
-            raise HTTPException(status_code=400, detail="Пароль має містити щонайменше 6 символів")
-        hashed_password = pwd_context.hash(user_data.password) if user_data.password else None
         user = models.User(
-            name=user_data.name,
+            name=user_data.name or "Користувач",
             phone=normalize_phone(user_data.phone) if user_data.phone else None,
             email=user_data.email,
-            role=user_data.role,
+            role=user_data.role or "B2C",
             faculty=user_data.faculty if user_data.faculty else "ФКІТ",
-            password=hashed_password
+            password=pwd_context.hash(user_data.password) if user_data.password else None
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     # Calculate average rating
     ratings = db.query(models.Review.rating).filter(models.Review.target_id == user.id).all()
     avg_rating = 0.0
     if ratings:
         avg_rating = sum(r[0] for r in ratings) / len(ratings)
+        
+    completed_count = db.query(models.Application).filter(
+        models.Application.volunteer_id == user.id,
+        models.Application.status.in_(["attended", "reviewed"])
+    ).count()
     
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
-    response.token = create_access_token(user.id)
+    response.completed_shifts_count = completed_count
     return response
 
 @router.get("/check-email")
@@ -152,6 +162,9 @@ def send_verification_email(
                 detail=f"Занадто багато запитів. Зачекайте {remaining} сек. перед наступною спробою."
             )
     
+    # Secure server-side OTP code generation
+    otp_code = str(secrets.randbelow(9000) + 1000)
+
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background-color: #f5f5f7; padding: 20px; color: #111111;">
@@ -160,7 +173,7 @@ def send_verification_email(
           <p>Дякуємо за реєстрацію на нашій платформі!</p>
           <p>Ваш код підтвердження для створення облікового запису:</p>
           <div style="font-size: 28px; font-weight: bold; color: #FF5522; padding: 15px; background-color: #fff0eb; border-radius: 10px; text-align: center; letter-spacing: 5px; margin: 20px 0;">
-            {payload.code}
+            {otp_code}
           </div>
           <p style="font-size: 12px; color: #888888;">Якщо ви не здійснювали цей запит, просто проігноруйте цей лист.</p>
         </div>
@@ -173,7 +186,7 @@ def send_verification_email(
     db.query(models.OTPCode).filter(models.OTPCode.target == payload.email).delete()
     otp_entry = models.OTPCode(
         target=payload.email,
-        code=payload.code,
+        code=otp_code,
         expires_at=expires_at,
         is_used=False
     )
@@ -189,7 +202,7 @@ def send_verification_email(
         payload.email,
         "Код підтвердження OneClick B2B",
         html_content,
-        payload.code
+        otp_code
     )
     return {"status": "ok"}
 
@@ -208,12 +221,15 @@ def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session =
                 detail=f"Занадто багато запитів. Зачекайте {remaining} сек. перед наступною спробою."
             )
 
+    # Secure server-side OTP code generation
+    otp_code = str(secrets.randbelow(9000) + 1000)
+
     # Save B2C OTP code to DB
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.query(models.OTPCode).filter(models.OTPCode.target == phone_normalized).delete()
     otp_entry = models.OTPCode(
         target=phone_normalized,
-        code=payload.code,
+        code=otp_code,
         expires_at=expires_at,
         is_used=False
     )
@@ -223,7 +239,7 @@ def send_verification_sms(payload: schemas.SmsVerificationRequest, db: Session =
     # Update last sent timestamp
     otp_timestamps[phone_normalized] = now
     
-    print(f"\n[LOCAL DEV] SMS simulation. Code for {phone_normalized} is: {payload.code}\n")
+    print(f"\n[LOCAL DEV] SMS simulation. Code for {phone_normalized} is: {otp_code}\n")
     return {"status": "ok"}
 
 @router.post("/reset-password")
@@ -337,7 +353,13 @@ def register_organization(
     user = db.query(models.User).filter(models.User.id == x_user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
-    
+        
+    if user.company_id and user.company_role and user.company_role != "owner":
+        raise HTTPException(
+            status_code=403,
+            detail="Ви вже є членом іншої організації. Спочатку вийдіть з поточної організації."
+        )
+
     # Check if org already exists for this owner
     existing_org = db.query(models.Organization).filter(models.Organization.coordinator_id == x_user_id).first()
     if existing_org:

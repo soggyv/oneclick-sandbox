@@ -35,6 +35,11 @@ export const useStore = create((set, get) => ({
     });
   },
 
+  setEmailNotificationsEnabled: (enabled) => {
+    localStorage.setItem('email_notifications_enabled', String(enabled));
+    set({ emailNotificationsEnabled: enabled });
+  },
+
   lastFetchTime: 0,
   lastFetchParams: { date: '', filter: '', search: '' },
 
@@ -105,7 +110,7 @@ export const useStore = create((set, get) => ({
         if (response.status === 429) {
           const errorData = await response.json().catch(() => ({}));
           const rawDetail = typeof errorData.detail === 'string' ? errorData.detail : '';
-          const friendlyMsg = rawDetail ? `⏱️ ${rawDetail}` : "⏱️ Занадто багато запитів. Зачекайте кілька секунд.";
+          const friendlyMsg = rawDetail ? rawDetail : "Занадто багато запитів. Зачекайте кілька секунд.";
           throw new Error(friendlyMsg);
         }
         const errorData = await response.json().catch(() => ({}));

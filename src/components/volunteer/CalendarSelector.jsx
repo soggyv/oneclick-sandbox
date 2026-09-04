@@ -25,6 +25,17 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
   const scrollContainerRef = useRef(null);
   const dayRefs = useRef({});
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isPickerClosing, setIsPickerClosing] = useState(false);
+
+  const handleClosePicker = (callback) => {
+    if (isPickerClosing) return;
+    setIsPickerClosing(true);
+    setTimeout(() => {
+      setIsDatePickerOpen(false);
+      setIsPickerClosing(false);
+      if (callback) callback();
+    }, 210);
+  };
 
   // Parse active selected date
   const selectedDayObj = (calendarDays || []).find(d => d.dateStr === selectedDateStr) || calendarDays?.[0];
@@ -240,8 +251,14 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
 
       {/* Date Picker Modal - Rendered via React Portal onto document.body for 100% full-screen backdrop blur */}
       {isDatePickerOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 animate-scaleUp">
+        <div
+          className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md ${isPickerClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={() => handleClosePicker()}
+        >
+          <div
+            className={`bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 ${isPickerClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
               <h3 className="font-black text-base flex items-center gap-2">
@@ -250,7 +267,7 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
               </h3>
               <button
                 type="button"
-                onClick={() => setIsDatePickerOpen(false)}
+                onClick={() => handleClosePicker()}
                 className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-100 dark:bg-zinc-800 rounded-full transition-colors cursor-pointer"
               >
                 <X size={16} />
@@ -326,8 +343,7 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
                     onClick={() => {
                       if (!isAvailable) return;
                       setSelectedDateStr(dateStr);
-                      setIsDatePickerOpen(false);
-                      setTimeout(() => scrollToDate(dateStr), 100);
+                      handleClosePicker(() => scrollToDate(dateStr));
                     }}
                     className={`relative h-9 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
                       !isAvailable
@@ -357,8 +373,7 @@ export default function CalendarSelector({ calendarDays, selectedDateStr, setSel
                 type="button"
                 onClick={() => {
                   setSelectedDateStr(todayStr);
-                  setIsDatePickerOpen(false);
-                  setTimeout(() => scrollToDate(todayStr), 100);
+                  handleClosePicker(() => scrollToDate(todayStr));
                 }}
                 className="font-bold text-[#FF5522] dark:text-orange-400 hover:underline cursor-pointer"
               >

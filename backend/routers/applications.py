@@ -104,8 +104,8 @@ def apply_to_shift(
     if existing:
         raise HTTPException(status_code=400, detail="Ви вже відгукнулися на цю зміну")
 
-    # Check shift spots limit
-    shift = db.query(models.Shift).filter(models.Shift.id == app_data.shift_id).first()
+    # Check shift spots limit with FOR UPDATE lock to prevent Race Condition
+    shift = db.query(models.Shift).filter(models.Shift.id == app_data.shift_id).with_for_update().first()
     if not shift:
         raise HTTPException(status_code=404, detail="Зміну не знайдено")
         
@@ -203,6 +203,8 @@ def review_candidate(
         raise HTTPException(status_code=403, detail="Немає доступу")
         
     if status == "approved":
+        # Lock shift row to prevent concurrent approval race conditions
+        shift_lock = db.query(models.Shift).filter(models.Shift.id == app.shift_id).with_for_update().first()
         # Check spots limit before approving
         approved_count = db.query(models.Application).filter(
             models.Application.shift_id == app.shift_id,

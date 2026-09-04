@@ -22,6 +22,8 @@ export default function EditTemplateModal({
   const [tempEndHour, setTempEndHour] = useState('18');
   const [tempEndMin, setTempEndMin] = useState('00');
 
+  const [isClosing, setIsClosing] = useState(false);
+
   // Sync state when template changes
   useEffect(() => {
     if (template) {
@@ -45,22 +47,40 @@ export default function EditTemplateModal({
 
   if (!isOpen || !template) return null;
 
+  const handleClose = (action) => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      if (action) action();
+      else onClose();
+    }, 210);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(template.id, {
-      name: editName,
-      title: editTitle,
-      category: editCategory,
-      time: editTime,
-      location: editLocation,
-      address: editAddress,
-      description: editDescription
+    handleClose(() => {
+      onSave(template.id, {
+        name: editName,
+        title: editTitle,
+        category: editCategory,
+        time: editTime,
+        location: editLocation,
+        address: editAddress,
+        description: editDescription
+      });
     });
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-      <div className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-lg p-6 md:p-8 shadow-2xl relative animate-scaleUp text-left">
+    <div
+      className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-y-auto ${isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+      onClick={() => handleClose()}
+    >
+      <div
+        className={`bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-lg p-6 md:p-8 shadow-2xl relative text-left ${isClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-lg font-black text-gray-900 dark:text-zinc-100 mb-1">Редагувати шаблон</h2>
         <p className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase tracking-wider mb-5">
           Оновлення збережених даних шаблону
@@ -175,7 +195,7 @@ export default function EditTemplateModal({
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => handleClose()}
               className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 dark:hover:text-white font-extrabold rounded-2xl text-xs tracking-wider uppercase transition-all cursor-pointer text-center"
             >
               Скасувати

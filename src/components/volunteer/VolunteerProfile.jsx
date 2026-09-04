@@ -36,7 +36,7 @@ export default function VolunteerProfile({
   const toggleEmailNotifications = useStore((state) => state.toggleEmailNotifications);
 
   return (
-    <div className="animate-fadeIn max-w-3xl mx-auto px-2 sm:px-4">
+    <div className="animate-fadeIn max-w-3xl mx-auto px-2 sm:px-4 pb-32 sm:pb-24">
       <div className="mb-5 text-left">
         <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-zinc-100">Профіль волонтера</h1>
         <p className="text-xs text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">Ваш student-профіль волонтера</p>

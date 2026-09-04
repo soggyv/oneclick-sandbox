@@ -29,8 +29,8 @@ export default function AuthForm({
           type="button"
           onClick={() => setRegRole('B2C')}
           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2C'
-              ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
-              : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
+            ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
+            : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           Волонтер (B2C)
@@ -39,8 +39,8 @@ export default function AuthForm({
           type="button"
           onClick={() => setRegRole('B2B')}
           className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-wider cursor-pointer ${regRole === 'B2B'
-              ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
-              : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
+            ? 'bg-[#FF5522] dark:bg-orange-500 text-white shadow-sm'
+            : 'text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           Організатор (B2B)
@@ -48,10 +48,13 @@ export default function AuthForm({
       </div>
 
       <div>
-        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+        <label htmlFor="reg-name" className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
           Ваше ім'я
         </label>
         <input
+          id="reg-name"
+          name="name"
+          autoComplete="name"
           type="text"
           placeholder="напр. Дмитро"
           value={regName}
@@ -61,10 +64,13 @@ export default function AuthForm({
       </div>
 
       <div>
-        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
+        <label htmlFor="reg-email" className="block text-[10px] font-bold text-gray-400 dark:text-gray-555 uppercase tracking-widest mb-1.5 px-1">
           Електронна пошта
         </label>
         <input
+          id="reg-email"
+          name="email"
+          autoComplete="email"
           type="email"
           placeholder="email@example.com"
           value={regEmail}
@@ -77,10 +83,12 @@ export default function AuthForm({
       {regRole === 'B2C' && (
         <>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+            <label htmlFor="reg-faculty" className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
               Факультет
             </label>
             <select
+              id="reg-faculty"
+              name="faculty"
               value={regFaculty || 'ФКІТ'}
               onChange={(e) => setRegFaculty(e.target.value)}
               className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all cursor-pointer mb-3"
@@ -93,7 +101,7 @@ export default function AuthForm({
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
+            <label htmlFor="reg-phone" className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
               Телефон (для зв'язку)
             </label>
             <div className="flex gap-2 items-center">
@@ -101,6 +109,9 @@ export default function AuthForm({
                 +380
               </span>
               <input
+                id="reg-phone"
+                name="phone"
+                autoComplete="tel"
                 type="text"
                 placeholder="931234567"
                 value={regPhone}
@@ -115,49 +126,9 @@ export default function AuthForm({
         </>
       )}
 
-      {/* Password Field with Show/Hide Eye Toggle */}
-      <div>
-        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-550 uppercase tracking-widest mb-1.5 px-1">
-          Пароль
-        </label>
-        <div className="relative flex items-center">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
-            value={regPassword}
-            onChange={(e) => setRegPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl px-4 py-3.5 pr-11 text-xs font-semibold text-gray-850 dark:text-gray-200 focus:outline-none focus:border-[#FF5522] dark:focus:border-[#FF5522] shadow-sm transition-all"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
-            title={showPassword ? "Приховати пароль" : "Показати пароль"}
-          >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-        <div className="flex justify-between items-center mt-1 px-1">
-          <span className="text-[9px] text-gray-400 dark:text-gray-555">
-            Мінімум 6 символів
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setForgotPasswordMode(true);
-            }}
-            className="text-[10px] text-[#FF5522] dark:text-[#F97316] hover:underline font-bold cursor-pointer"
-          >
-            Забули пароль?
-          </button>
-        </div>
-      </div>
-
       <button
         type="submit"
-        className="w-full py-4 mt-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
+        className="w-full py-4 mt-4 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-extrabold rounded-full shadow-md text-xs tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
       >
         Увійти / Зареєструватися
       </button>

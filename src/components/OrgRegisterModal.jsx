@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
 export default function OrgRegisterModal({
@@ -12,13 +12,30 @@ export default function OrgRegisterModal({
   setRegOrgDesc,
   onSubmit
 }) {
+  const [isClosing, setIsClosing] = useState(false);
+
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 210);
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-3xl w-full max-w-[380px] p-6 shadow-2xl animate-scaleUp text-left relative">
+    <div
+      className={`fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 ${isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+      onClick={handleClose}
+    >
+      <div
+        className={`bg-white dark:bg-zinc-800 rounded-3xl w-full max-w-[380px] p-6 shadow-2xl text-left relative ${isClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-black dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800/50 dark:hover:text-white rounded-full transition-all active:scale-95 cursor-pointer"
         >
           <X size={18} />

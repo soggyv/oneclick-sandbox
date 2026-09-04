@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -15,11 +15,28 @@ export default function TimePickerModal({
   onClose,
   onConfirm
 }) {
+  const [isClosing, setIsClosing] = useState(false);
+
   if (!isOpen) return null;
 
+  const handleClose = (action) => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      action();
+    }, 210);
+  };
+
   return createPortal(
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 rounded-3xl w-full max-w-[340px] p-6 shadow-2xl animate-scaleUp text-left flex flex-col">
+    <div
+      className={`fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 ${isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+      onClick={() => handleClose(onClose)}
+    >
+      <div
+        className={`bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 rounded-3xl w-full max-w-[340px] p-6 shadow-2xl text-left flex flex-col ${isClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-2 mb-4 text-[#FF5522] dark:text-[#F97316]">
           <Clock size={16} />
           <h3 className="text-xs font-black uppercase tracking-wider">
@@ -249,14 +266,14 @@ export default function TimePickerModal({
         <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 dark:border-zinc-800 pt-4">
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => handleClose(onClose)}
             className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-zinc-300 bg-transparent dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white rounded-xl transition-all cursor-pointer"
           >
             Скасувати
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => handleClose(onConfirm)}
             className="px-5 py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             Підтвердити

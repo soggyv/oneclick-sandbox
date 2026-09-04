@@ -74,6 +74,28 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
 
   // Custom DatePicker modal state
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isModalClosing, setIsModalClosing] = useState(false);
+  const [isPickerClosing, setIsPickerClosing] = useState(false);
+
+  const handleCloseModal = (action) => {
+    if (isModalClosing) return;
+    setIsModalClosing(true);
+    setTimeout(() => {
+      setIsModalClosing(false);
+      if (action) action();
+      else onClose();
+    }, 210);
+  };
+
+  const handleClosePicker = (action) => {
+    if (isPickerClosing) return;
+    setIsPickerClosing(true);
+    setTimeout(() => {
+      setIsDatePickerOpen(false);
+      setIsPickerClosing(false);
+      if (action) action();
+    }, 210);
+  };
 
   const [selY, selM, selD] = (date || '').split('-').map(Number);
   const selectedDateObj = (selY && selM && selD) ? new Date(selY, selM - 1, selD) : new Date();
@@ -258,7 +280,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
         max_volunteers: maxVolunteers,
         target_faculty: targetFaculty || 'ALL'
       });
-      onClose();
+      handleCloseModal();
     } catch (err) {
       console.error("Error updating shift:", err);
     }
@@ -277,8 +299,14 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
   const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-      <div className="bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-gray-200 dark:border-zinc-800 animate-scaleUp max-h-[90vh] overflow-y-auto text-left">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md ${isModalClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+      onClick={() => handleCloseModal()}
+    >
+      <div
+        className={`bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-gray-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto text-left ${isModalClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-zinc-800 mb-5">
           <div>
@@ -287,7 +315,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => handleCloseModal()}
             className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-100 dark:bg-zinc-800 rounded-full transition-colors cursor-pointer"
           >
             <X size={18} />
@@ -467,7 +495,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
           <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => handleCloseModal()}
               className="px-5 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all cursor-pointer"
             >
               Скасувати
@@ -501,8 +529,14 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
 
         {/* DatePicker modal */}
         {isDatePickerOpen && createPortal(
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-            <div className="bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 animate-scaleUp text-left">
+          <div
+            className={`fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md ${isPickerClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+            onClick={() => handleClosePicker()}
+          >
+            <div
+              className={`bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-5 w-full max-w-xs sm:max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 text-left ${isPickerClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
                 <h3 className="font-black text-base flex items-center gap-2">
                   <Calendar size={16} className="text-[#FF5522]" />
@@ -510,7 +544,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setIsDatePickerOpen(false)}
+                  onClick={() => handleClosePicker()}
                   className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-100 dark:bg-zinc-800 rounded-full transition-colors cursor-pointer"
                 >
                   <X size={16} />
@@ -578,7 +612,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                       onClick={() => {
                         if (!isAvailable) return;
                         setDate(dateStr);
-                        setIsDatePickerOpen(false);
+                        handleClosePicker();
                       }}
                       className={`relative h-9 rounded-xl font-black text-xs flex flex-col items-center justify-center transition-all ${
                         !isAvailable
@@ -601,7 +635,7 @@ export default function EditShiftModal({ isOpen, onClose, shift }) {
                   type="button"
                   onClick={() => {
                     setDate(nowStr);
-                    setIsDatePickerOpen(false);
+                    handleClosePicker();
                   }}
                   className="font-bold text-[#FF5522] dark:text-orange-400 hover:underline cursor-pointer"
                 >

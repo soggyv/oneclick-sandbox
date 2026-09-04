@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Search,
   Calendar,
@@ -21,7 +22,9 @@ import {
   Trash2,
   Settings,
   Sun,
-  Moon
+  Moon,
+  Mail,
+  Bell
 } from 'lucide-react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore'
@@ -84,7 +87,8 @@ function AppContent() {
     isReviewsModalOpen, setIsReviewsModalOpen,
     showSettingsPanel, setShowSettingsPanel,
     activeB2BFilter, setActiveB2BFilter,
-    activeB2CShiftsFilter, setActiveB2CShiftsFilter
+    activeB2CShiftsFilter, setActiveB2CShiftsFilter,
+    setEmailNotificationsEnabled
   } = useStore();
 
   // Form Inputs
@@ -97,6 +101,12 @@ function AppContent() {
   const [enteredOtp, setEnteredOtp] = useState('');
   const [regRole, setRegRole] = useState('B2C');
   const [googlePhone, setGooglePhone] = useState('');
+
+  // Email Notification Preference & Modal States ("Плашка сповіщень на пошту")
+  const [emailNotifPref, setEmailNotifPref] = useState(true);
+  const [showEmailNotifModal, setShowEmailNotifModal] = useState(false);
+  const [isEmailNotifModalClosing, setIsEmailNotifModalClosing] = useState(false);
+  const [pendingAuthTargetRole, setPendingAuthTargetRole] = useState(null);
 
   // Password Reset States
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -500,16 +510,13 @@ function AppContent() {
     const newEmail = editEmail.trim();
     const currentEmail = user.email || '';
     if (newEmail && newEmail !== currentEmail && !emailOtpMode) {
-      const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-      setSentEmailOtp(generatedCode);
       try {
         await apiCall('/users/send-email-otp', 'POST', {
-          email: newEmail,
-          code: generatedCode
+          email: newEmail
         });
         setEmailOtpMode(true);
         setEditEmailOtpCode('');
-        showToastMsg(`Код підтвердження надіслано на пошту! (Код: ${generatedCode})`, "success");
+        showToastMsg(`Код підтвердження надіслано на пошту ${newEmail}!`, "success");
       } catch (err) {
         console.error(err);
         showToastMsg(err.message || "Помилка при надсиланні коду", "error");
@@ -517,10 +524,6 @@ function AppContent() {
       return;
     }
 
-    if (emailOtpMode && editEmailOtpCode !== sentEmailOtp) {
-      showToastMsg("Невірний код підтвердження пошти", "error");
-      return;
-    }
 
     try {
       const updatedUser = await apiCall('/users/profile', 'PUT', {
@@ -770,81 +773,43 @@ function AppContent() {
       showToastMsg("Будь ласка, введіть коректну електронну пошту", "error");
       return;
     }
-    if (!regPassword || regPassword.length < 6) {
-      showToastMsg("Пароль має містити щонайменше 6 символів", "error");
-      return;
-    }
 
     try {
-      const checkRes = await fetch(`${API_URL}/auth/check-email?email=${encodeURIComponent(regEmail)}`).then(r => r.json());
+      await apiCall('/auth/send-verification-email', 'POST', {
+        email: regEmail
+      });
 
-      if (checkRes.exists) {
-        // User exists -> Direct Login with Email + Password
-        const userData = await apiCall('/auth/login-or-register', 'POST', {
-          email: regEmail,
-          password: regPassword,
-          role: regRole,
-          name: regName || '',
-          faculty: regFaculty,
-          phone: regPhone ? `+380${regPhone}` : null
-        });
-
-        setUser(userData);
-        localStorage.setItem('oneclick_user_id', String(userData.id));
-        if (userData.token) {
-          localStorage.setItem('oneclick_user_token', userData.token);
-        }
-
-        const org = await fetch(`${API_URL}/auth/my-org`, {
-          headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
-
-        if (org) {
-          setOrganization(org);
-        } else {
-          setOrganization(null);
-        }
-
-        const roleToSet = regRole;
-        setCurrentRole(roleToSet);
-        localStorage.setItem('oneclick_user_role', roleToSet);
-
-        showToastMsg(`Вітаємо, ${userData.name}! Вхід успішний.`, 'success');
-        if (roleToSet === 'B2C') {
-          navigate('/volunteer/search');
-        } else {
-          navigate('/coordinator/manage');
-        }
-      } else {
-        // New User -> Registration flow with free Email OTP verification
-        if (!regName || !regName.trim()) {
-          showToastMsg("Будь ласка, введіть ваше ім'я для реєстрації", "error");
-          return;
-        }
-
-        const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-
-        await apiCall('/auth/send-verification-email', 'POST', {
-          email: regEmail,
-          code: generatedCode
-        });
-
-        setOtpCode(generatedCode);
-        setOtpMode(true);
-        setEnteredOtp('');
-        showToastMsg(`Код підтвердження надіслано на пошту ${regEmail}`, 'success');
-      }
+      setOtpMode(true);
+      setEnteredOtp('');
+      showToastMsg(`Код підтвердження надіслано на пошту ${regEmail}`, 'success');
     } catch (err) {
-      // Toast error is automatically shown by apiCall
+      if (err && err.message) {
+        showToastMsg(err.message, 'error');
+      } else {
+        showToastMsg("Помилка підключення до сервера", 'error');
+      }
     }
+  };
+
+  const handleConfirmEmailNotif = (enabled) => {
+    if (isEmailNotifModalClosing) return;
+    setEmailNotificationsEnabled(enabled);
+    setIsEmailNotifModalClosing(true);
+
+    setTimeout(() => {
+      setShowEmailNotifModal(false);
+      setIsEmailNotifModalClosing(false);
+      const targetRole = pendingAuthTargetRole || currentRole || 'B2C';
+      if (targetRole === 'B2C') {
+        navigate('/volunteer/search');
+      } else {
+        navigate('/coordinator/manage');
+      }
+    }, 210);
   };
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (enteredOtp !== otpCode) {
-      showToastMsg("Невірний код підтвердження", "error");
-      return;
-    }
 
     try {
       const payload = {
@@ -852,7 +817,6 @@ function AppContent() {
         email: regEmail,
         phone: regPhone ? `+380${regPhone}` : null,
         faculty: regRole === 'B2C' ? (regFaculty || 'ФКІТ') : null,
-        password: regPassword,
         otp_code: enteredOtp,
         role: regRole
       };
@@ -860,9 +824,7 @@ function AppContent() {
       const userData = await apiCall('/auth/login-or-register', 'POST', payload);
       setUser(userData);
 
-      const org = await fetch(`${API_URL}/auth/my-org`, {
-        headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
-      }).then(r => r.ok ? r.json() : null).catch(() => null);
+      const org = await apiCall('/auth/my-org').catch(() => null);
 
       if (org) {
         setOrganization(org);
@@ -878,19 +840,17 @@ function AppContent() {
       if (userData.token) {
         localStorage.setItem('oneclick_user_token', userData.token);
       }
-      showToastMsg(`Вітаємо, ${userData.name}! Реєстрація успішна.`, 'success');
+      setEmailNotificationsEnabled(emailNotifPref);
+      showToastMsg(`Вітаємо, ${userData.name || 'користувачу'}! Вхід успішний.`, 'success');
       setOtpMode(false);
-      setOtpCode('');
-      setEnteredOtp('');
-
-      if (initialRole === 'B2C') {
-        navigate('/volunteer/search');
-      } else {
-        navigate('/coordinator/manage');
-      }
+      setPendingAuthTargetRole(initialRole);
+      setShowEmailNotifModal(true);
     } catch (err) {
-      console.error(err);
-      showToastMsg(err.message || "Помилка реєстрації", "error");
+      if (err && err.message) {
+        showToastMsg(err.message, 'error');
+      } else {
+        showToastMsg("Помилка підтвердження коду", 'error');
+      }
     }
   };
 
@@ -903,12 +863,8 @@ function AppContent() {
         return;
       }
 
-      const generatedCode = String(Math.floor(1000 + Math.random() * 9000));
-      setResetOtpCode(generatedCode);
-
       await apiCall('/auth/send-verification-email', 'POST', {
-        email: resetEmail,
-        code: generatedCode
+        email: resetEmail
       });
 
       setResetOtpMode(true);
@@ -922,15 +878,12 @@ function AppContent() {
 
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
-    if (resetEnteredOtp !== resetOtpCode) {
-      showToastMsg("Невірний код підтвердження", "error");
-      return;
-    }
 
     try {
       await apiCall('/auth/reset-password', 'POST', {
         email: resetEmail,
-        new_password: newPassword
+        new_password: newPassword,
+        otp_code: resetEnteredOtp
       });
 
       showToastMsg("Пароль успішно змінено! Тепер ви можете увійти.", "success");
@@ -1368,6 +1321,8 @@ function AppContent() {
                       setOtpMode={setOtpMode}
                       setOtpCode={setOtpCode}
                       handleVerifyOtp={handleVerifyOtp}
+                      emailNotifPref={emailNotifPref}
+                      setEmailNotifPref={setEmailNotifPref}
                     />
                   ) : forgotPasswordMode ? (
                     <ResetPasswordForm
@@ -1879,6 +1834,54 @@ function AppContent() {
           }
         }}
       />
+
+      {/* --- EMAIL NOTIFICATIONS PREFERENCE MODAL ("Плашка сповіщень на пошту") --- */}
+      {showEmailNotifModal && createPortal(
+        <div
+          className={`fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md ${isEmailNotifModalClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={() => handleConfirmEmailNotif(emailNotifPref)}
+        >
+          <div
+            className={`bg-white dark:bg-[#18181B] text-gray-900 dark:text-zinc-100 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-200 dark:border-zinc-800 text-left relative ${isEmailNotifModalClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-950/50 text-[#FF5522] dark:text-orange-400 flex items-center justify-center mb-4 shadow-sm">
+              <Mail size={24} />
+            </div>
+
+            <h3 className="font-black text-lg text-gray-900 dark:text-zinc-100 mb-1">
+              Сповіщення на пошту
+            </h3>
+            <p className="text-xs font-bold text-[#FF5522] dark:text-orange-400 uppercase tracking-wider mb-3">
+              Листи про оновлення ваших заявок
+            </p>
+
+            <p className="text-xs text-gray-600 dark:text-zinc-300 font-semibold mb-6 leading-relaxed">
+              Бажаєте отримувати повідомлення про оновлення та зміну статусу вашої заявки (прийнято / відхилено) на пошту <span className="font-black text-gray-900 dark:text-zinc-100">{regEmail}</span>?
+            </p>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => handleConfirmEmailNotif(true)}
+                className="w-full py-3.5 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-extrabold text-xs rounded-2xl shadow-md uppercase tracking-wider transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Bell size={16} />
+                Так, отримувати листи
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleConfirmEmailNotif(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 font-bold text-xs rounded-2xl transition-all cursor-pointer text-center"
+              >
+                Не зараз
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

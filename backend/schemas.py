@@ -165,12 +165,12 @@ class MemberRoleUpdate(BaseModel):
 
 class EmailVerificationRequest(BaseModel):
     email: str
-    code: str
+    code: Optional[str] = None
 
 
 class SmsVerificationRequest(BaseModel):
     phone: str
-    code: str
+    code: Optional[str] = None
 
 
 class ResetPasswordRequest(BaseModel):

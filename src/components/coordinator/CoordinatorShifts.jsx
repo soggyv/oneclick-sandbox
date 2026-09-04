@@ -38,6 +38,47 @@ export default function CoordinatorShifts({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedShifts, setExpandedShifts] = useState({});
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isNotifClosing, setIsNotifClosing] = useState(false);
+  const [isRatingClosing, setIsRatingClosing] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleCloseNotif = () => {
+    if (isNotifClosing) return;
+    if (isMobile) {
+      setIsNotifClosing(true);
+      setTimeout(() => {
+        setIsNotifOpen(false);
+        setIsNotifClosing(false);
+      }, 210);
+    } else {
+      setIsNotifOpen(false);
+    }
+  };
+
+  const handleCloseRating = (callback) => {
+    if (isRatingClosing) return;
+    setIsRatingClosing(true);
+    setTimeout(() => {
+      setRatingModalApp(null);
+      setIsRatingClosing(false);
+      if (callback) callback();
+    }, 210);
+  };
+
+  const toggleNotif = () => {
+    if (isNotifOpen) {
+      handleCloseNotif();
+    } else {
+      setIsNotifClosing(false);
+      setIsNotifOpen(true);
+    }
+  };
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('coordinatorShiftsViewMode') || 'grid');
   const [ratingModalApp, setRatingModalApp] = useState(null);
 
@@ -69,7 +110,7 @@ export default function CoordinatorShifts({
   }, [loadData]);
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn pb-32 sm:pb-24">
       <div className="flex justify-between items-center mb-5">
         <div className="text-left">
           <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-100">Керування заходами</h1>
@@ -82,7 +123,7 @@ export default function CoordinatorShifts({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              onClick={toggleNotif}
               className="relative p-2.5 bg-gray-50 border border-transparent hover:bg-gray-100 dark:bg-[#27272A] dark:border-transparent dark:hover:bg-zinc-700 text-gray-500 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100 rounded-full shadow-sm transition-all active:scale-90 cursor-pointer flex items-center justify-center"
               title="Сповіщення"
             >
@@ -94,111 +135,214 @@ export default function CoordinatorShifts({
               )}
             </button>
 
-            {/* Backdrop for closing popover on tap/click outside */}
-            {isNotifOpen && (
-              <div
-                className="fixed inset-0 z-[90] bg-black/20 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-none"
-                onClick={() => setIsNotifOpen(false)}
-              />
-            )}
+            {/* PC Dropdown View (under bell button, no backdrop dimming) */}
+            {isNotifOpen && !isMobile && (
+              <>
+                <div className="fixed inset-0 z-[90]" onClick={handleCloseNotif} />
+                <div className="absolute top-full right-0 mt-2 w-[380px] bg-white/95 dark:bg-[#27272A]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700/80 z-[100] p-4 animate-fadeIn text-left">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100 dark:border-zinc-700/60">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-xs text-gray-900 dark:text-zinc-100 uppercase tracking-wider">Сповіщення</h3>
+                      {unreadCount > 0 && (
+                        <span className="bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                          {unreadCount} нових
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => markNotificationsRead()}
+                          className="text-[10px] font-bold text-gray-500 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          Прочитати все
+                        </button>
+                      )}
+                      {(notifications || []).length > 0 && (
+                        <button
+                          onClick={() => clearNotifications()}
+                          className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                        >
+                          Очистити
+                        </button>
+                      )}
+                      <button
+                        onClick={handleCloseNotif}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 p-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
 
-            {isNotifOpen && (
-              <div className="fixed sm:absolute top-16 right-3 left-3 sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[380px] max-w-sm sm:max-w-none mx-auto bg-white/95 dark:bg-[#27272A]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700/80 z-[100] p-4 animate-fadeIn text-left">
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100 dark:border-zinc-700/60">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-xs text-gray-900 dark:text-zinc-100 uppercase tracking-wider">Сповіщення</h3>
-                    {unreadCount > 0 && (
-                      <span className="bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400 text-[10px] font-black px-2 py-0.5 rounded-full">
-                        {unreadCount} нових
-                      </span>
+                  <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                    {(notifications || []).length > 0 ? (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`p-3 rounded-xl border text-xs transition-all ${!notif.is_read
+                              ? 'bg-orange-50/50 dark:bg-orange-950/30 border-orange-200/60 dark:border-orange-900/40'
+                              : 'bg-gray-50/50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-800'
+                            }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${notif.type === 'cancellation'
+                                ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                                : notif.type === 'new_application'
+                                  ? 'bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400'
+                                  : 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                              }`}>
+                              {notif.type === 'cancellation' ? <UserX size={14} /> : notif.type === 'new_application' ? <UserPlus size={14} /> : <Bell size={14} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-baseline gap-1">
+                                <span className="font-extrabold text-gray-900 dark:text-zinc-100 text-[11px] leading-tight">
+                                  {notif.title}
+                                </span>
+                                <span className="text-[9px] font-semibold text-gray-400 dark:text-zinc-500 shrink-0">
+                                  {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-600 dark:text-zinc-300 mt-0.5 leading-snug">
+                                {notif.message}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-gray-400 dark:text-zinc-500 text-xs font-semibold">
+                        Немає нових сповіщень
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => markNotificationsRead()}
-                        className="text-[10px] font-bold text-gray-500 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
-                      >
-                        Прочитати все
-                      </button>
-                    )}
-                    {(notifications || []).length > 0 && (
-                      <button
-                        onClick={() => clearNotifications()}
-                        className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 transition-colors cursor-pointer"
-                      >
-                        Очистити
-                      </button>
-                    )}
+
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700/60 flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Mail size={12} className="text-[#FF5522]" />
+                      <span>Email-сповіщення:</span>
+                    </span>
                     <button
-                      onClick={() => setIsNotifOpen(false)}
-                      className="sm:hidden text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 p-1"
+                      type="button"
+                      onClick={toggleEmailNotifications}
+                      className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm border-0 ${emailNotificationsEnabled
+                          ? 'bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white'
+                          : 'bg-rose-500 text-white dark:bg-rose-600 dark:text-white'
+                        }`}
                     >
-                      <X size={14} />
+                      {emailNotificationsEnabled ? 'Увімкнено' : 'Вимкнено'}
                     </button>
                   </div>
                 </div>
+              </>
+            )}
 
-                <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto space-y-2 pr-1">
-                  {(notifications || []).length > 0 ? (
-                    notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`p-3 rounded-xl border text-xs transition-all ${!notif.is_read
-                            ? 'bg-orange-50/50 dark:bg-orange-950/30 border-orange-200/60 dark:border-orange-900/40'
-                            : 'bg-gray-50/50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-800'
-                          }`}
+            {/* Mobile Full Screen Backdrop Modal via Portal */}
+            {isNotifOpen && isMobile && createPortal(
+              <div
+                className={`fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm ${isNotifClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+                onClick={handleCloseNotif}
+              >
+                <div
+                  className={`w-full max-w-sm bg-white dark:bg-[#27272A] rounded-3xl p-5 shadow-2xl border border-gray-100 dark:border-zinc-700/80 text-left relative ${isNotifClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100 dark:border-zinc-700/60">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-gray-900 dark:text-zinc-100 uppercase tracking-wider">Сповіщення</h3>
+                      {unreadCount > 0 && (
+                        <span className="bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                          {unreadCount} нових
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => markNotificationsRead()}
+                          className="text-[10px] font-bold text-gray-500 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                          Прочитати все
+                        </button>
+                      )}
+                      {(notifications || []).length > 0 && (
+                        <button
+                          onClick={() => clearNotifications()}
+                          className="text-[10px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                        >
+                          Очистити
+                        </button>
+                      )}
+                      <button
+                        onClick={handleCloseNotif}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                       >
-                        <div className="flex items-start gap-2.5">
-                          <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${notif.type === 'cancellation'
-                              ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400'
-                              : notif.type === 'new_application'
-                                ? 'bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400'
-                                : 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
-                            }`}>
-                            {notif.type === 'cancellation' ? <UserX size={14} /> : notif.type === 'new_application' ? <UserPlus size={14} /> : <Bell size={14} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-baseline gap-1">
-                              <span className="font-extrabold text-gray-900 dark:text-zinc-100 text-[11px] leading-tight">
-                                {notif.title}
-                              </span>
-                              <span className="text-[9px] font-semibold text-gray-400 dark:text-zinc-500 shrink-0">
-                                {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1">
+                    {(notifications || []).length > 0 ? (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`p-3.5 rounded-2xl border text-xs transition-all ${!notif.is_read
+                              ? 'bg-orange-50/60 dark:bg-orange-950/30 border-orange-200/60 dark:border-orange-900/40'
+                              : 'bg-gray-50/50 dark:bg-zinc-800/40 border-gray-100 dark:border-zinc-800'
+                            }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${notif.type === 'cancellation'
+                                ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                                : notif.type === 'new_application'
+                                  ? 'bg-orange-100 dark:bg-orange-950/40 text-[#FF5522] dark:text-orange-400'
+                                  : 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                              }`}>
+                              {notif.type === 'cancellation' ? <UserX size={16} /> : notif.type === 'new_application' ? <UserPlus size={16} /> : <Bell size={16} />}
                             </div>
-                            <p className="text-[10px] text-gray-600 dark:text-zinc-300 mt-0.5 leading-snug">
-                              {notif.message}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-baseline gap-1">
+                                <span className="font-extrabold text-gray-900 dark:text-zinc-100 text-xs leading-tight">
+                                  {notif.title}
+                                </span>
+                                <span className="text-[9px] font-semibold text-gray-400 dark:text-zinc-500 shrink-0">
+                                  {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-600 dark:text-zinc-300 mt-1 leading-snug">
+                                {notif.message}
+                              </p>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="py-10 text-center text-gray-400 dark:text-zinc-500 text-xs font-semibold">
+                        Немає нових сповіщень
                       </div>
-                    ))
-                  ) : (
-                    <div className="py-8 text-center text-gray-400 dark:text-zinc-500 text-xs font-semibold">
-                      Немає нових сповіщень
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Email Notification Quick Toggle */}
-                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700/60 flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Mail size={12} className="text-[#FF5522]" />
-                    <span>Email-сповіщення:</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={toggleEmailNotifications}
-                    className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm border-0 ${emailNotificationsEnabled
-                        ? 'bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white'
-                        : 'bg-rose-500 text-white dark:bg-rose-600 dark:text-white'
-                      }`}
-                  >
-                    {emailNotificationsEnabled ? 'Увімкнено' : 'Вимкнено'}
-                  </button>
+                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-700/60 flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Mail size={14} className="text-[#FF5522]" />
+                      <span>Email-сповіщення:</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={toggleEmailNotifications}
+                      className={`px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-sm border-0 ${emailNotificationsEnabled
+                          ? 'bg-emerald-500 text-white dark:bg-emerald-500 dark:text-white'
+                          : 'bg-rose-500 text-white dark:bg-rose-600 dark:text-white'
+                        }`}
+                    >
+                      {emailNotificationsEnabled ? 'Увімкнено' : 'Вимкнено'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
@@ -764,8 +908,14 @@ export default function CoordinatorShifts({
 
       {/* Rating & Shift Completion Modal */}
       {ratingModalApp && createPortal(
-        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#27272A] w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 text-left relative">
+        <div
+          className={`fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md ${isRatingClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}
+          onClick={() => handleCloseRating()}
+        >
+          <div
+            className={`bg-white dark:bg-[#27272A] w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 text-left relative ${isRatingClosing ? 'animate-modal-card-out' : 'animate-modal-card-in'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 {ratingModalApp.volunteer_avatar_url ? (
@@ -790,7 +940,7 @@ export default function CoordinatorShifts({
               </div>
               <button
                 type="button"
-                onClick={() => setRatingModalApp(null)}
+                onClick={() => handleCloseRating()}
                 className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X size={18} />
@@ -837,16 +987,15 @@ export default function CoordinatorShifts({
             <div className="flex gap-2.5 pt-2">
               <button
                 type="button"
-                onClick={() => setRatingModalApp(null)}
+                onClick={() => handleCloseRating()}
                 className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 font-extrabold text-xs rounded-xl uppercase tracking-wide transition-all cursor-pointer"
               >
                 Скасувати
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  await handleRateVolunteer(ratingModalApp.id);
-                  setRatingModalApp(null);
+                onClick={() => {
+                  handleCloseRating(() => handleRateVolunteer(ratingModalApp.id));
                 }}
                 className="flex-1 py-2.5 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-extrabold text-xs rounded-xl uppercase tracking-wide transition-all active:scale-95 cursor-pointer shadow-md"
               >

@@ -43,7 +43,7 @@ export default function CoordinatorProfile({
   const toggleEmailNotifications = useStore((state) => state.toggleEmailNotifications);
 
   return (
-    <div className="animate-fadeIn text-left">
+    <div className="animate-fadeIn text-left pb-32 sm:pb-24">
       <div className="mb-5">
         <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-zinc-100">Кабінет організації</h1>
         <p className="text-[10px] text-gray-400 dark:text-zinc-550 font-bold uppercase tracking-wider">Кабінет керування установою / кафедрою</p>
@@ -396,36 +396,35 @@ export default function CoordinatorProfile({
         )}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-gray-155 dark:border-transparent space-y-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-155 dark:border-transparent">
         <button
           type="button"
           onClick={toggleRole}
-          className="w-full py-3.5 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 dark:hover:text-white text-gray-700 dark:text-zinc-200 font-extrabold rounded-2xl border border-gray-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+          className="w-full py-4 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 font-extrabold rounded-2xl border border-gray-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
         >
-          <User size={14} className="text-[#FF5522]" />
+          <User size={16} className="text-[#FF5522]" />
           <span>Кабінет Волонтера (B2C)</span>
         </button>
 
-        <div className="flex gap-2">
-          {user.company_role !== 'owner' && (
-            <button
-              type="button"
-              onClick={handleLeaveOrganization}
-              className="flex-1 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-655 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-transparent transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <LogOut size={13} className="text-red-550 dark:text-red-400" />
-              <span>Вийти з компанії</span>
-            </button>
-          )}
+        {user.company_role !== 'owner' && (
           <button
             type="button"
-            onClick={handleSignOut}
-            className="flex-1 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-655 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-transparent transition-all active:scale-95 text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+            onClick={handleLeaveOrganization}
+            className="w-full py-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-extrabold rounded-2xl border border-red-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
           >
-            <LogOut size={13} className="text-red-550 dark:text-red-400" />
-            <span>Вийти з акаунту</span>
+            <LogOut size={16} />
+            <span>Вийти з компанії</span>
           </button>
-        </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="w-full py-4 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-extrabold rounded-2xl border border-red-200 dark:border-transparent shadow-sm flex items-center justify-center gap-2.5 transition-all active:scale-95 text-xs uppercase tracking-wider cursor-pointer"
+        >
+          <LogOut size={16} />
+          <span>Вийти з акаунту</span>
+        </button>
       </div>
     </div>
   );

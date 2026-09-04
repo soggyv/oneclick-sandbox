@@ -1,7 +1,7 @@
 import os
 import random
 import shutil
-from typing import List
+from typing import List, Optional
 from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -23,14 +23,17 @@ def send_email_otp(
     db: Session = Depends(get_db)
 ):
     import datetime
+    import secrets
     from backend.core.utils import send_email_background_task
     
+    otp_code = str(secrets.randbelow(9000) + 1000)
+
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.query(models.OTPCode).filter(models.OTPCode.target == payload.email).delete()
     
     otp_entry = models.OTPCode(
         target=payload.email,
-        code=payload.code,
+        code=otp_code,
         expires_at=expires_at,
         is_used=False
     )
@@ -48,7 +51,7 @@ def send_email_otp(
         <p>Ви вказали цю адресу для отримання сповіщень у OneClick.</p>
         <p>Ваш код підтвердження:</p>
         <div style="font-size: 24px; font-weight: bold; color: #FF5522; padding: 15px; background-color: #fff0eb; border-radius: 10px; text-align: center; letter-spacing: 2px; margin: 20px 0;">
-          {payload.code}
+          {otp_code}
         </div>
         <p style="font-size: 13px; color: #555555;">Будь ласка, введіть цей код на сторінці профілю для завершення прив'язки.</p>
       </div>
@@ -56,7 +59,7 @@ def send_email_otp(
     </html>
     """
     
-    background_tasks.add_task(send_email_background_task, payload.email, subject, html, payload.code)
+    background_tasks.add_task(send_email_background_task, payload.email, subject, html, otp_code)
     return {"status": "ok"}
 
 @router.put("/profile", response_model=schemas.UserResponse)
@@ -104,8 +107,13 @@ def update_profile(
         elif not email_clean:
             user.email = None
         
-    # If B2B user and has a linked company, allow updating company info
+    # If B2B user and has a linked company, allow updating company info only if owner or manager
     if user.role == "B2B" and user.company_id and profile_data.org_name:
+        if user.company_role not in ["owner", "manager"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Тільки власник або менеджер організації може змінювати її дані"
+            )
         org = db.query(models.Organization).filter(models.Organization.id == user.company_id).first()
         if org:
             org.name = profile_data.org_name
@@ -142,15 +150,28 @@ def upload_avatar(
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
         
-    # Validate file extension
+    # 1. Validate MIME content-type
+    allowed_mimes = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type and file.content_type.lower() not in allowed_mimes:
+        raise HTTPException(status_code=400, detail="Дозволено лише зображення JPG, PNG або WEBP")
+
+    # 2. Validate file extension
     file_ext = file.filename.split(".")[-1].lower() if "." in file.filename else "jpg"
     if file_ext not in ["jpg", "jpeg", "png", "webp"]:
         raise HTTPException(status_code=400, detail="Формат файлу має бути JPG, PNG або WEBP")
         
+    # 3. Check file size (max 2 MB)
+    MAX_FILE_SIZE = 2 * 1024 * 1024
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Максимальний розмір фотографії — 2 МБ")
+
     try:
-        # Load image with PIL
+        # Load image with PIL to verify integrity and strip EXIF / embedded scripts
         image = Image.open(file.file)
-        # Convert RGBA to RGB to ensure webp/jpeg compatibility if needed
+        # Convert RGBA/P to RGB to ensure webp compatibility
         if image.mode in ("RGBA", "P"):
             image = image.convert("RGB")
             
@@ -161,11 +182,11 @@ def upload_avatar(
         filename = f"avatar_{x_user_id}_{random.randint(1000, 9999)}.webp"
         file_path = os.path.join(uploads_dir, filename)
         
-        # Save as WebP with 80% quality
+        # Re-encode as WebP with 80% quality (strips all script payloads)
         image.save(file_path, "WEBP", quality=80)
     except Exception as e:
         print(f"Error processing avatar image: {e}")
-        raise HTTPException(status_code=400, detail="Помилка при обробці зображення")
+        raise HTTPException(status_code=400, detail="Недійсний або пошкоджений файл зображення")
         
     # Delete old avatar if exists to prevent bloat
     if user.avatar_url:
@@ -200,7 +221,11 @@ def upload_avatar(
     return response
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
-def get_user_profile(user_id: int, db: Session = Depends(get_db)):
+def get_user_profile(
+    user_id: int,
+    x_user_id: Optional[int] = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Користувача не знайдено")
@@ -220,6 +245,12 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     response = schemas.UserResponse.model_validate(user)
     response.rating = round(avg_rating, 1) if ratings else None
     response.completed_shifts_count = completed_count
+
+    # Protect PII: Redact email and phone unless user is inspecting their own profile
+    if x_user_id != user_id:
+        response.email = None
+        response.phone = None
+
     return response
 
 @router.get("/{user_id}/reviews", response_model=List[schemas.ReviewResponse])

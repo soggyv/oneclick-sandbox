@@ -22,23 +22,37 @@ Base.metadata.create_all(bind=engine)
 # 3. Initialize FastAPI App
 app = FastAPI(title="OneClick Volunteering API")
 
-# Configure CORS
-origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
-origins = [o.strip() for o in origins_str.split(",") if o.strip()]
+# Configure CORS strictly
+default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://188.245.35.229,https://oneclick.kyiv.ua,https://www.oneclick.kyiv.ua"
+origins_str = os.getenv("ALLOWED_ORIGINS", default_origins)
+origins = [o.strip() for o in origins_str.split(",") if o.strip() and o.strip() != "*"]
 
-cors_params = {
-    "allow_credentials": True,
-    "allow_methods": ["*"],
-    "allow_headers": ["*"],
-}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+)
 
-if "*" in origins:
-    # Use regex to allow any http/https origin with credentials
-    cors_params["allow_origin_regex"] = r"https?://.*"
-else:
-    cors_params["allow_origins"] = origins
-
-app.add_middleware(CORSMiddleware, **cors_params)
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; "
+        "img-src 'self' data: blob: https:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://accounts.google.com; "
+        "frame-src 'self' https://accounts.google.com;"
+    )
+    return response
 
 # Mount static files for serving uploads (create directory first)
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
