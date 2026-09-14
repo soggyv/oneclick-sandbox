@@ -20,6 +20,26 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def auto_migrate_db(engine):
+    try:
+        with engine.connect() as conn:
+            # Performance indexes
+            index_statements = [
+                "CREATE INDEX IF NOT EXISTS ix_shifts_status_date ON shifts (status, date)",
+                "CREATE INDEX IF NOT EXISTS ix_shifts_status ON shifts (status)",
+                "CREATE INDEX IF NOT EXISTS ix_shifts_date ON shifts (date)",
+                "CREATE INDEX IF NOT EXISTS ix_shifts_category ON shifts (category)",
+                "CREATE INDEX IF NOT EXISTS ix_shifts_title ON shifts (title)",
+                "CREATE INDEX IF NOT EXISTS ix_applications_shift_status ON applications (shift_id, status)"
+            ]
+            for stmt in index_statements:
+                try:
+                    conn.execute(text(stmt))
+                except Exception:
+                    pass
+            conn.commit()
+    except Exception as e:
+        print(f"Index auto-migration info: {e}")
+
     if engine.url.drivername.startswith("sqlite"):
         try:
             with engine.connect() as conn:

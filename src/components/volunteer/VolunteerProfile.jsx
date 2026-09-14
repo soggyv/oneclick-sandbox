@@ -175,12 +175,20 @@ export default function VolunteerProfile({
                   src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
                   alt="Avatar"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'flex';
+                    }
+                  }}
                 />
-              ) : (
-                <div className="w-full h-full bg-[#FF5522] dark:bg-[#F97316] text-white text-3xl font-black flex items-center justify-center">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
-                </div>
-              )}
+              ) : null}
+              <div
+                className="w-full h-full bg-[#FF5522] dark:bg-[#F97316] text-white text-3xl font-black flex items-center justify-center"
+                style={{ display: user.avatar_url ? 'none' : 'flex' }}
+              >
+                {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+              </div>
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                 <Camera size={16} className="animate-pulse" />
               </div>

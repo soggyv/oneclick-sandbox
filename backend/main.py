@@ -1,9 +1,19 @@
 import sys
 import os
+import mimetypes
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+
+# Ensure correct image mimetypes on Windows
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/svg+xml", ".svg")
+mimetypes.add_type("image/jpeg", ".jpg")
+mimetypes.add_type("image/jpeg", ".jpeg")
+mimetypes.add_type("image/png", ".png")
 
 
 # Ensure backend directory is in the import path
@@ -20,8 +30,39 @@ from backend import models
 Base.metadata.create_all(bind=engine)
 auto_migrate_db(engine)
 
+# Background worker for auto-closing past shifts every 5 minutes
+async def periodic_shift_cleanup():
+    while True:
+        try:
+            await asyncio.sleep(300)  # 5 minutes
+            with SessionLocal() as db:
+                from backend.routers.shifts import auto_close_past_shifts
+                auto_close_past_shifts(db)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Periodic shift cleanup error: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run initial cleanup on server startup
+    try:
+        with SessionLocal() as db:
+            from backend.routers.shifts import auto_close_past_shifts
+            auto_close_past_shifts(db)
+    except Exception as e:
+        print(f"Initial shift cleanup error: {e}")
+
+    cleanup_task = asyncio.create_task(periodic_shift_cleanup())
+    yield
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+
 # 3. Initialize FastAPI App
-app = FastAPI(title="OneClick Volunteering API")
+app = FastAPI(title="OneClick Volunteering API", lifespan=lifespan)
 
 # Configure CORS strictly
 default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://188.245.35.229,https://oneclick.kyiv.ua,https://www.oneclick.kyiv.ua"
@@ -48,7 +89,7 @@ async def add_security_headers(request, call_next):
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; "
-        "img-src 'self' data: blob: https:; "
+        "img-src 'self' data: blob: https: http://localhost:8000 http://127.0.0.1:8000; "
         "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://accounts.google.com; "
         "frame-src 'self' https://accounts.google.com;"

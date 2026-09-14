@@ -913,7 +913,7 @@ function AppContent() {
       return;
     }
     try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '604999474013-vbn98u78alve3m054hcavkl6u8trkm1k.apps.googleusercontent.com';
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: 'email profile openid',
@@ -928,7 +928,16 @@ function AppContent() {
                 org_address: regRole === 'B2B' ? regOrgAddr : null,
                 org_description: regRole === 'B2B' ? regOrgDesc : null
               });
+
+              const initialRole = regRole || userData.role;
+              localStorage.setItem('oneclick_user_id', String(userData.id));
+              localStorage.setItem('oneclick_user_role', initialRole);
+              if (userData.token) {
+                localStorage.setItem('oneclick_user_token', userData.token);
+              }
+
               setUser(userData);
+              setCurrentRole(initialRole);
 
               const org = await fetch(`${API_URL}/auth/my-org`, {
                 headers: userData.token ? { 'Authorization': `Bearer ${userData.token}` } : { 'x-user-id': String(userData.id) }
@@ -940,14 +949,6 @@ function AppContent() {
                 setOrganization(null);
               }
 
-              const initialRole = regRole || userData.role;
-              setCurrentRole(initialRole);
-
-              localStorage.setItem('oneclick_user_id', String(userData.id));
-              localStorage.setItem('oneclick_user_role', initialRole);
-              if (userData.token) {
-                localStorage.setItem('oneclick_user_token', userData.token);
-              }
               showToastMsg(`Вітаємо, ${userData.name}! Вхід через Google успішний.`, 'success');
 
               if (initialRole === 'B2C') {

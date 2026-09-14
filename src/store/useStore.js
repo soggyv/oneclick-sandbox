@@ -155,15 +155,14 @@ export const useStore = create((set, get) => ({
 
     try {
       if (currentRole === 'B2C') {
-        const [fetchedShifts, allShiftsData, booked, notifsData] = await Promise.all([
-          apiCall(`/shifts?date=${selectedDateStr}&category=${encodeURIComponent(selectedFilter)}&search=${encodeURIComponent(searchQuery)}`),
-          apiCall('/shifts').catch(() => []),
+        const [fetchedShifts, booked, notifsData] = await Promise.all([
+          apiCall(`/shifts?date=${selectedDateStr}&category=${encodeURIComponent(selectedFilter)}&search=${encodeURIComponent(searchQuery)}&limit=50&offset=0`),
           apiCall('/applications/my').catch(() => []),
           apiCall('/notifications?role=B2C').catch(() => [])
         ]);
         set({
-          shifts: fetchedShifts,
-          allShifts: allShiftsData || [],
+          shifts: fetchedShifts || [],
+          allShifts: fetchedShifts || [],
           bookedShifts: booked,
           notifications: notifsData || [],
           lastFetchParams: { date: selectedDateStr, filter: selectedFilter, search: searchQuery },

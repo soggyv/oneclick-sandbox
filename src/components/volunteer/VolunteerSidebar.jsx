@@ -42,10 +42,17 @@ export default function VolunteerSidebar({
                   src={`${API_URL.replace('/api', '')}${user.avatar_url}`}
                   alt="Avatar"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'inline';
+                    }
+                  }}
                 />
-              ) : (
-                user.name ? user.name.charAt(0).toUpperCase() : 'У'
-              )}
+              ) : null}
+              <span style={{ display: user.avatar_url ? 'none' : 'inline' }}>
+                {user.name ? user.name.charAt(0).toUpperCase() : 'У'}
+              </span>
             </div>
             <div className="overflow-hidden">
               <h3 className="text-xs font-black text-gray-800 dark:text-zinc-200 truncate">{user.name}</h3>

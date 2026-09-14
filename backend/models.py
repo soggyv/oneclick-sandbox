@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, Boolean, Index
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -53,18 +53,21 @@ class Organization(Base):
 
 class Shift(Base):
     __tablename__ = "shifts"
+    __table_args__ = (
+        Index("ix_shifts_status_date", "status", "date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    category = Column(String, nullable=False, default="Захід")
+    title = Column(String, nullable=False, index=True)
+    category = Column(String, nullable=False, default="Захід", index=True)
     target_faculty = Column(String, default="ALL", nullable=True)
-    date = Column(String, nullable=False)  # ISO string or YYYY-MM-DD
+    date = Column(String, nullable=False, index=True)  # ISO string or YYYY-MM-DD
     time = Column(String, nullable=False)  # e.g., "09:00 - 18:00"
     location = Column(String, nullable=False)  # e.g., "Актова зала"
     address = Column(String, nullable=False)  # e.g., "вул. Канатна, 15"
     description = Column(String, nullable=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
-    status = Column(String, default="open")  # 'open' or 'closed'
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    status = Column(String, default="open", index=True)  # 'open' or 'closed'
     max_volunteers = Column(Integer, default=1, nullable=False)
     
     # NEW audit field to track which user created the shift
@@ -98,11 +101,14 @@ class ShiftTemplate(Base):
 
 class Application(Base):
     __tablename__ = "applications"
+    __table_args__ = (
+        Index("ix_applications_shift_status", "shift_id", "status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=False)
-    volunteer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(String, default="pending")  # 'pending' | 'approved' | 'rejected' | 'attended' | 'reviewed'
+    shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=False, index=True)
+    volunteer_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, default="pending", index=True)  # 'pending' | 'approved' | 'rejected' | 'attended' | 'reviewed'
     check_in_code = Column(String, unique=True, index=True, nullable=False)
 
     # Relationships
