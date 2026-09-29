@@ -66,17 +66,22 @@ export default function TimePickerModal({
                 </button>
                 <input
                   type="text"
+                  inputMode="numeric"
                   maxLength={2}
                   value={tempStartHour}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '');
                     if (clean === '') {
                       setTempStartHour('');
                       return;
                     }
-                    let num = parseInt(clean, 10);
-                    if (num > 23) num = 23;
-                    setTempStartHour(String(num).padStart(2, '0'));
+                    const num = parseInt(clean, 10);
+                    if (num > 23) {
+                      setTempStartHour('23');
+                      return;
+                    }
+                    setTempStartHour(clean);
                   }}
                   onBlur={() => {
                     if (tempStartHour === '') {
@@ -117,17 +122,22 @@ export default function TimePickerModal({
                 </button>
                 <input
                   type="text"
+                  inputMode="numeric"
                   maxLength={2}
                   value={tempStartMin}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '');
                     if (clean === '') {
                       setTempStartMin('');
                       return;
                     }
-                    let num = parseInt(clean, 10);
-                    if (num > 59) num = 59;
-                    setTempStartMin(String(num).padStart(2, '0'));
+                    const num = parseInt(clean, 10);
+                    if (num > 59) {
+                      setTempStartMin('59');
+                      return;
+                    }
+                    setTempStartMin(clean);
                   }}
                   onBlur={() => {
                     if (tempStartMin === '') {
@@ -174,17 +184,22 @@ export default function TimePickerModal({
                 </button>
                 <input
                   type="text"
+                  inputMode="numeric"
                   maxLength={2}
                   value={tempEndHour}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '');
                     if (clean === '') {
                       setTempEndHour('');
                       return;
                     }
-                    let num = parseInt(clean, 10);
-                    if (num > 23) num = 23;
-                    setTempEndHour(String(num).padStart(2, '0'));
+                    const num = parseInt(clean, 10);
+                    if (num > 23) {
+                      setTempEndHour('23');
+                      return;
+                    }
+                    setTempEndHour(clean);
                   }}
                   onBlur={() => {
                     if (tempEndHour === '') {
@@ -225,17 +240,22 @@ export default function TimePickerModal({
                 </button>
                 <input
                   type="text"
+                  inputMode="numeric"
                   maxLength={2}
                   value={tempEndMin}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '');
                     if (clean === '') {
                       setTempEndMin('');
                       return;
                     }
-                    let num = parseInt(clean, 10);
-                    if (num > 59) num = 59;
-                    setTempEndMin(String(num).padStart(2, '0'));
+                    const num = parseInt(clean, 10);
+                    if (num > 59) {
+                      setTempEndMin('59');
+                      return;
+                    }
+                    setTempEndMin(clean);
                   }}
                   onBlur={() => {
                     if (tempEndMin === '') {
@@ -273,7 +293,17 @@ export default function TimePickerModal({
           </button>
           <button
             type="button"
-            onClick={() => handleClose(onConfirm)}
+            onClick={() => {
+              const sH = String(parseInt(tempStartHour, 10) || 9).padStart(2, '0');
+              const sM = String(parseInt(tempStartMin, 10) || 0).padStart(2, '0');
+              const eH = String(parseInt(tempEndHour, 10) || 18).padStart(2, '0');
+              const eM = String(parseInt(tempEndMin, 10) || 0).padStart(2, '0');
+              setTempStartHour(sH);
+              setTempStartMin(sM);
+              setTempEndHour(eH);
+              setTempEndMin(eM);
+              handleClose(onConfirm);
+            }}
             className="px-5 py-2 bg-[#FF5522] hover:bg-[#FF5522]/90 dark:bg-orange-500 dark:hover:bg-orange-600 text-white dark:text-white font-bold text-xs rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             Підтвердити
